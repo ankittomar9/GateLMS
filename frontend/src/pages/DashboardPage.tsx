@@ -1,14 +1,21 @@
 import React from 'react';
-import { HeroPlanner } from '../components/HeroPlanner';
-import { SubjectCards } from '../components/SubjectCards';
+import { useDashboardLayout } from '../context/LayoutContext';
+import { MinimalistDashboard } from '../components/dashboard/MinimalistDashboard';
+import { EditorialDashboard } from '../components/dashboard/EditorialDashboard';
+import { BentoDashboard } from '../components/dashboard/BentoDashboard';
 
 export const DashboardPage: React.FC = () => {
-  return (
-    <div className="space-y-8">
-      <HeroPlanner />
-      <SubjectCards />
-    </div>
-  );
+  const { currentLayout } = useDashboardLayout();
+
+  switch (currentLayout) {
+    case 'editorial':
+      return <EditorialDashboard />;
+    case 'bento':
+      return <BentoDashboard />;
+    case 'minimalist':
+    default:
+      return <MinimalistDashboard />;
+  }
 };
 
 export default DashboardPage;
