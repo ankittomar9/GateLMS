@@ -28,6 +28,70 @@ services:
       retries: 5
       start_period: 10s
 
+  # 2. Loki 3.x Log Aggregation Engine
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: gatelms-loki
+    profiles: ["observability"]
+    ports:
+      - "127.0.0.1:3100:3100"
+    command: -config.file=/etc/loki/config.yaml
+    volumes:
+      - loki_data:/loki
+      - ./docker/observability/loki-config.yaml:/etc/loki/config.yaml:ro
+    networks:
+      - gatelms-net
+
+  # 3. Tempo 2.x Distributed Tracing Store (OTLP HTTP/gRPC receiver)
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: gatelms-tempo
+    profiles: ["observability"]
+    command: ["-config.file=/etc/tempo.yaml"]
+    ports:
+      - "127.0.0.1:3200:3200"
+      - "127.0.0.1:4318:4318"
+    volumes:
+      - tempo_data:/var/tempo
+      - ./docker/observability/tempo.yaml:/etc/tempo.yaml:ro
+    networks:
+      - gatelms-net
+
+  # 4. Promtail 3.x Scrapes host logs/gatelms-backend.jsonl into Loki
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: gatelms-promtail
+    profiles: ["observability"]
+    command: -config.file=/etc/promtail/config.yaml
+    volumes:
+      - ./logs:/var/log/gatelms:ro
+      - ./docker/observability/promtail.yaml:/etc/promtail/config.yaml:ro
+    networks:
+      - gatelms-net
+
+  # 5. Grafana Dashboard & Analytics
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: gatelms-grafana
+    profiles: ["observability"]
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - gatelms-net
+
 volumes:
   gatelms_postgres_data:
     name: gatelms_postgres_data
+  loki_data:
+    name: gatelms_loki_data
+  tempo_data:
+    name: gatelms_tempo_data
+  grafana_data:
+    name: gatelms_grafana_data
