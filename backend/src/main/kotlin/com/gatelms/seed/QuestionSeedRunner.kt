@@ -136,7 +136,6 @@ class QuestionSeedRunner(
                         updated++
                     } else {
                         val newQ = Question(
-                            id = UUID.randomUUID(),
                             externalId = raw.externalId,
                             subject = subject,
                             topic = topic,
