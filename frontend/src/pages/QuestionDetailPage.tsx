@@ -106,24 +106,24 @@ export const QuestionDetailPage: React.FC = () => {
   const getTypeBadge = (type?: QuestionType) => {
     switch (type) {
       case 'MCQ':
-        return 'text-amber-400 border-amber-500/20 bg-amber-500/10';
+        return 'text-ds-accent border-ds-accent/30 bg-ds-accent-soft';
       case 'MSQ':
-        return 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10';
+        return 'text-ds-info border-ds-info/30 bg-ds-info/10';
       case 'NAT':
-        return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10';
+        return 'text-ds-success border-ds-success/30 bg-ds-success/10';
       default:
-        return 'text-zinc-400 border-zinc-700 bg-zinc-800';
+        return 'text-ds-muted border-ds-border bg-ds-surface-raised';
     }
   };
 
   if (isLoading) {
     return (
       <div className="p-8 max-w-4xl mx-auto space-y-6">
-        <div className="h-8 bg-[#161616] rounded-lg animate-pulse w-48" />
-        <div className="h-48 bg-[#161616] rounded-xl animate-pulse" />
+        <div className="h-8 bg-ds-surface-raised rounded-ds animate-pulse w-48" />
+        <div className="h-48 bg-ds-surface rounded-ds animate-pulse" />
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-16 bg-[#161616] rounded-lg animate-pulse" />
+            <div key={i} className="h-16 bg-ds-surface rounded-ds animate-pulse" />
           ))}
         </div>
       </div>
@@ -133,14 +133,14 @@ export const QuestionDetailPage: React.FC = () => {
   if (error || !q) {
     return (
       <div className="p-8 max-w-2xl mx-auto text-center space-y-4">
-        <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
-        <h2 className="text-lg font-bold text-white">Question not found</h2>
-        <p className="text-sm text-zinc-400">
+        <AlertCircle className="w-10 h-10 text-ds-danger mx-auto" />
+        <h2 className="text-lg font-bold text-ds-primary">Question not found</h2>
+        <p className="text-sm text-ds-muted">
           The requested question could not be loaded or does not exist.
         </p>
         <button
           onClick={() => navigate('/questions')}
-          className="px-4 py-2 bg-amber-500 text-black font-semibold rounded-lg text-sm hover:bg-amber-400 transition-colors"
+          className="px-4 py-2 bg-ds-accent text-ds-accent-contrast font-semibold rounded-ds text-sm hover:bg-ds-accent-hover transition-colors"
         >
           Return to Question Bank
         </button>
@@ -154,7 +154,7 @@ export const QuestionDetailPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-xs text-ds-muted hover:text-ds-primary transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Questions</span>
@@ -166,37 +166,37 @@ export const QuestionDetailPage: React.FC = () => {
               href={q.gateOverflowUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#262626] bg-[#161616] hover:bg-[#1f1f1f] text-xs text-zinc-300 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-ds border border-ds-border bg-ds-surface hover:bg-ds-surface-hover text-xs text-ds-secondary transition-colors"
             >
               <span>GATE Overflow Discussion</span>
-              <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
+              <ExternalLink className="w-3.5 h-3.5 text-ds-muted" />
             </a>
           )}
 
           <button
             type="button"
             onClick={() => toggleBookmark.mutate(q.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-ds border text-xs transition-colors ${
               q.isBookmarked
-                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                : 'bg-[#161616] border-[#262626] text-zinc-400 hover:text-zinc-200'
+                ? 'bg-ds-accent-soft border-ds-accent/30 text-ds-accent'
+                : 'bg-ds-surface border-ds-border text-ds-muted hover:text-ds-secondary'
             }`}
           >
-            <Bookmark className={`w-3.5 h-3.5 ${q.isBookmarked ? 'fill-amber-400' : ''}`} />
+            <Bookmark className={`w-3.5 h-3.5 ${q.isBookmarked ? 'fill-ds-accent text-ds-accent' : ''}`} />
             <span>{q.isBookmarked ? 'Bookmarked' : 'Bookmark'}</span>
           </button>
         </div>
       </div>
 
       {conflictError && (
-        <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 px-4 py-3 rounded-lg text-sm flex items-center justify-between">
+        <div className="bg-ds-danger/10 border border-ds-danger/30 text-ds-danger px-4 py-3 rounded-ds text-sm flex items-center justify-between">
           <span>{conflictError}</span>
           <button
             onClick={() => {
               setConflictError(null);
               refetch();
             }}
-            className="text-xs text-amber-400 hover:underline ml-4"
+            className="text-xs text-ds-accent hover:underline ml-4"
           >
             Reload Latest
           </button>
@@ -204,40 +204,40 @@ export const QuestionDetailPage: React.FC = () => {
       )}
 
       {/* Main Question Card */}
-      <div className="bg-[#161616] border border-[#262626] rounded-xl p-6 md:p-8 space-y-6">
+      <div className="bg-ds-surface border border-ds-border rounded-ds p-6 md:p-8 space-y-6 shadow-ds-card">
         {/* Header Tags */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#262626] pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ds-border pb-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`px-2.5 py-1 rounded text-xs font-mono font-semibold border ${getTypeBadge(q.type)}`}>
+            <span className={`px-2.5 py-1 rounded-ds text-xs font-mono font-semibold border ${getTypeBadge(q.type)}`}>
               {q.type}
             </span>
-            <span className="font-mono text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded">
+            <span className="font-mono text-xs text-ds-accent bg-ds-accent-soft border border-ds-accent/30 px-2.5 py-1 rounded-ds">
               {q.marks} {q.marks === 1 ? 'Mark' : 'Marks'}
             </span>
-            <span className="font-mono text-xs text-zinc-400 bg-[#1f1f1f] px-2.5 py-1 rounded border border-[#2a2a2a]">
+            <span className="font-mono text-xs text-ds-muted bg-ds-surface-raised px-2.5 py-1 rounded-ds border border-ds-border">
               GATE {q.year}
             </span>
-            <span className="font-mono text-xs text-zinc-500">
+            <span className="font-mono text-xs text-ds-muted">
               ID: {q.externalId}
             </span>
           </div>
 
-          <div className="text-xs text-zinc-400 flex items-center gap-1.5">
-            <span className="text-zinc-300 font-medium">{q.subjectName}</span>
-            <span className="text-zinc-600">/</span>
-            <span className="text-zinc-400">{q.topicName}</span>
+          <div className="text-xs text-ds-muted flex items-center gap-1.5">
+            <span className="text-ds-secondary font-medium">{q.subjectName}</span>
+            <span className="text-ds-muted">/</span>
+            <span className="text-ds-muted">{q.topicName}</span>
           </div>
         </div>
 
         {/* Question Statement */}
-        <div className="text-base text-zinc-100 leading-relaxed font-normal">
+        <div className="text-base text-ds-primary leading-relaxed font-normal">
           <MathText content={q.statement} />
         </div>
 
         {/* Multiple Choice Options List (MCQ / MSQ) */}
         {options.length > 0 && (
           <div className="space-y-3 pt-2">
-            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            <div className="text-xs font-semibold uppercase tracking-wider text-ds-muted">
               Options:
             </div>
             {options.map((opt) => {
@@ -247,26 +247,26 @@ export const QuestionDetailPage: React.FC = () => {
               return (
                 <div
                   key={opt.label}
-                  className={`p-4 rounded-xl border transition-all flex items-start gap-3.5 ${
+                  className={`p-4 rounded-ds border transition-all flex items-start gap-3.5 ${
                     highlightCorrect
-                      ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-200'
-                      : 'bg-[#121212] border-[#262626] text-zinc-300'
+                      ? 'bg-ds-success/10 border-ds-success/50 text-ds-success'
+                      : 'bg-ds-surface-raised border-ds-border text-ds-secondary'
                   }`}
                 >
                   <span
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono text-xs font-bold shrink-0 border ${
+                    className={`w-7 h-7 rounded-ds flex items-center justify-center font-mono text-xs font-bold shrink-0 border ${
                       highlightCorrect
-                        ? 'bg-emerald-500 text-black border-emerald-400'
-                        : 'bg-[#1f1f1f] text-zinc-400 border-[#2a2a2a]'
+                        ? 'bg-ds-success text-ds-accent-contrast border-ds-success'
+                        : 'bg-ds-surface text-ds-muted border-ds-border'
                     }`}
                   >
                     {opt.label}
                   </span>
-                  <div className="flex-1 pt-0.5 text-sm">
+                  <div className="flex-1 pt-0.5 text-sm text-ds-primary">
                     <MathText content={opt.text} />
                   </div>
                   {highlightCorrect && (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-ds-success shrink-0 mt-0.5" />
                   )}
                 </div>
               );
@@ -276,15 +276,15 @@ export const QuestionDetailPage: React.FC = () => {
 
         {/* NAT Question Input Area */}
         {q.type === 'NAT' && !solutionRevealed && (
-          <div className="bg-[#121212] border border-[#262626] rounded-xl p-5 space-y-3">
-            <div className="text-xs font-semibold text-zinc-400">Numerical Answer (NAT):</div>
+          <div className="bg-ds-surface-raised border border-ds-border rounded-ds p-5 space-y-3">
+            <div className="text-xs font-semibold text-ds-secondary">Numerical Answer (NAT):</div>
             <div className="flex items-center gap-3">
               <input
                 type="number"
                 placeholder="Enter calculated value..."
-                className="bg-[#1a1a1a] border border-[#262626] rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 w-64"
+                className="bg-ds-surface-input border border-ds-border rounded-ds px-3.5 py-2 text-sm text-ds-primary focus:outline-none focus:border-ds-accent/60 w-64"
               />
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-ds-muted">
                 Self-verify before revealing solution.
               </span>
             </div>
@@ -292,14 +292,14 @@ export const QuestionDetailPage: React.FC = () => {
         )}
 
         {/* Reveal Solution / Two-Pass Toggle */}
-        <div className="border-t border-[#262626] pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="text-xs text-zinc-400">
+        <div className="border-t border-ds-border pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="text-xs text-ds-muted">
             {solutionRevealed ? (
-              <span className="text-emerald-400 font-medium flex items-center gap-1.5">
+              <span className="text-ds-success font-medium flex items-center gap-1.5">
                 <Check className="w-4 h-4" /> Solution Unmasked (Review carefully)
               </span>
             ) : (
-              <span className="text-zinc-500">
+              <span className="text-ds-muted">
                 Honest-Attempt Mode: Attempt calculation before revealing solution key.
               </span>
             )}
@@ -308,10 +308,10 @@ export const QuestionDetailPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setSolutionRevealed(!solutionRevealed)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-ds text-xs font-semibold transition-all ${
               solutionRevealed
-                ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-700'
-                : 'bg-amber-500 hover:bg-amber-400 text-black shadow-md shadow-amber-500/20'
+                ? 'bg-ds-surface-raised text-ds-secondary hover:bg-ds-surface-hover border border-ds-border'
+                : 'bg-ds-accent hover:bg-ds-accent-hover text-ds-accent-contrast shadow-md'
             }`}
           >
             {solutionRevealed ? (
@@ -330,27 +330,27 @@ export const QuestionDetailPage: React.FC = () => {
 
         {/* Solution Details (Revealed) */}
         {solutionRevealed && (
-          <div className="bg-[#101915] border border-emerald-500/30 rounded-xl p-6 space-y-4 animate-in fade-in">
+          <div className="bg-ds-surface-raised border border-ds-success/30 rounded-ds p-6 space-y-4 animate-in fade-in">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-bold text-ds-success uppercase tracking-wider flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Answer Key & Detailed Explanation</span>
               </h3>
             </div>
 
             {/* Correct Key */}
-            <div className="text-xs text-zinc-300">
+            <div className="text-xs text-ds-secondary">
               {q.type === 'NAT' ? (
                 <div>
                   Accepted Tolerance Range:{' '}
-                  <strong className="text-emerald-400 font-mono text-sm">
+                  <strong className="text-ds-success font-mono text-sm">
                     [{q.numericMin} to {q.numericMax}]
                   </strong>
                 </div>
               ) : (
                 <div>
                   Correct Option(s):{' '}
-                  <strong className="text-emerald-400 font-mono text-sm">
+                  <strong className="text-ds-success font-mono text-sm">
                     {correctOptionLabels.join(', ')}
                   </strong>
                 </div>
@@ -359,11 +359,11 @@ export const QuestionDetailPage: React.FC = () => {
 
             {/* Explanation with MathText */}
             {q.explanation ? (
-              <div className="pt-2 text-sm text-zinc-200 border-t border-emerald-500/20 leading-relaxed">
+              <div className="pt-2 text-sm text-ds-primary border-t border-ds-border leading-relaxed">
                 <MathText content={q.explanation} />
               </div>
             ) : (
-              <p className="text-xs text-zinc-500 italic">
+              <p className="text-xs text-ds-muted italic">
                 No formal explanation authored for this question yet.
               </p>
             )}
@@ -372,15 +372,15 @@ export const QuestionDetailPage: React.FC = () => {
       </div>
 
       {/* Two-Pass Preparation State Toggles */}
-      <div className="bg-[#161616] border border-[#262626] rounded-xl p-6 space-y-5">
-        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+      <div className="bg-ds-surface border border-ds-border rounded-ds p-6 space-y-5 shadow-ds-card">
+        <h3 className="text-xs font-semibold text-ds-muted uppercase tracking-wider">
           Two-Pass Preparation Status Tracker
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Pass 1 Tracker */}
           <div className="space-y-2">
-            <label className="text-xs text-zinc-400 block font-medium">
+            <label className="text-xs text-ds-secondary block font-medium">
               Pass 1 (Concept Building):
             </label>
             <div className="flex flex-wrap gap-2">
@@ -389,10 +389,10 @@ export const QuestionDetailPage: React.FC = () => {
                   key={st}
                   type="button"
                   onClick={() => handlePass1Change(st)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium border transition-colors ${
+                  className={`px-3 py-1.5 rounded-ds text-xs font-mono font-medium border transition-colors ${
                     q.pass1Status === st
-                      ? 'bg-amber-500 text-black border-amber-400 font-bold'
-                      : 'bg-[#121212] border-[#262626] text-zinc-400 hover:text-zinc-200'
+                      ? 'bg-ds-accent text-ds-accent-contrast border-ds-accent font-bold'
+                      : 'bg-ds-surface-raised border-ds-border text-ds-muted hover:text-ds-secondary'
                   }`}
                 >
                   {st}
@@ -403,7 +403,7 @@ export const QuestionDetailPage: React.FC = () => {
 
           {/* Pass 2 Tracker */}
           <div className="space-y-2">
-            <label className="text-xs text-zinc-400 block font-medium">
+            <label className="text-xs text-ds-secondary block font-medium">
               Pass 2 (Speed & Accuracy Timed):
             </label>
             <div className="flex flex-wrap gap-2">
@@ -412,10 +412,10 @@ export const QuestionDetailPage: React.FC = () => {
                   key={st}
                   type="button"
                   onClick={() => handlePass2Change(st)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium border transition-colors ${
+                  className={`px-3 py-1.5 rounded-ds text-xs font-mono font-medium border transition-colors ${
                     q.pass2Status === st
-                      ? 'bg-cyan-500 text-black border-cyan-400 font-bold'
-                      : 'bg-[#121212] border-[#262626] text-zinc-400 hover:text-zinc-200'
+                      ? 'bg-ds-info text-ds-accent-contrast border-ds-info font-bold'
+                      : 'bg-ds-surface-raised border-ds-border text-ds-muted hover:text-ds-secondary'
                   }`}
                 >
                   {st}

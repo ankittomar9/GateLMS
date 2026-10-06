@@ -85,7 +85,7 @@ export const MathText: React.FC<MathTextProps> = ({ content, className = '' }) =
             <code
               key={idx}
               data-testid="math-fallback"
-              className="px-1.5 py-0.5 mx-0.5 rounded text-xs bg-zinc-800 text-zinc-400 font-mono border border-zinc-700 select-none inline-block"
+              className="px-1.5 py-0.5 mx-0.5 rounded-ds text-xs bg-ds-surface-raised text-ds-muted font-mono border border-ds-border select-none inline-block"
               title="Mathematical expression could not be rendered"
             >
               [Math Error]

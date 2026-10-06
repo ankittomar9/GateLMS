@@ -30,7 +30,7 @@ describe('UI Declutter and Navigation Verification', () => {
       // Verified retained items
       expect(screen.getByText('14')).toBeDefined();
       expect(screen.getByText(/days streak/i)).toBeDefined();
-      expect(screen.getByPlaceholderText(/Search subjects/i)).toBeDefined();
+      expect(screen.getByPlaceholderText(/Search topics/i)).toBeDefined();
     });
 
     it('renders the layout switcher with 3 options and updates layout on click', async () => {
