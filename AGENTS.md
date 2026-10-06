@@ -111,8 +111,9 @@ Every critical calculation (especially the GATE scoring engine: MCQ negative mar
 2. One branch carries strictly one work package's deliverables. Mixing packages on a single branch is prohibited.
 3. Code reaches `master` ONLY via a non-fast-forward merge (`--no-ff`):
    `git merge --no-ff <phase>/wp<N>-<slug> -m "feat(<phase>): WP<N> <title>"`
-4. Remote feature branches must be deleted after merge; history is preserved in the merge commit.
+4. Feature branches must be pushed to GitHub and NEVER deleted after merge; all branches must be permanently preserved in GitHub for complete audit and branch history.
 5. `--force-with-lease` is permitted ONLY on the executor's own un-merged feature branch; force-pushing `master` is strictly prohibited.
+
 6. Doc-only commits touching strictly `collab/**` may land directly on `master` with standard commit prefixes.
 
 
