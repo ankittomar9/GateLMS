@@ -2,7 +2,7 @@
 
 INSERT INTO subjects (id, name, slug, cluster, avg_weightage, priority_tier, standard_book_ref) VALUES
 ('subj_aptitude', 'General Aptitude', 'general-aptitude', 'MATH_APTITUDE', 15.0, 1, 'RS Aggarwal / Wren & Martin'),
-('subj_discrete_math', 'Engineering & Discrete Mathematics', 'discrete-mathematics', 'MATH_APTITUDE', 14.0, 1, 'Kenneth Rosen / Erwin Kreyszig'),
+('subj_discrete_math', 'Engineering & Discrete Mathematics', 'discrete-mathematics', 'MATH_APTITUDE', 15.0, 1, 'Kenneth Rosen / Erwin Kreyszig'),
 ('subj_prog_ds', 'Programming & Data Structures', 'programming-and-ds', 'CONCEPTUAL_CORE', 11.0, 1, 'Kernighan & Ritchie / CLRS'),
 ('subj_algo', 'Algorithms', 'algorithms', 'CONCEPTUAL_CORE', 9.0, 1, 'Thomas H. Cormen (CLRS)'),
 ('subj_toc', 'Theory of Computation', 'theory-of-computation', 'CONCEPTUAL_CORE', 9.0, 1, 'Michael Sipser'),

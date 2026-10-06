@@ -9,6 +9,8 @@ node_modules/
 dist/
 **/dist/
 .vite/
+*.tsbuildinfo
+
 
 # IDE files & connection datasources
 .idea/

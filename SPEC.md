@@ -18,7 +18,7 @@ The system consolidates five disparate preparation streams into one unified dash
 | :--- | :--- | :--- |
 | **Database** | PostgreSQL 16 (Docker / Local) | Native `JSONB` for exam blueprints, full-text search (`tsvector`), Flyway migrations. |
 | **Backend** | Spring Boot 3.4+ (Kotlin, JVM 21, Maven) | High performance, zero boilerplate with Kotlin `data class`, compile-time null safety. |
-| **Frontend** | Vite 8 + React 19 + TypeScript | Instant HMR, zero SSR hydration overhead, fast PWA for iPad browser. |
+| **Frontend** | Vite 6 + React 19 + TypeScript | Instant HMR, zero SSR hydration overhead, fast PWA for iPad browser. |
 | **Styling & UI**| Tailwind CSS + TakeUForward Tokens | Deep dark aesthetic (`#0d0d0d`), Lucide React icons, Recharts analytics, KaTeX math. |
 | **Infrastructure**| Docker Compose | Containerized PostgreSQL store with automated database initialization. |
 

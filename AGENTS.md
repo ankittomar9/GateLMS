@@ -97,3 +97,11 @@ Every critical calculation (especially the GATE scoring engine: MCQ negative mar
 ### G7 — Shell Execution Discipline
 - Run focused commands. Do not use destructive recursive commands (`rm -rf *` / `Remove-Item *`) with wildcards.
 - Clean working trees: commit files atomically per task.
+
+### G8 — Multi-Agent Collab Folders Protocol
+- Each agent writes strictly within its dedicated folder under `collab/<agent>/`. No cross-folder modifications.
+- File naming format: `<TASK-ID>-<TYPE>.md` (e.g. `collab/gemini/PHASE0-FIXUP-REPORT.md`, `collab/z/PHASE0-SETUP-AUDIT.md`, `collab/qwen/PHASE0-SETUP-REVIEW.md`).
+- Review cycle: Executor implements & reports -> Reviewers audit & report -> Operator adjudicates. All exchange occurs via git on `master`.
+- Secret hygiene (G5) applies strictly before pushing any collab artifact.
+- Raw session transcripts stay out of git; `collab/` files are the only durable records.
+
