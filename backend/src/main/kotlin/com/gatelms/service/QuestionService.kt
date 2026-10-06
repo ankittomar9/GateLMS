@@ -135,7 +135,7 @@ class QuestionService(
         question.gateOverflowUrl = dto.gateOverflowUrl?.trim()
         question.updatedAt = Instant.now()
 
-        val saved = questionRepository.save(question)
+        val saved = questionRepository.saveAndFlush(question)
         return saved.toDto()
     }
 
@@ -149,7 +149,7 @@ class QuestionService(
         dto.isBookmarked?.let { question.isBookmarked = it }
         question.updatedAt = Instant.now()
 
-        val saved = questionRepository.save(question)
+        val saved = questionRepository.saveAndFlush(question)
         return saved.toDto()
     }
 

@@ -1,6 +1,7 @@
 package com.gatelms.entity
 
 import jakarta.persistence.*
+import org.hibernate.annotations.UpdateTimestamp
 import java.time.Instant
 
 @Entity
@@ -38,8 +39,9 @@ class Topic(
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now(),
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
-    var updatedAt: Instant? = Instant.now(),
+    var updatedAt: Instant? = null,
 
     @Version
     @Column(name = "version", nullable = false)

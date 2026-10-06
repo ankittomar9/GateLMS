@@ -2,6 +2,7 @@ package com.gatelms.entity
 
 import jakarta.persistence.*
 import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.annotations.UpdateTimestamp
 import org.hibernate.type.SqlTypes
 import java.time.Instant
 import java.util.UUID
@@ -73,8 +74,9 @@ class Question(
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now(),
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
-    var updatedAt: Instant? = Instant.now(),
+    var updatedAt: Instant? = null,
 
     @Version
     @Column(name = "version", nullable = false)
