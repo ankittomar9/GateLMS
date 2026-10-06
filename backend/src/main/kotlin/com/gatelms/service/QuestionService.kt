@@ -12,6 +12,7 @@ import com.gatelms.repository.QuestionRepository
 import com.gatelms.repository.SubjectRepository
 import com.gatelms.repository.TopicRepository
 import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -40,6 +41,7 @@ class QuestionService(
         pageable: Pageable
     ): Page<QuestionSummaryDto> {
         val normalizedQ = if (q.isNullOrBlank()) null else q.trim()
+        val unpagedSortPageable = PageRequest.of(pageable.pageNumber, pageable.pageSize)
         val page = questionRepository.findWithFilters(
             subjectId = subjectId?.ifBlank { null },
             topicId = topicId?.ifBlank { null },
@@ -49,7 +51,7 @@ class QuestionService(
             pass2Status = pass2Status?.ifBlank { null },
             bookmarked = bookmarked,
             q = normalizedQ,
-            pageable = pageable
+            pageable = unpagedSortPageable
         )
         return page.map { it.toSummaryDto() }
     }

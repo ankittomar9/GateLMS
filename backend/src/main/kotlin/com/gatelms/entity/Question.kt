@@ -45,9 +45,11 @@ class Question(
     @Column(name = "correct_options", length = 50)
     var correctOptions: String? = null,
 
+    @JdbcTypeCode(SqlTypes.NUMERIC)
     @Column(name = "numeric_min")
     var numericMin: Double? = null,
 
+    @JdbcTypeCode(SqlTypes.NUMERIC)
     @Column(name = "numeric_max")
     var numericMax: Double? = null,
 

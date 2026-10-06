@@ -9,8 +9,7 @@ services:
     image: postgres:16-alpine
     container_name: gatelms-postgres
     ports:
-      - "127.0.0.1:5432:5432"
-
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
@@ -28,7 +27,48 @@ services:
       retries: 5
       start_period: 10s
 
-  # 2. Loki 3.x Log Aggregation Engine
+  # 2. GateLMS Core Backend Service (Kotlin + Spring Boot 3.4.2)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gatelms-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-seed}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/gatelms_db
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - MANAGEMENT_OTLP_TRACING_ENDPOINT=${MANAGEMENT_OTLP_TRACING_ENDPOINT:-http://tempo:4318/v1/traces}
+    volumes:
+      - ./logs:/app/logs
+      - gatelms_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - gatelms-net
+    mem_limit: 768m
+    restart: unless-stopped
+
+  # 3. GateLMS Frontend Cockpit (React 19 + Vite + Tailwind + Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gatelms-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - gatelms-net
+    mem_limit: 128m
+    restart: unless-stopped
+
+  # 4. Loki 3.x Log Aggregation Engine
   loki:
     image: grafana/loki:3.0.0
     container_name: gatelms-loki
@@ -42,7 +82,7 @@ services:
     networks:
       - gatelms-net
 
-  # 3. Tempo 2.x Distributed Tracing Store (OTLP HTTP/gRPC receiver)
+  # 5. Tempo 2.x Distributed Tracing Store (OTLP HTTP/gRPC receiver)
   tempo:
     image: grafana/tempo:2.4.1
     container_name: gatelms-tempo
@@ -57,7 +97,7 @@ services:
     networks:
       - gatelms-net
 
-  # 4. Promtail 3.x Scrapes host logs/gatelms-backend.jsonl into Loki
+  # 6. Promtail 3.x Scrapes host logs/gatelms-backend.jsonl into Loki
   promtail:
     image: grafana/promtail:3.0.0
     container_name: gatelms-promtail
@@ -69,7 +109,7 @@ services:
     networks:
       - gatelms-net
 
-  # 5. Grafana Dashboard & Analytics
+  # 7. Grafana Dashboard & Analytics
   grafana:
     image: grafana/grafana:11.0.0
     container_name: gatelms-grafana
@@ -89,6 +129,8 @@ services:
 volumes:
   gatelms_postgres_data:
     name: gatelms_postgres_data
+  gatelms_uploads:
+    name: gatelms_uploads
   loki_data:
     name: gatelms_loki_data
   tempo_data:

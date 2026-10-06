@@ -30,7 +30,7 @@ class QuestionController(
         @RequestParam(required = false) pass2Status: String?,
         @RequestParam(required = false) bookmarked: Boolean?,
         @RequestParam(required = false) q: String?,
-        @PageableDefault(size = 20, sort = ["created_at"], direction = Sort.Direction.DESC) pageable: Pageable
+        @PageableDefault(size = 20) pageable: Pageable
     ): Page<QuestionSummaryDto> {
         return questionService.searchQuestions(
             subjectId = subjectId,

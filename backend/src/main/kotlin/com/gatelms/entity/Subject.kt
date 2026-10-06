@@ -1,6 +1,8 @@
 package com.gatelms.entity
 
 import jakarta.persistence.*
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.Instant
 
 @Entity
@@ -19,6 +21,7 @@ class Subject(
     @Column(name = "cluster", length = 50, nullable = false)
     var cluster: String = "",
 
+    @JdbcTypeCode(SqlTypes.NUMERIC)
     @Column(name = "avg_weightage", nullable = false)
     var avgWeightage: Double = 0.0,
 
