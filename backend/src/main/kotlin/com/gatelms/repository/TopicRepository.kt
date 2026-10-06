@@ -12,6 +12,8 @@ interface TopicRepository : JpaRepository<Topic, String> {
     @Query("SELECT t FROM Topic t JOIN t.subject s WHERE s.slug = :subjectSlug")
     fun findBySubjectSlug(subjectSlug: String): List<Topic>
 
+    fun findBySlug(slug: String): Topic?
+
     @Query("SELECT t FROM Topic t WHERE (t.subject.id = :subjectIdOrSlug OR t.subject.slug = :subjectIdOrSlug) AND t.slug = :topicSlug")
     fun findBySubjectAndTopicSlug(subjectIdOrSlug: String, topicSlug: String): Topic?
 }
