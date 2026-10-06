@@ -69,7 +69,8 @@ git push origin master
 
 ### 5. Mandatory Guardrails
 - **G5 (Secret Hygiene)**: NEVER commit your PAT token, API keys, or raw environment variables into git or review files.
-- **G7 (Worklog Scope)**: Do not commit raw conversation logs to git; `collab/` files are the only durable records.
+- **G8 (Worklog Scope)**: Do not commit raw conversation logs to git; `collab/` files are the only durable records.
+
 ```
 
 ---
@@ -145,7 +146,8 @@ git push origin master
 
 ### 5. Mandatory Guardrails
 - **G5 (Secret Hygiene)**: Store your PAT only via `git credential approve` or local config; NEVER commit tokens into any file or repo URL.
-- **G7 (Worklog Scope)**: Raw session transcripts stay out of git; mailbox artifacts in `collab/` are the durable audit trail.
+- **G8 (Worklog Scope)**: Raw session transcripts stay out of git; mailbox artifacts in `collab/` are the durable audit trail.
+
 ```
 
 ---
