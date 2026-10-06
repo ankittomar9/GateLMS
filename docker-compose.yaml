@@ -1,0 +1,32 @@
+networks:
+  gatelms-net:
+    name: gatelms-net
+    driver: bridge
+
+services:
+  # 1. PostgreSQL 16 Relational Store (Syllabus, Questions, Mocks, Mistake Log, Notes)
+  postgres:
+    image: postgres:16-alpine
+    container_name: gatelms-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-gatelms_db}
+    volumes:
+      - gatelms_postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    networks:
+      - gatelms-net
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-gatelms_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  gatelms_postgres_data:
+    name: gatelms_postgres_data
