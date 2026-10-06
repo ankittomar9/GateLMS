@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { LayoutProvider, STORAGE_KEY } from '../../context/LayoutContext';
+import { DesignProvider } from '../../context/DesignContext';
 import { Header } from '../../components/Header';
 import { DashboardPage } from '../DashboardPage';
 
@@ -111,5 +112,102 @@ describe('Dashboard Multi-Layout Engine & Variant Views', () => {
     expect(screen.getByTestId('minimalist-dashboard')).toBeDefined();
     expect(screen.queryByTestId('editorial-dashboard')).toBeNull();
     expect(screen.queryByTestId('bento-dashboard')).toBeNull();
+  });
+
+  it('renders Dashboard without throwing for each valid design preset', () => {
+    const presets: Array<'tuf' | 'ink' | 'aurora' | 'sky'> = ['tuf', 'ink', 'aurora', 'sky'];
+
+    presets.forEach((preset) => {
+      localStorage.setItem('gatelms_design', preset);
+
+      const { unmount } = render(
+        <MemoryRouter initialEntries={['/']}>
+          <DesignProvider>
+            <LayoutProvider>
+              <DashboardPage />
+            </LayoutProvider>
+          </DesignProvider>
+        </MemoryRouter>
+      );
+
+      // Verify that the dashboard variant is mounted
+      expect(
+        screen.queryByTestId('minimalist-dashboard') ||
+        screen.queryByTestId('editorial-dashboard') ||
+        screen.queryByTestId('bento-dashboard')
+      ).not.toBeNull();
+
+      unmount();
+    });
+  });
+
+  it('mounts design-specific sections only when their preset is active', () => {
+    // 1. Sky preset -> sky-welcome-banner mounted
+    localStorage.setItem('gatelms_design', 'sky');
+    localStorage.setItem(STORAGE_KEY, 'bento');
+    const { unmount: unmountSky } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <DesignProvider>
+          <LayoutProvider>
+            <DashboardPage />
+          </LayoutProvider>
+        </DesignProvider>
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('sky-welcome-banner')).toBeDefined();
+    expect(screen.getByText(/Good to see you, Aspirant/i)).toBeDefined();
+    unmountSky();
+
+    // 2. Ink preset -> ink-quote-banner and ink-inline-column mounted, sky banner not mounted
+    localStorage.setItem('gatelms_design', 'ink');
+    localStorage.setItem(STORAGE_KEY, 'minimalist');
+    const { unmount: unmountInk } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <DesignProvider>
+          <LayoutProvider>
+            <DashboardPage />
+          </LayoutProvider>
+        </DesignProvider>
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('ink-quote-banner')).toBeDefined();
+    expect(screen.getByTestId('ink-inline-column')).toBeDefined();
+    expect(screen.queryByTestId('sky-welcome-banner')).toBeNull();
+    unmountInk();
+
+    // 3. Aurora preset -> aurora-book-card mounted, sky banner not mounted
+    localStorage.setItem('gatelms_design', 'aurora');
+    localStorage.setItem(STORAGE_KEY, 'editorial');
+    const { unmount: unmountAurora } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <DesignProvider>
+          <LayoutProvider>
+            <DashboardPage />
+          </LayoutProvider>
+        </DesignProvider>
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('aurora-book-card')).toBeDefined();
+    expect(screen.getByText(/CLRS · Introduction to Algorithms/i)).toBeDefined();
+    expect(screen.queryByTestId('sky-welcome-banner')).toBeNull();
+    expect(screen.queryByTestId('ink-quote-banner')).toBeNull();
+    unmountAurora();
+
+    // 4. Tuf preset -> none of the special mockup cards mounted
+    localStorage.setItem('gatelms_design', 'tuf');
+    localStorage.setItem(STORAGE_KEY, 'minimalist');
+    const { unmount: unmountTuf } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <DesignProvider>
+          <LayoutProvider>
+            <DashboardPage />
+          </LayoutProvider>
+        </DesignProvider>
+      </MemoryRouter>
+    );
+    expect(screen.queryByTestId('sky-welcome-banner')).toBeNull();
+    expect(screen.queryByTestId('ink-quote-banner')).toBeNull();
+    expect(screen.queryByTestId('aurora-book-card')).toBeNull();
+    unmountTuf();
   });
 });

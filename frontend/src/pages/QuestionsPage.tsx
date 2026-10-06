@@ -2,13 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Search, 
-  Filter, 
   Bookmark, 
   ChevronLeft, 
   ChevronRight, 
-  ExternalLink, 
   RotateCcw,
-  Sparkles,
   HelpCircle,
   FileQuestion
 } from 'lucide-react';
@@ -110,61 +107,61 @@ export const QuestionsPage: React.FC = () => {
   const getTypeBadge = (type: QuestionType) => {
     switch (type) {
       case 'MCQ':
-        return 'text-amber-400 border-amber-500/20 bg-amber-500/10';
+        return 'text-ds-accent border-ds-accent/30 bg-ds-accent-soft';
       case 'MSQ':
-        return 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10';
+        return 'text-ds-info border-ds-info/30 bg-ds-info/10';
       case 'NAT':
-        return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10';
+        return 'text-ds-success border-ds-success/30 bg-ds-success/10';
     }
   };
 
   const getPass1Badge = (status: Pass1Status) => {
     switch (status) {
       case 'SOLVED':
-        return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+        return 'text-ds-success bg-ds-success/10 border-ds-success/30';
       case 'REVISE':
-        return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+        return 'text-ds-warning bg-ds-warning/10 border-ds-warning/30';
       case 'FLAGGED':
-        return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+        return 'text-ds-danger bg-ds-danger/10 border-ds-danger/30';
       case 'UNSEEN':
       default:
-        return 'text-zinc-500 bg-zinc-800/50 border-zinc-700/50';
+        return 'text-ds-muted bg-ds-surface-raised border-ds-border';
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-[#161616] border border-[#262626] rounded-xl p-6">
+      <div className="bg-ds-surface border border-ds-border rounded-ds p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <FileQuestion className="w-5 h-5 text-amber-400" />
-              <h1 className="text-xl font-bold text-white tracking-tight">GATE Overflow PYQ Question Bank</h1>
+              <FileQuestion className="w-5 h-5 text-ds-accent" />
+              <h1 className="text-xl font-bold text-ds-primary tracking-tight">GATE Overflow PYQ Question Bank</h1>
             </div>
-            <p className="text-zinc-400 text-sm max-w-2xl">
+            <p className="text-ds-secondary text-sm max-w-2xl">
               Search and filter official GATE CS questions with Postgres Full-Text Search. Two-pass preparation mode with solution masking.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 font-mono text-xs text-zinc-400 bg-[#121212] px-3 py-1.5 rounded-lg border border-[#262626]">
+          <div className="flex items-center gap-2 font-mono text-xs text-ds-muted bg-ds-surface-raised px-3 py-1.5 rounded-ds border border-ds-border">
             <span>Total Questions:</span>
-            <strong className="text-amber-400">{data?.totalElements ?? '...'}</strong>
+            <strong className="text-ds-accent">{data?.totalElements ?? '...'}</strong>
           </div>
         </div>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-[#161616] border border-[#262626] rounded-xl p-4 space-y-4">
+      <div className="bg-ds-surface border border-ds-border rounded-ds p-4 space-y-4 shadow-sm">
         {/* Search Bar */}
         <div className="relative">
-          <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-ds-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search questions by keyword, topic, or formula with full-text search..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full bg-[#121212] border border-[#262626] rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 transition-all"
+            className="w-full bg-ds-surface-input border border-ds-border rounded-ds pl-10 pr-4 py-2 text-sm text-ds-primary placeholder:text-ds-muted focus:outline-none focus:border-ds-accent/60 transition-all"
           />
         </div>
 
@@ -174,7 +171,7 @@ export const QuestionsPage: React.FC = () => {
           <select
             value={subjectIdParam}
             onChange={(e) => handleFilterChange('subjectId', e.target.value)}
-            className="bg-[#121212] border border-[#262626] rounded-lg px-2.5 py-1.5 text-zinc-300 focus:outline-none focus:border-amber-500/50"
+            className="bg-ds-surface-input border border-ds-border rounded-ds px-2.5 py-1.5 text-ds-secondary focus:outline-none focus:border-ds-accent/60"
           >
             <option value="">All Subjects</option>
             {subjects?.map((s) => (
@@ -189,7 +186,7 @@ export const QuestionsPage: React.FC = () => {
             value={topicIdParam}
             onChange={(e) => handleFilterChange('topicId', e.target.value)}
             disabled={!subjectIdParam}
-            className="bg-[#121212] border border-[#262626] rounded-lg px-2.5 py-1.5 text-zinc-300 disabled:opacity-40 focus:outline-none focus:border-amber-500/50"
+            className="bg-ds-surface-input border border-ds-border rounded-ds px-2.5 py-1.5 text-ds-secondary disabled:opacity-40 focus:outline-none focus:border-ds-accent/60"
           >
             <option value="">All Topics</option>
             {topics?.map((t) => (
@@ -203,7 +200,7 @@ export const QuestionsPage: React.FC = () => {
           <select
             value={typeParam || ''}
             onChange={(e) => handleFilterChange('type', e.target.value)}
-            className="bg-[#121212] border border-[#262626] rounded-lg px-2.5 py-1.5 text-zinc-300 focus:outline-none focus:border-amber-500/50"
+            className="bg-ds-surface-input border border-ds-border rounded-ds px-2.5 py-1.5 text-ds-secondary focus:outline-none focus:border-ds-accent/60"
           >
             <option value="">All Types</option>
             <option value="MCQ">MCQ (Single Choice)</option>
@@ -215,7 +212,7 @@ export const QuestionsPage: React.FC = () => {
           <select
             value={pass1StatusParam || ''}
             onChange={(e) => handleFilterChange('pass1Status', e.target.value)}
-            className="bg-[#121212] border border-[#262626] rounded-lg px-2.5 py-1.5 text-zinc-300 focus:outline-none focus:border-amber-500/50"
+            className="bg-ds-surface-input border border-ds-border rounded-ds px-2.5 py-1.5 text-ds-secondary focus:outline-none focus:border-ds-accent/60"
           >
             <option value="">Pass 1: All</option>
             <option value="UNSEEN">UNSEEN</option>
@@ -227,20 +224,20 @@ export const QuestionsPage: React.FC = () => {
           {/* Bookmarked Filter */}
           <button
             onClick={() => handleFilterChange('bookmarked', !bookmarkedParam)}
-            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border font-medium transition-colors ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-ds border font-medium transition-colors ${
               bookmarkedParam
-                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                : 'bg-[#121212] border-[#262626] text-zinc-400 hover:text-zinc-200'
+                ? 'bg-ds-accent-soft border-ds-accent text-ds-accent'
+                : 'bg-ds-surface-input border-ds-border text-ds-muted hover:text-ds-primary'
             }`}
           >
-            <Bookmark className={`w-3.5 h-3.5 ${bookmarkedParam ? 'fill-amber-400' : ''}`} />
+            <Bookmark className={`w-3.5 h-3.5 ${bookmarkedParam ? 'fill-current' : ''}`} />
             <span>Bookmarked</span>
           </button>
 
           {/* Reset Filters */}
           <button
             onClick={handleResetFilters}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#262626] bg-[#121212] text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-ds border border-ds-border bg-ds-surface-input text-ds-muted hover:text-ds-primary transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset</span>
@@ -250,31 +247,31 @@ export const QuestionsPage: React.FC = () => {
 
       {/* Error Banner */}
       {error && (
-        <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-4 rounded-xl text-sm">
+        <div className="bg-ds-danger/10 border border-ds-danger/30 text-ds-danger p-4 rounded-ds text-sm">
           Failed to load questions. Please verify backend service availability.
         </div>
       )}
 
       {/* Questions List */}
-      <div className="bg-[#161616] border border-[#262626] rounded-xl overflow-hidden divide-y divide-[#262626]">
+      <div className="bg-ds-surface border border-ds-border rounded-ds overflow-hidden divide-y divide-ds-border shadow-sm">
         {isLoading && (
           <div className="p-4 space-y-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-16 bg-[#1a1a1a] rounded-lg animate-pulse" />
+              <div key={i} className="h-16 bg-ds-surface-raised rounded-ds animate-pulse" />
             ))}
           </div>
         )}
 
         {!isLoading && data?.content.length === 0 && (
           <div className="p-12 text-center space-y-3">
-            <HelpCircle className="w-8 h-8 text-zinc-600 mx-auto" />
-            <h3 className="text-sm font-semibold text-zinc-300">No questions found</h3>
-            <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+            <HelpCircle className="w-8 h-8 text-ds-muted mx-auto" />
+            <h3 className="text-sm font-semibold text-ds-primary">No questions found</h3>
+            <p className="text-xs text-ds-muted max-w-sm mx-auto">
               No questions matched your current filter criteria. Try resetting filters or importing question data.
             </p>
             <button
               onClick={handleResetFilters}
-              className="mt-2 text-xs text-amber-400 hover:text-amber-300 underline font-medium"
+              className="mt-2 text-xs text-ds-accent hover:underline font-medium"
             >
               Reset all filters
             </button>
@@ -286,7 +283,7 @@ export const QuestionsPage: React.FC = () => {
             <div
               key={q.id}
               onClick={() => navigate(`/questions/${q.id}`)}
-              className="p-4 hover:bg-[#1a1a1a] cursor-pointer transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              className="p-4 hover:bg-ds-surface-hover cursor-pointer transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               {/* Question summary metadata & snippet */}
               <div className="min-w-0 space-y-1.5 flex-1">
@@ -294,26 +291,26 @@ export const QuestionsPage: React.FC = () => {
                   <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${getTypeBadge(q.type)}`}>
                     {q.type}
                   </span>
-                  <span className="text-zinc-500 font-mono text-[11px]">
+                  <span className="text-ds-muted font-mono text-[11px]">
                     {q.marks} {q.marks === 1 ? 'Mark' : 'Marks'}
                   </span>
-                  <span className="text-zinc-500 font-mono text-[11px]">
+                  <span className="text-ds-muted font-mono text-[11px]">
                     GATE {q.year}
                   </span>
-                  <span className="text-zinc-600">•</span>
-                  <span className="text-zinc-400 font-mono text-[11px]">
+                  <span className="text-ds-muted">•</span>
+                  <span className="text-ds-secondary font-mono text-[11px]">
                     {q.externalId}
                   </span>
-                  <span className="text-zinc-600">•</span>
-                  <span className="text-amber-400 font-medium text-[11px]">
+                  <span className="text-ds-muted">•</span>
+                  <span className="text-ds-accent font-medium text-[11px]">
                     {q.subjectName}
                   </span>
-                  <span className="text-zinc-500 text-[11px]">
+                  <span className="text-ds-muted text-[11px]">
                     / {q.topicName}
                   </span>
                 </div>
 
-                <p className="text-sm text-zinc-300 line-clamp-2 leading-relaxed">
+                <p className="text-sm text-ds-secondary line-clamp-2 leading-relaxed">
                   {q.statementSnippet}
                 </p>
               </div>
@@ -331,13 +328,13 @@ export const QuestionsPage: React.FC = () => {
                     e.stopPropagation();
                     toggleBookmark.mutate(q.id);
                   }}
-                  className={`p-1.5 rounded-lg border border-[#2a2a2a] transition-colors ${
+                  className={`p-1.5 rounded-ds border border-ds-border transition-colors ${
                     q.isBookmarked
-                      ? 'text-amber-400 bg-amber-500/10'
-                      : 'text-zinc-500 hover:text-zinc-300 bg-[#121212]'
+                      ? 'text-ds-accent bg-ds-accent-soft border-ds-accent/40'
+                      : 'text-ds-muted hover:text-ds-primary bg-ds-surface-input'
                   }`}
                 >
-                  <Bookmark className={`w-3.5 h-3.5 ${q.isBookmarked ? 'fill-amber-400' : ''}`} />
+                  <Bookmark className={`w-3.5 h-3.5 ${q.isBookmarked ? 'fill-current' : ''}`} />
                 </button>
               </div>
             </div>
@@ -346,30 +343,30 @@ export const QuestionsPage: React.FC = () => {
 
       {/* Pagination Controls */}
       {data && data.totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs text-zinc-400 bg-[#161616] border border-[#262626] rounded-xl px-4 py-3">
+        <div className="flex items-center justify-between text-xs text-ds-secondary bg-ds-surface border border-ds-border rounded-ds px-4 py-3 shadow-sm">
           <div>
-            Showing <strong className="text-white">{data.page * data.size + 1}</strong> to{' '}
-            <strong className="text-white">
+            Showing <strong className="text-ds-primary">{data.page * data.size + 1}</strong> to{' '}
+            <strong className="text-ds-primary">
               {Math.min((data.page + 1) * data.size, data.totalElements)}
             </strong>{' '}
-            of <strong className="text-white">{data.totalElements}</strong>
+            of <strong className="text-ds-primary">{data.totalElements}</strong>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               disabled={data.page <= 0}
               onClick={() => handlePageChange(data.page - 1)}
-              className="p-1.5 rounded-lg border border-[#262626] bg-[#121212] hover:bg-[#1a1a1a] disabled:opacity-30 disabled:hover:bg-[#121212] transition-colors text-zinc-300"
+              className="p-1.5 rounded-ds border border-ds-border bg-ds-surface-input hover:bg-ds-surface-hover disabled:opacity-30 transition-colors text-ds-secondary"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="font-mono text-zinc-300">
+            <span className="font-mono text-ds-primary">
               {data.page + 1} / {data.totalPages}
             </span>
             <button
               disabled={data.page >= data.totalPages - 1}
               onClick={() => handlePageChange(data.page + 1)}
-              className="p-1.5 rounded-lg border border-[#262626] bg-[#121212] hover:bg-[#1a1a1a] disabled:opacity-30 disabled:hover:bg-[#121212] transition-colors text-zinc-300"
+              className="p-1.5 rounded-ds border border-ds-border bg-ds-surface-input hover:bg-ds-surface-hover disabled:opacity-30 transition-colors text-ds-secondary"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

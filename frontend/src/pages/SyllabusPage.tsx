@@ -7,7 +7,6 @@ import {
   Plus, 
   Minus, 
   AlertTriangle, 
-  Sparkles, 
   ArrowUpRight,
   GraduationCap
 } from 'lucide-react';
@@ -54,33 +53,33 @@ export const SyllabusPage: React.FC = () => {
     switch (tier.toUpperCase()) {
       case 'TIER_1':
       case 'TIER 1':
-        return 'text-amber-400 border-amber-500/20 bg-amber-500/10';
+        return 'text-ds-accent border-ds-accent/30 bg-ds-accent-soft';
       case 'TIER_2':
       case 'TIER 2':
-        return 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10';
+        return 'text-ds-info border-ds-info/30 bg-ds-info/10';
       default:
-        return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10';
+        return 'text-ds-success border-ds-success/30 bg-ds-success/10';
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-[#161616] border border-[#262626] rounded-xl p-6 relative overflow-hidden">
+      <div className="bg-ds-surface border border-ds-border rounded-ds p-6 relative overflow-hidden shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <GraduationCap className="w-5 h-5 text-amber-400" />
-              <h1 className="text-xl font-bold text-white tracking-tight">GATE CSE 2028 Syllabus Taxonomy</h1>
+              <GraduationCap className="w-5 h-5 text-ds-accent" />
+              <h1 className="text-xl font-bold text-ds-primary tracking-tight">GATE CSE 2028 Syllabus Taxonomy</h1>
             </div>
-            <p className="text-zinc-400 text-sm max-w-2xl">
+            <p className="text-ds-secondary text-sm max-w-2xl">
               10 Official Subject Domains normalized to 100 Marks. Track topic-level retention, standard textbook chapters, and revision schedules.
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => navigate('/questions')}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-lg text-sm transition-all shadow-md shadow-amber-500/20"
+              className="flex items-center gap-2 px-4 py-2 bg-ds-accent hover:bg-ds-accent-hover text-ds-accent-contrast font-semibold rounded-ds text-sm transition-all shadow-md"
             >
               <span>Practice Questions</span>
               <ArrowUpRight className="w-4 h-4" />
@@ -90,14 +89,14 @@ export const SyllabusPage: React.FC = () => {
       </div>
 
       {conflictError && (
-        <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 px-4 py-3 rounded-lg text-sm flex items-center justify-between">
+        <div className="bg-ds-danger/10 border border-ds-danger/30 text-ds-danger px-4 py-3 rounded-ds text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-400" />
+            <AlertTriangle className="w-4 h-4 text-ds-danger" />
             <span>{conflictError}</span>
           </div>
           <button
             onClick={() => setConflictError(null)}
-            className="text-xs hover:text-white underline ml-4"
+            className="text-xs hover:text-ds-primary underline ml-4"
           >
             Dismiss
           </button>
@@ -108,20 +107,20 @@ export const SyllabusPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Subject Cards List */}
         <div className="lg:col-span-5 space-y-3">
-          <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
+          <h2 className="text-xs font-semibold text-ds-muted uppercase tracking-wider px-1">
             Subjects ({subjects?.length || 0})
           </h2>
 
           {subjectsLoading && (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-20 bg-[#161616] border border-[#262626] rounded-xl animate-pulse" />
+                <div key={i} className="h-20 bg-ds-surface border border-ds-border rounded-ds animate-pulse" />
               ))}
             </div>
           )}
 
           {subjectsError && (
-            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-4 rounded-xl text-sm">
+            <div className="bg-ds-danger/10 border border-ds-danger/30 text-ds-danger p-4 rounded-ds text-sm">
               Failed to load subjects. Please ensure the backend is running.
             </div>
           )}
@@ -133,18 +132,18 @@ export const SyllabusPage: React.FC = () => {
                 <div
                   key={subject.id}
                   onClick={() => setSelectedSubjectId(subject.id)}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                  className={`p-4 rounded-ds border cursor-pointer transition-all ${
                     isSelected
-                      ? 'bg-[#1e1e1e] border-amber-500/50 shadow-lg shadow-black/40 ring-1 ring-amber-500/20'
-                      : 'bg-[#161616] border-[#262626] hover:border-zinc-700 hover:bg-[#1a1a1a]'
+                      ? 'bg-ds-surface-hover border-ds-accent shadow-md ring-1 ring-ds-accent/30'
+                      : 'bg-ds-surface border-ds-border hover:border-ds-border-strong hover:bg-ds-surface-hover'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div>
-                      <span className="text-[10px] font-mono font-semibold text-amber-400 uppercase tracking-wider block">
+                      <span className="text-[10px] font-mono font-semibold text-ds-accent uppercase tracking-wider block">
                         {subject.code}
                       </span>
-                      <h3 className="text-sm font-semibold text-white tracking-tight leading-snug">
+                      <h3 className="text-sm font-semibold text-ds-primary tracking-tight leading-snug">
                         {subject.name}
                       </h3>
                     </div>
@@ -153,13 +152,13 @@ export const SyllabusPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-zinc-400 pt-2 border-t border-[#262626]">
-                    <div className="flex items-center gap-1.5 font-mono text-zinc-300">
-                      <span className="text-amber-400 font-bold">{subject.weightageAvg}</span>
-                      <span className="text-zinc-500">Marks</span>
+                  <div className="flex items-center justify-between text-xs text-ds-secondary pt-2 border-t border-ds-border">
+                    <div className="flex items-center gap-1.5 font-mono text-ds-primary">
+                      <span className="text-ds-accent font-bold">{subject.weightageAvg}</span>
+                      <span className="text-ds-muted">Marks</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-zinc-400">
-                      <Layers className="w-3.5 h-3.5 text-zinc-500" />
+                    <div className="flex items-center gap-1.5 text-ds-muted">
+                      <Layers className="w-3.5 h-3.5 text-ds-muted" />
                       <span>{subject.topicCount} Topics</span>
                     </div>
                   </div>
@@ -170,42 +169,42 @@ export const SyllabusPage: React.FC = () => {
         </div>
 
         {/* Right Column: Topics Table & Mastery Controller */}
-        <div className="lg:col-span-7 bg-[#161616] border border-[#262626] rounded-xl p-5 space-y-5">
+        <div className="lg:col-span-7 bg-ds-surface border border-ds-border rounded-ds p-5 space-y-5 shadow-sm">
           {activeSubject ? (
             <>
               {/* Subject Header Card */}
-              <div className="border-b border-[#262626] pb-4">
+              <div className="border-b border-ds-border pb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-mono font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  <span className="text-xs font-mono font-semibold text-ds-accent bg-ds-accent-soft px-2 py-0.5 rounded border border-ds-accent/30">
                     {activeSubject.code}
                   </span>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => navigate(`/questions?subjectId=${activeSubject.id}`)}
-                      className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-medium transition-colors"
+                      className="text-xs text-ds-accent hover:underline flex items-center gap-1 font-medium transition-colors"
                     >
                       <span>Filter Questions</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
-                <h2 className="text-lg font-bold text-white tracking-tight mb-1">
+                <h2 className="text-lg font-bold text-ds-primary tracking-tight mb-1">
                   {activeSubject.name}
                 </h2>
-                <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-zinc-400">
+                <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-ds-secondary">
                   <div className="flex items-center gap-1">
-                    <BookOpen className="w-3.5 h-3.5 text-zinc-500" />
-                    <span>Primary Reference: <strong className="text-zinc-300">{activeSubject.primaryBookRef}</strong></span>
+                    <BookOpen className="w-3.5 h-3.5 text-ds-muted" />
+                    <span>Primary Reference: <strong className="text-ds-primary">{activeSubject.primaryBookRef}</strong></span>
                   </div>
                   <div>
-                    Weightage: <strong className="text-amber-400 font-mono">{activeSubject.weightageAvg}</strong> Marks
+                    Weightage: <strong className="text-ds-accent font-mono">{activeSubject.weightageAvg}</strong> Marks
                   </div>
                 </div>
               </div>
 
               {/* Topics List */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs text-zinc-400 px-1 font-semibold uppercase tracking-wider">
+                <div className="flex items-center justify-between text-xs text-ds-muted px-1 font-semibold uppercase tracking-wider">
                   <span>Topic & Chapter Reference</span>
                   <span>Mastery Level</span>
                 </div>
@@ -213,13 +212,13 @@ export const SyllabusPage: React.FC = () => {
                 {topicsLoading && (
                   <div className="space-y-2 py-4">
                     {[...Array(4)].map((_, i) => (
-                      <div key={i} className="h-14 bg-[#1f1f1f] rounded-lg animate-pulse" />
+                      <div key={i} className="h-14 bg-ds-surface-raised rounded-ds animate-pulse" />
                     ))}
                   </div>
                 )}
 
                 {!topicsLoading && topics?.length === 0 && (
-                  <div className="text-center py-10 text-zinc-500 text-sm">
+                  <div className="text-center py-10 text-ds-muted text-sm">
                     No topics mapped for this subject yet.
                   </div>
                 )}
@@ -230,13 +229,13 @@ export const SyllabusPage: React.FC = () => {
                     return (
                       <div
                         key={topic.id}
-                        className="bg-[#121212] border border-[#262626] rounded-lg p-3 hover:border-zinc-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                        className="bg-ds-surface-raised border border-ds-border rounded-ds p-3 hover:border-ds-border-strong transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
                         <div className="min-w-0">
-                          <h4 className="text-sm font-medium text-white truncate mb-0.5">
+                          <h4 className="text-sm font-medium text-ds-primary truncate mb-0.5">
                             {topic.name}
                           </h4>
-                          <span className="text-[11px] text-zinc-500 block truncate font-mono">
+                          <span className="text-[11px] text-ds-muted block truncate font-mono">
                             {topic.bookChapterRef || 'Standard Syllabus Mapping'}
                           </span>
                         </div>
@@ -250,25 +249,25 @@ export const SyllabusPage: React.FC = () => {
                                 key={dot}
                                 className={`w-2 h-2 rounded-full transition-colors ${
                                   dot <= dotsCount
-                                    ? 'bg-amber-400 shadow-sm shadow-amber-400/50'
-                                    : 'bg-zinc-700'
+                                    ? 'bg-ds-accent shadow-sm'
+                                    : 'bg-ds-border'
                                 }`}
                               />
                             ))}
                           </div>
 
                           {/* Numeric % */}
-                          <span className="text-xs font-mono font-semibold text-zinc-300 w-10 text-right">
+                          <span className="text-xs font-mono font-semibold text-ds-secondary w-10 text-right">
                             {topic.masteryLevel}%
                           </span>
 
                           {/* Stepper Buttons */}
-                          <div className="flex items-center bg-[#1a1a1a] rounded-lg border border-[#2a2a2a] p-0.5">
+                          <div className="flex items-center bg-ds-surface rounded-ds border border-ds-border p-0.5">
                             <button
                               title="Decrease Mastery by 10%"
                               disabled={topic.masteryLevel <= 0 || updateMastery.isPending}
                               onClick={() => handleMasteryChange(topic, -10)}
-                              className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors"
+                              className="p-1 text-ds-muted hover:text-ds-primary disabled:opacity-30 transition-colors"
                             >
                               <Minus className="w-3.5 h-3.5" />
                             </button>
@@ -276,7 +275,7 @@ export const SyllabusPage: React.FC = () => {
                               title="Increase Mastery by 10%"
                               disabled={topic.masteryLevel >= 100 || updateMastery.isPending}
                               onClick={() => handleMasteryChange(topic, 10)}
-                              className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors"
+                              className="p-1 text-ds-muted hover:text-ds-primary disabled:opacity-30 transition-colors"
                             >
                               <Plus className="w-3.5 h-3.5" />
                             </button>
@@ -289,7 +288,7 @@ export const SyllabusPage: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="text-center py-20 text-zinc-500">
+            <div className="text-center py-20 text-ds-muted">
               Select a subject to view mapped syllabus topics and mastery.
             </div>
           )}

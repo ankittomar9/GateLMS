@@ -6,8 +6,8 @@ import { RightSidebar } from './RightSidebar';
 
 export const Layout: React.FC = () => {
   return (
-    <div className="flex bg-[#0d0d0d] min-h-screen text-zinc-100 selection:bg-amber-500/20 selection:text-amber-300">
-      {/* 1. Left Navigation Rail (TakeUForward style) */}
+    <div className="flex bg-ds-bg min-h-screen text-ds-primary font-ds-sans selection:bg-ds-accent-soft selection:text-ds-accent transition-colors duration-150">
+      {/* 1. Left Navigation Rail */}
       <Sidebar />
 
       {/* 2. Main Middle Viewport */}
@@ -19,7 +19,7 @@ export const Layout: React.FC = () => {
         </main>
       </div>
 
-      {/* 3. Right Productivity Rail (Circular Gauge + Widgets) */}
+      {/* 3. Right Productivity Rail */}
       <RightSidebar />
     </div>
   );

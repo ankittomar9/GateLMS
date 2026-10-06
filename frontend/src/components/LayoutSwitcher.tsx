@@ -5,30 +5,27 @@ import { useDashboardLayout, DashboardLayoutVariant } from '../context/LayoutCon
 export const LayoutSwitcher: React.FC = () => {
   const { currentLayout, setLayout } = useDashboardLayout();
 
-  const options: { id: DashboardLayoutVariant; label: string; icon: React.ReactNode; activeClass: string }[] = [
+  const options: { id: DashboardLayoutVariant; label: string; icon: React.ReactNode }[] = [
     {
       id: 'minimalist',
       label: 'Minimalist',
       icon: <SlidersHorizontal className="w-3.5 h-3.5" />,
-      activeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/40 shadow-sm shadow-blue-500/10'
     },
     {
       id: 'editorial',
       label: 'Editorial',
       icon: <BookOpen className="w-3.5 h-3.5" />,
-      activeClass: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40 shadow-sm shadow-indigo-500/10'
     },
     {
       id: 'bento',
       label: 'Bento Grid',
       icon: <LayoutGrid className="w-3.5 h-3.5" />,
-      activeClass: 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm shadow-amber-500/10'
-    }
+    },
   ];
 
   return (
     <div
-      className="flex items-center bg-[#141414] border border-[#262626] p-1 rounded-xl gap-1"
+      className="flex items-center bg-ds-surface border border-ds-border p-1 rounded-ds gap-1"
       role="radiogroup"
       aria-label="Dashboard layout switcher"
     >
@@ -42,10 +39,10 @@ export const LayoutSwitcher: React.FC = () => {
             aria-checked={isActive}
             onClick={() => setLayout(opt.id)}
             data-testid={`layout-toggle-${opt.id}`}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150 border ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-ds text-xs font-semibold transition-all duration-150 border ${
               isActive
-                ? opt.activeClass
-                : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#1f1f1f]'
+                ? 'bg-ds-accent-soft text-ds-accent border-ds-accent/40 shadow-sm'
+                : 'border-transparent text-ds-muted hover:text-ds-primary hover:bg-ds-surface-hover'
             }`}
             title={opt.label}
           >

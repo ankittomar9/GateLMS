@@ -1,40 +1,78 @@
 import React from 'react';
-import { Search, Flame, Plus } from 'lucide-react';
+import { Search, Flame, Plus, Bell, ChevronDown } from 'lucide-react';
+import { DesignSwitcher } from './DesignSwitcher';
 import { LayoutSwitcher } from './LayoutSwitcher';
+import { useDesign } from '../context/DesignContext';
 
 export const Header: React.FC = () => {
+  const { currentDesign } = useDesign();
+
   return (
-    <header className="h-16 border-b border-[#262626] bg-[#0d0d0d]/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
+    <header className="h-16 border-b border-ds-border bg-ds-bg/95 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30 transition-colors">
       {/* Search Input (Ctrl + K) */}
-      <div className="relative w-72 md:w-96">
-        <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+      <div className="relative w-64 sm:w-80 md:w-96">
+        <Search className="w-4 h-4 text-ds-muted absolute left-3 top-1/2 -translate-y-1/2" />
         <input
           type="text"
-          placeholder="Search subjects, Rosen theorems, GATE PYQs... (Ctrl + K)"
-          className="w-full bg-[#161616] border border-[#262626] rounded-lg pl-9 pr-12 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50 transition-all"
+          placeholder="Search topics, questions, or anything..."
+          className="w-full bg-ds-surface-input border border-ds-border rounded-ds pl-9 pr-12 py-1.5 text-xs text-ds-primary placeholder:text-ds-muted focus:outline-none focus:border-ds-accent/60 transition-all"
         />
-        <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700 font-mono">
+        <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] bg-ds-surface-raised text-ds-muted px-1.5 py-0.5 rounded border border-ds-border-strong font-mono">
           ⌘K
         </kbd>
       </div>
 
-      {/* Header Actions: Layout Switcher, Streak, Quick Log */}
-      <div className="flex items-center gap-3 md:gap-4">
+      {/* Header Actions: Design Switcher, Layout Switcher, Conditional Badges & Profile */}
+      <div className="flex items-center gap-2.5 sm:gap-3.5">
+        {/* Design Preset Switcher (Immediately left of LayoutSwitcher) */}
+        <DesignSwitcher />
+
         {/* Client-Side Layout Switcher Engine */}
         <LayoutSwitcher />
 
-        {/* Streak Counter */}
-        <div className="flex items-center gap-1.5 bg-[#161616] border border-[#262626] px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-300">
-          <Flame className="w-4 h-4 text-amber-500 animate-pulse" />
-          <span>14</span>
-          <span className="text-[10px] text-zinc-500 font-normal hidden sm:inline">days streak</span>
-        </div>
+        {/* Notification Bell (Aurora & Sky presets) */}
+        {(currentDesign === 'aurora' || currentDesign === 'sky') && (
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="p-1.5 rounded-ds bg-ds-surface hover:bg-ds-surface-hover text-ds-secondary hover:text-ds-primary border border-ds-border transition-colors relative"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="w-1.5 h-1.5 rounded-full bg-ds-accent absolute top-1 right-1" />
+          </button>
+        )}
 
-        {/* Quick Action */}
-        <button className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-black px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md shadow-amber-500/10">
-          <Plus className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Quick Log</span>
-        </button>
+        {/* Streak Counter (TUF Classic only) */}
+        {currentDesign === 'tuf' && (
+          <div className="flex items-center gap-1.5 bg-ds-surface border border-ds-border px-3 py-1.5 rounded-ds text-xs font-semibold text-ds-primary">
+            <Flame className="w-4 h-4 text-ds-accent animate-pulse" />
+            <span>14</span>
+            <span className="text-[10px] text-ds-muted font-normal hidden sm:inline">days streak</span>
+          </div>
+        )}
+
+        {/* Quick Action (TUF Classic only) */}
+        {currentDesign === 'tuf' && (
+          <button
+            type="button"
+            className="flex items-center gap-1.5 bg-ds-accent hover:bg-ds-accent-hover text-ds-accent-contrast px-3.5 py-1.5 rounded-ds text-xs font-bold transition-all shadow-md shadow-ds-accent/10"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Quick Log</span>
+          </button>
+        )}
+
+        {/* User Profile Chip (All 4 designs) */}
+        <div
+          className="flex items-center gap-2 pl-1 sm:pl-2 border-l border-ds-border text-xs font-medium cursor-pointer"
+          data-testid="header-profile-chip"
+        >
+          <div className="w-7 h-7 rounded-full bg-ds-accent text-ds-accent-contrast font-bold flex items-center justify-center text-xs shadow-sm">
+            A
+          </div>
+          <span className="text-ds-primary hidden md:inline font-semibold">Aspirant</span>
+          <ChevronDown className="w-3 h-3 text-ds-muted hidden md:inline" />
+        </div>
       </div>
     </header>
   );

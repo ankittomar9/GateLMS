@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { registerLayoutSetter } from './DesignContext';
 
 export type DashboardLayoutVariant = 'minimalist' | 'editorial' | 'bento';
 
@@ -37,6 +38,13 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Ignore localStorage write failures
     }
   };
+
+  useEffect(() => {
+    registerLayoutSetter(setLayout);
+    return () => {
+      registerLayoutSetter(null);
+    };
+  }, []);
 
   return (
     <LayoutContext.Provider value={{ currentLayout, setLayout }}>

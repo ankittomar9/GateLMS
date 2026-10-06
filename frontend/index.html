@@ -5,9 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GateLMS — High-ROI GATE CSE 2028 Study Engine</title>
+    <script>
+      (function () {
+        var d = 'tuf';
+        try {
+          var v = localStorage.getItem('gatelms_design');
+          if (v === 'ink' || v === 'aurora' || v === 'sky' || v === 'tuf') d = v;
+        } catch (e) { /* private mode / sandbox */ }
+        document.documentElement.setAttribute('data-design', d);
+      })();
+    </script>
   </head>
 
-  <body class="bg-[#0d0d0d] text-zinc-100 font-sans antialiased selection:bg-amber-500/20 selection:text-amber-300 min-h-screen">
+  <body class="bg-ds-bg text-ds-primary font-ds-sans antialiased selection:bg-ds-accent-soft selection:text-ds-accent min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
