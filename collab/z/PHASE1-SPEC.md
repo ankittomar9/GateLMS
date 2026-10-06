@@ -5,10 +5,10 @@
 | **Task ID** | `PHASE1` (work packages `PHASE1-WP0` … `PHASE1-WP4`) |
 | **Author Agent** | Z.ai (Architect & Quality Auditor) |
 | **Base Commit** | `4ab6f59` (rev 2; rev 1 was based on `1c06274`) |
-| **Revision** | Rev 2 (2026-10-07): §3.3 upgraded to a mandatory **Branch & Integration Protocol**; WP0 closed by the Operator @ `4ab6f59` (verified by Z.ai); execution starts at **WP1** |
+| **Revision** | Rev 3 (2026-10-07): §3.3.3 branch-deletion step removed — **feature branches are permanently retained on GitHub** per Operator directive (codified as `AGENTS.md` G9). Rev 2: §3.3 Branch & Integration Protocol; WP0 closed @ `4ab6f59`. Rev 1 based on `1c06274` |
 | **Governing Inputs** | `SPEC.md` §5 Phase 1 · Operator directive 2026-10-07 (branch discipline + long-session execution) · `collab/z/PHASE0-FIXUP-AUDIT.md` residuals R1–R4 |
 | **Executor** | Gemini / Antigravity (primary; split-safe per §3.4) |
-| **Status** | `APPROVED_FOR_EXECUTION` (awaiting Operator directive to Gemini) |
+| **Status** | `EXECUTED` (WP1–WP4 merged to master, all feature branches retained) — fixups pending per `collab/z/PHASE1-AUDIT.md` |
 | **Estimated Effort** | ~10.5–13.5 focused hours (see §12.3) |
 
 ---
@@ -88,7 +88,7 @@ git push --force-with-lease origin phase1/wp<N>-<slug>
 git checkout master && git pull --rebase origin master
 git merge --no-ff phase1/wp<N>-<slug> -m "feat(phase1): WP<N> <title>"
 git push origin master
-git push origin --delete phase1/wp<N>-<slug>       # history is preserved by the merge commit
+# Feature branches are NEVER deleted after merge — permanently preserved on GitHub (AGENTS.md G9).
 ```
 
 Merge message convention:
@@ -102,7 +102,7 @@ feat(phase1): WP4 observability stack (Grafana/Loki/Tempo)
 
 **3.3.4 Report after merge.** Immediately after each merge, publish `collab/gemini/PHASE1-WP<N>-REPORT.md` on master as a doc-only commit (`report(collab): PHASE1-WP<N> execution report`) whose metadata header cites the **merge SHA and branch name**, plus per-WP receipts (§12.2).
 
-**3.3.5 Push discipline.** `--force-with-lease` is allowed **only** on the Executor's own un-merged WP branch after a rebase. Never force-push `master`; never push onto another agent's branch, report, or folder (G8 isolation). Within a WP branch, keep a small number of clean, reviewable commits (squash WIP locally if needed) — reviewers read branch diffs, not archaeology.
+**3.3.5 Push discipline.** `--force-with-lease` is allowed **only** on the Executor's own un-merged WP branch after a rebase. Never force-push `master`; never push onto another agent's branch, report, or folder (G8 isolation); never delete a feature branch after merge (G9). Within a WP branch, keep a small number of clean, reviewable commits (squash WIP locally if needed) — reviewers read branch diffs, not archaeology.
 
 **3.3.6 Sequential merges, asynchronous reviews.** Reviews remain post-merge (Phase 0 cadence): the Executor keeps running while Qwen and Z.ai review each merge on master. Gemini may cut the next WP branch as soon as the previous WP is merged — with one brake: a **FAIL verdict** on any WP freezes all further WP merges until the matching fixup branch merges and is re-reviewed.
 
@@ -382,4 +382,4 @@ Operator checklist (browser + terminal, ~15 min):
 - **OQ-3 — Bulk seed data in git:** default = keep the sample pack tracked; the real 2,500-question JSONL (likely > 2 MB) stays untracked and is loaded from a local path. Confirm.
 - **OQ-4 — Grafana auth:** anonymous Admin for localhost convenience (loopback-bound). Confirm or lock down with a local admin password via `.env`.
 
-*End of `PHASE1-SPEC.md` — Z.ai, 2026-10-07 (rev 2: §3.3 branch & integration protocol; WP0 closed). Executor: proceed per §12 upon Operator directive; start at WP1.*
+*End of `PHASE1-SPEC.md` — Z.ai, 2026-10-07 (rev 3: branch retention per G9). Phase 1 execution merged (WP1–WP4); fixups per `collab/z/PHASE1-AUDIT.md` conditions.*
