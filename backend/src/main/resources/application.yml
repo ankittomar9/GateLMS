@@ -29,6 +29,22 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+
 app:
+  cors:
+    allowed-origins: http://localhost:5173
   storage:
     notes-dir: uploads/notes
+  seed:
+    path: seed-data/questions.jsonl
