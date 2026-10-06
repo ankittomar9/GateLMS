@@ -4,11 +4,12 @@
 |---|---|
 | **Task ID** | `PHASE1` (work packages `PHASE1-WP0` … `PHASE1-WP4`) |
 | **Author Agent** | Z.ai (Architect & Quality Auditor) |
-| **Base Commit** | `1c06274` |
-| **Governing Inputs** | `SPEC.md` §5 Phase 1 · Operator directive 2026-10-07 · `collab/z/PHASE0-FIXUP-AUDIT.md` residuals R1–R4 |
+| **Base Commit** | `4ab6f59` (rev 2; rev 1 was based on `1c06274`) |
+| **Revision** | Rev 2 (2026-10-07): §3.3 upgraded to a mandatory **Branch & Integration Protocol**; WP0 closed by the Operator @ `4ab6f59` (verified by Z.ai); execution starts at **WP1** |
+| **Governing Inputs** | `SPEC.md` §5 Phase 1 · Operator directive 2026-10-07 (branch discipline + long-session execution) · `collab/z/PHASE0-FIXUP-AUDIT.md` residuals R1–R4 |
 | **Executor** | Gemini / Antigravity (primary; split-safe per §3.4) |
 | **Status** | `APPROVED_FOR_EXECUTION` (awaiting Operator directive to Gemini) |
-| **Estimated Effort** | ~11–14 focused hours (see §12.3) |
+| **Estimated Effort** | ~10.5–13.5 focused hours (see §12.3) |
 
 ---
 
@@ -46,7 +47,7 @@ This spec operationalizes **Phase 1** of `SPEC.md` §5 ("Syllabus Taxonomy & Que
 ### 3.1 Execution order and dependency graph
 
 ```text
-WP0 (governance sweep, ~30 min)
+WP0 ✅ CLOSED — governance sweep executed by the Operator directly on master (4ab6f59, verified by Z.ai)
   └─> WP1 (backend domain core + V3/V4 + tests + tracing foundations)
         └─> WP2 (frontend pages + Vitest)
         └─> WP3 (seed pipeline + sample pack)      [depends on WP1 entities/repos]
@@ -57,27 +58,59 @@ WP0 (governance sweep, ~30 min)
 
 | WP | ID | Title | One-line scope | Acceptance anchor |
 |---|---|---|---|---|
-| 0 | `PHASE1-WP0` | Governance sweep | R1 prompt-label fix + R2 loopback port binding (see §3.5) | §3.5 |
+| 0 | `PHASE1-WP0` | Governance sweep | R1 prompt-label fix + R2 loopback port binding — **CLOSED by Operator @ `4ab6f59`, verified** (see §3.5) | §3.5 |
 | 1 | `PHASE1-WP1` | Backend domain core | Entities, repos, services, DTOs, controllers, error model, V3+V4, actuator/tracing/JSON-logging, full backend test suite | §4, §5, §6, §11 |
 | 2 | `PHASE1-WP2` | Frontend LMS shell & pages | Router, TanStack Query, typed API client, syllabus + questions + detail pages, KaTeX MathText, filters, skeletons, Vitest suite | §7, §11 |
 | 3 | `PHASE1-WP3` | Question seed pipeline | JSONL contract, idempotent upsert runner, validation report, ≥25 synthetic sample questions, import verification test | §8, §11 |
 | 4 | `PHASE1-WP4` | Observability (GLT) | Compose `observability` profile (Loki, Tempo, Promtail, Grafana), provisioned datasources, correlation config, runbook | §9 |
 
-### 3.3 Commit & push discipline (G7)
+### 3.3 Branch & integration protocol (mandatory — code reaches `master` only via WP merges)
 
-One atomic commit per work package, pushed immediately after its local verification passes. Message convention:
+Phase 1 raises the integration bar over Phase 0: **every work package executes on its own branch and lands on `master` through a `--no-ff` merge commit.** The merge commit is the auditable unit — the SHA that Qwen reviews and Z.ai audits for that WP, and the boundary that keeps master bisectable package-by-package.
+
+**3.3.1 Branch-per-WP.** Before starting WP *N*, cut the branch from the tip of `origin/master` (never from another WP branch, never from a stale local master):
+
+```bash
+git fetch origin
+git checkout -b phase1/wp1-backend-core origin/master
+```
+
+Planned branch names: `phase1/wp1-backend-core`, `phase1/wp2-frontend-pages`, `phase1/wp3-seed-pipeline`, `phase1/wp4-observability`. One branch carries exactly one WP's work — mixing packages on a branch is forbidden. Audit fixups ride `phase1/wp<N>-fixup-<M>` branches cut from post-merge `origin/master`.
+
+**3.3.2 Self-verify before merge.** A WP branch may merge only when every acceptance anchor for that WP is met and the §11 gates are green **on the branch tip**, with G3 receipts captured for the report.
+
+**3.3.3 Integrate via `--no-ff`.** If `origin/master` moved while work was in flight (Qwen/Z.ai doc commits are frequent — it happened twice in Phase 0), rebase first, re-run the gates, then merge:
+
+```bash
+git fetch origin
+git rebase origin/master                          # on the WP branch; re-run §11 gates afterwards
+git push --force-with-lease origin phase1/wp<N>-<slug>
+git checkout master && git pull --rebase origin master
+git merge --no-ff phase1/wp<N>-<slug> -m "feat(phase1): WP<N> <title>"
+git push origin master
+git push origin --delete phase1/wp<N>-<slug>       # history is preserved by the merge commit
+```
+
+Merge message convention:
 
 ```text
-feat(phase1): WP0 governance sweep
 feat(phase1): WP1 backend domain core (entities, APIs, V3/V4, tracing)
 feat(phase1): WP2 frontend syllabus & question bank pages
 feat(phase1): WP3 question seed pipeline + sample pack
 feat(phase1): WP4 observability stack (Grafana/Loki/Tempo)
 ```
 
+**3.3.4 Report after merge.** Immediately after each merge, publish `collab/gemini/PHASE1-WP<N>-REPORT.md` on master as a doc-only commit (`report(collab): PHASE1-WP<N> execution report`) whose metadata header cites the **merge SHA and branch name**, plus per-WP receipts (§12.2).
+
+**3.3.5 Push discipline.** `--force-with-lease` is allowed **only** on the Executor's own un-merged WP branch after a rebase. Never force-push `master`; never push onto another agent's branch, report, or folder (G8 isolation). Within a WP branch, keep a small number of clean, reviewable commits (squash WIP locally if needed) — reviewers read branch diffs, not archaeology.
+
+**3.3.6 Sequential merges, asynchronous reviews.** Reviews remain post-merge (Phase 0 cadence): the Executor keeps running while Qwen and Z.ai review each merge on master. Gemini may cut the next WP branch as soon as the previous WP is merged — with one brake: a **FAIL verdict** on any WP freezes all further WP merges until the matching fixup branch merges and is re-reviewed.
+
+**3.3.7 Doc-only exception.** Commits touching only `collab/**` (reports, reviews, audits, this spec) may continue to land directly on master with the established prefixes (`report(collab):`, `review(collab):`, `audit(collab):`, `spec(collab):`), each preceded by `git pull --rebase` — the Phase 0 precedent. Every other path requires the branch protocol.
+
 ### 3.4 Split protocol (multi-agent completion)
 
-If Gemini's session must end early, it stops **only at a WP boundary** (all acceptance anchors for that WP met, committed, pushed) and publishes `collab/gemini/PHASE1-WP{n}-REPORT.md` for the completed packages, marking the remaining ones `PENDING`. Any agent that picks up the remaining packages must: re-read this spec + the latest WP report, implement the remaining WPs in order, and publish its own report file(s) under the same naming scheme (`PHASE1-WP{n}-REPORT.md`, author = completing agent). A consolidated `collab/gemini/PHASE1-REPORT.md` (or `PHASE1-COMBINED-REPORT.md` if split) closes the task with all receipts. Executors must never edit another agent's report file (G8).
+If Gemini's session must end early, it stops **only at a WP boundary** (all acceptance anchors for that WP met, committed, pushed) and publishes `collab/gemini/PHASE1-WP{n}-REPORT.md` for the completed packages, marking the remaining ones `PENDING`. Any agent that picks up the remaining packages must: re-read this spec + the latest WP report, implement the remaining WPs in order, and publish its own report file(s) under the same naming scheme (`PHASE1-WP{n}-REPORT.md`, author = completing agent). It cuts **its own** branches per §3.3 for the remaining packages and never continues work on the previous agent's branch. A consolidated `collab/gemini/PHASE1-REPORT.md` (or `PHASE1-COMBINED-REPORT.md` if split) closes the task with all receipts. Executors must never edit another agent's report file (G8).
 
 ### 3.5 WP0 detail — governance sweep (PHASE0-FIXUP-AUDIT residuals)
 
@@ -85,6 +118,7 @@ If Gemini's session must end early, it stops **only at a WP boundary** (all acce
 2. **R2**: in `docker-compose.yaml`, bind the Postgres port to loopback — `"127.0.0.1:5432:5432"` — so the dev database is never LAN-exposed while zero-config startup is preserved (the `.env.example` from PHASE0-FIXUP covers credential overrides).
 3. Do **not** touch `collab/operator/` — recording `PHASE0-ACCEPTANCE.md` (R5) is the Operator's own action.
 
+**Status: CLOSED (2026-10-07, verified by Z.ai @ `4ab6f59`).** The Operator executed WP0 directly on `master` in commit `4ab6f59` (`feat(phase1): WP0 governance sweep`) — owner privilege; a two-file governance patch is doc-scale and needs no branch. Verification: both G7→G8 relabels applied in `collab/STANDARDIZED-AGENT-PROMPTS.md`, the port binding is `127.0.0.1:5432:5432`, `collab/operator/` untouched, commit message follows §3.3's convention. Executors begin at **WP1**.
 
 ## 4. Database Migrations (exact DDL; forward-only, never edit V1/V2 — the F9 in-place exception is closed per PHASE0-FIXUP-AUDIT R3)
 
@@ -304,7 +338,7 @@ docker compose --profile observability up -d   # then open http://localhost:3000
 
 ### 12.1 Session strategy
 
-One long session, WP0 → WP4 strictly in order. Per WP: implement → self-verify against that WP's acceptance anchors + relevant test matrix rows → commit (§3.3 message) → push. Do not start a new WP with uncommitted or failing state. If the session must stop, follow §3.4.
+One long session, **WP1 → WP4 strictly in order** (WP0 is closed by the Operator, §3.5). Per WP, run the §3.3 cycle end-to-end: cut the branch → implement → self-verify against that WP's acceptance anchors + relevant test matrix rows (green on the branch tip) → `--no-ff` merge to master → publish `PHASE1-WP<N>-REPORT.md`. Do not start a new WP with uncommitted, failing, or un-merged state; respect the FAIL-freeze brake (§3.3.6). If the session must stop, follow §3.4.
 
 ### 12.2 Report requirements
 
@@ -314,7 +348,7 @@ One long session, WP0 → WP4 strictly in order. Per WP: implement → self-veri
 
 ### 12.3 Effort estimates (planning only, not a gate)
 
-WP0 ≈ 0.5 h · WP1 ≈ 4–5 h · WP2 ≈ 3–4 h · WP3 ≈ 1.5–2 h · WP4 ≈ 2–3 h · total ≈ **11–14 h**. This is at the upper bound of the lean-sprint ethos; it is accepted because the Operator explicitly expanded Phase 1 scope (observability + seed pipeline). Do not compensate by cutting tests.
+WP0 done (Operator) · WP1 ≈ 4–5 h · WP2 ≈ 3–4 h · WP3 ≈ 1.5–2 h · WP4 ≈ 2–3 h · total ≈ **10.5–13.5 h**. This is at the upper bound of the lean-sprint ethos; it is accepted because the Operator explicitly expanded Phase 1 scope (observability + seed pipeline). Do not compensate by cutting tests.
 
 ## 13. Definition of Done & Operator Acceptance Checklist
 
@@ -348,4 +382,4 @@ Operator checklist (browser + terminal, ~15 min):
 - **OQ-3 — Bulk seed data in git:** default = keep the sample pack tracked; the real 2,500-question JSONL (likely > 2 MB) stays untracked and is loaded from a local path. Confirm.
 - **OQ-4 — Grafana auth:** anonymous Admin for localhost convenience (loopback-bound). Confirm or lock down with a local admin password via `.env`.
 
-*End of `PHASE1-SPEC.md` — Z.ai, 2026-10-07. Executor: proceed per §12 upon Operator directive.*
+*End of `PHASE1-SPEC.md` — Z.ai, 2026-10-07 (rev 2: §3.3 branch & integration protocol; WP0 closed). Executor: proceed per §12 upon Operator directive; start at WP1.*
