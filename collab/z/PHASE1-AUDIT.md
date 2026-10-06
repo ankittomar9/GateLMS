@@ -86,8 +86,13 @@ The implementation fidelity to the binding clauses is high; the following were v
 
 **Operator runtime acceptance (parallel, not fixup-dependent):** the §13 checklist — fresh `docker compose up -d postgres` → 5 migrations applied; seed profile run → `[SEED-RECEIPT] inserted=26`; browser pass over `/syllabus`, `/questions`, reveal-solution flow; `--profile observability` → Grafana trace↔log deep-link. This auditor's sandbox has no Docker CLI (as in Phase 0), so these receipts are the Operator's.
 
-## 7. Cross-Validation
+## 7. Cross-Validation (updated — Qwen review landed at `71f5ddf` mid-push)
 
-Qwen's `collab/qwen/PHASE1-REVIEW.md` was **not yet published** at audit time. Per §3.3.6 (post-merge, asynchronous reviews) this audit is independent of Qwen's; convergence or divergence on F1/F2 will be recorded when Qwen's review lands. Note for Qwen: the executor's raw receipts (§3 of the consolidated report) are accurate — the audit finding is about the *missing integration tier* and the *aggregate-gate framing*, not fabricated numbers.
+Qwen's `collab/qwen/PHASE1-REVIEW.md` arrived while this audit was being pushed. **Verdicts diverge: Qwen APPROVED, Z.ai CONDITIONAL.** The divergence is factual, not stylistic:
+
+- Qwen's review cites no independent G3 receipts (no build/test re-runs) and records its Audited Artifact as the execution report rather than the merged code; its HJ-register acceptance covers the unit-level pairs only.
+- This audit's F1/F2 are objective counts against binding clauses: 4 backend test files vs ≥6 required, 11 backend cases vs ≥25 required, five §11.1 integration rows absent, and the consolidated report's "combined" gate arithmetic vs §11.1's per-pillar wording.
+- Both reviews **agree on the strengths** — Qwen's §2.1–2.4 positives (V3/V4 fidelity, key-safe DTOs, two-pass concealment, MathText, loopback pinning, G9-clean integration) match this audit's §2 compliance matrix line-for-line.
+- Division of labor in action: Qwen verified the report's claims against the code; this audit additionally verified the report's claims against the **spec's gates**. The Operator adjudicates; on the objective evidence above this auditor holds **CONDITIONAL (C1–C3)**. Qwen's "proceed to Phase 2" recommendation is premature until `PHASE1-FIXUP` closes C1.
 
 *Phase 1 is one honest fixup away from closure. The branch protocol (G9) worked exactly as the Operator directed — every work package is bisectable, attributable, and permanently preserved on GitHub.*
