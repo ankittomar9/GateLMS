@@ -2,8 +2,6 @@
 
 A specialized, single-portal Learning Management System tailored to **GATE Computer Science & Information Technology (CSE)**.
 
-Inspired by **takeUforward (TUF)** dark dashboard aesthetics, built for serious 2-year preparation.
-
 ---
 
 ## 🛠️ Tech Stack
