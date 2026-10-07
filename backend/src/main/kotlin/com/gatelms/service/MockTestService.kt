@@ -24,7 +24,9 @@ class MockTestService(
     private val subjectRepository: SubjectRepository,
     private val mockAssemblyService: MockAssemblyService,
     private val gradingService: GradingService,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null
 ) {
 
     @Transactional
@@ -289,6 +291,7 @@ class MockTestService(
         var unattemptedCount = 0
         var maxMarks = 0.0
 
+        val startNano = System.nanoTime()
         for (qidStr in frozenIds) {
             val qid = UUID.fromString(qidStr)
             val question = questionRepository.findById(qid).orElse(null) ?: continue
@@ -321,6 +324,7 @@ class MockTestService(
                 negativeScoreSum += grading.penalty
             }
         }
+        gateLmsMetrics?.recordGradingDuration("mock", java.time.Duration.ofNanos(System.nanoTime() - startNano))
 
         val posScore = BigDecimal.valueOf(positiveScoreSum).setScale(2, RoundingMode.HALF_UP).toDouble()
         val negScore = BigDecimal.valueOf(negativeScoreSum).setScale(2, RoundingMode.HALF_UP).toDouble()
@@ -334,6 +338,8 @@ class MockTestService(
         attempt.finishedReason = finishedReason
 
         mockAttemptRepository.save(attempt)
+
+        gateLmsMetrics?.recordAttemptSubmitted("mock")
 
         return SubmitMockAttemptResponse(
             attemptId = attempt.id,

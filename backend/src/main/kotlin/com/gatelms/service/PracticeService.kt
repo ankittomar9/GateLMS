@@ -20,7 +20,9 @@ class PracticeService(
     private val attemptAnswerRepository: AttemptAnswerRepository,
     private val topicRepository: TopicRepository,
     private val gradingService: GradingService,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null
 ) {
 
     @Transactional
@@ -135,11 +137,13 @@ class PracticeService(
         }
 
         val qId = question.id ?: submission.questionId
+        val startNano = System.nanoTime()
         val grading = gradingService.gradeQuestion(
             question = question,
             selectedOptions = submission.selectedOptions,
             numericAnswer = submission.numericAnswer
         )
+        gateLmsMetrics?.recordGradingDuration("practice", java.time.Duration.ofNanos(System.nanoTime() - startNano))
 
         val ans = attemptAnswerRepository.findByAttemptIdAndQuestionId(attemptId, qId)
             ?: AttemptAnswer(attempt = attempt, question = question)
@@ -243,6 +247,8 @@ class PracticeService(
         attempt.submittedAt = Instant.now()
         attempt.status = MockAttemptStatus.SUBMITTED
         mockAttemptRepository.save(attempt)
+
+        gateLmsMetrics?.recordAttemptSubmitted("practice")
 
         val answers = attemptAnswerRepository.findByAttemptId(attemptId)
 

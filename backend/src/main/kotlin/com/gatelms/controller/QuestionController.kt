@@ -33,8 +33,17 @@ class QuestionController(
         @RequestParam(required = false) source: String?,
         @RequestParam(required = false) difficulty: String?,
         @RequestParam(required = false) q: String?,
+        @RequestParam(required = false, defaultValue = "created_at") sort: String?,
         @PageableDefault(size = 20) pageable: Pageable
     ): Page<QuestionSummaryDto> {
+        val allowedSorts = setOf("created_at", "year", "marks")
+        val normalizedSort = if (sort.isNullOrBlank()) "created_at" else sort.trim().lowercase()
+        if (normalizedSort !in allowedSorts) {
+            throw com.gatelms.error.ValidationException(
+                "Invalid sort parameter",
+                mapOf("sort" to "Must be one of: created_at, year, marks")
+            )
+        }
         return questionService.searchQuestions(
             subjectId = subjectId,
             topicId = topicId,
@@ -47,6 +56,7 @@ class QuestionController(
             source = source,
             difficulty = difficulty,
             q = q,
+            sort = normalizedSort,
             pageable = pageable
         )
     }

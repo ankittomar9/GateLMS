@@ -25,7 +25,9 @@ class QuestionService(
     private val questionRepository: QuestionRepository,
     private val subjectRepository: SubjectRepository,
     private val topicRepository: TopicRepository,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null
 ) {
 
     @Transactional(readOnly = true)
@@ -41,9 +43,16 @@ class QuestionService(
         source: String? = null,
         difficulty: String? = null,
         q: String?,
+        sort: String? = "created_at",
         pageable: Pageable
     ): Page<QuestionSummaryDto> {
         val normalizedQ = if (q.isNullOrBlank()) null else q.trim()
+        val sortColumn = when (sort?.trim()?.lowercase()) {
+            "year" -> "year"
+            "marks" -> "marks"
+            "created_at" -> "created_at"
+            else -> "created_at"
+        }
         val unpagedSortPageable = PageRequest.of(pageable.pageNumber, pageable.pageSize)
         val page = questionRepository.findWithFilters(
             subjectId = subjectId?.ifBlank { null },
@@ -57,6 +66,7 @@ class QuestionService(
             source = source?.ifBlank { null },
             difficulty = difficulty?.ifBlank { null },
             q = normalizedQ,
+            sortColumn = sortColumn,
             pageable = unpagedSortPageable
         )
         return page.map { it.toSummaryDto() }
@@ -190,6 +200,10 @@ class QuestionService(
         question.curationStatus = status
         question.curationNote = dto.note?.trim()
         question.updatedAt = Instant.now()
+
+        if (status == "ACCEPTED" || status == "REJECTED") {
+            gateLmsMetrics?.recordCurationDecision(status.lowercase())
+        }
 
         val saved = questionRepository.saveAndFlush(question)
         return saved.toDto()

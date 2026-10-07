@@ -7,6 +7,14 @@ spring:
     hibernate:
       ddl-auto: validate
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  prometheus:
+    metrics:
+      export:
+        enabled: true
   tracing:
     enabled: false
 app:
