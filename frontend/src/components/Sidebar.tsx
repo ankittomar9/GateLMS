@@ -27,6 +27,7 @@ export const Sidebar: React.FC = () => {
   const isCuration = pathname.startsWith('/curation');
   const isPractice = pathname.startsWith('/practice');
   const isMistakes = pathname.startsWith('/mistakes');
+  const isMocks = pathname.startsWith('/mocks');
 
   // Active item styling: 3px left border on aurora & sky, background tint on tuf & ink
   const getActiveNavClass = (isActive: boolean) => {
@@ -185,11 +186,11 @@ export const Sidebar: React.FC = () => {
             <div className="space-y-0.5">
               <button
                 type="button"
-                onClick={() => navigate('/')}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium text-ds-secondary hover:text-ds-primary hover:bg-ds-surface transition-all"
+                onClick={() => navigate('/mocks')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isMocks)}`}
               >
-                <Clock className="w-4 h-4 text-ds-success" />
-                <span>TCS iON Mocks (Phase 3)</span>
+                <Clock className={`w-4 h-4 ${isMocks ? 'text-ds-accent' : 'text-ds-success'}`} />
+                <span>Mock Tests</span>
               </button>
 
               <button

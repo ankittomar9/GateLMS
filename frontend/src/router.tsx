@@ -9,6 +9,9 @@ import { CurationQueuePage } from './pages/CurationQueuePage';
 import { PracticePage } from './pages/PracticePage';
 import { PracticeRunnerPage } from './pages/PracticeRunnerPage';
 import { MistakeNotebookPage } from './pages/MistakeNotebookPage';
+import { MockTestsPage } from './pages/MockTestsPage';
+import { TestRunnerPage } from './pages/TestRunnerPage';
+import { ResultPage } from './pages/ResultPage';
 
 export const router = createBrowserRouter([
   {
@@ -46,6 +49,18 @@ export const router = createBrowserRouter([
       {
         path: 'mistakes',
         element: <MistakeNotebookPage />,
+      },
+      {
+        path: 'mocks',
+        element: <MockTestsPage />,
+      },
+      {
+        path: 'mocks/attempts/:attemptId',
+        element: <TestRunnerPage />,
+      },
+      {
+        path: 'mocks/attempts/:attemptId/result',
+        element: <ResultPage />,
       },
     ],
   },

@@ -37,5 +37,16 @@ class MockAttempt(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
-    var status: MockAttemptStatus = MockAttemptStatus.IN_PROGRESS
+    var status: MockAttemptStatus = MockAttemptStatus.IN_PROGRESS,
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "question_ids_json")
+    var questionIdsJson: String? = null,
+
+    @Column(name = "duration_seconds")
+    var durationSeconds: Int? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "finished_reason", length = 20)
+    var finishedReason: FinishedReason? = null
 )

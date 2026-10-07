@@ -50,6 +50,11 @@ class GlobalExceptionHandler {
         return problem
     }
 
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException::class)
+    fun handleResponseStatusException(ex: org.springframework.web.server.ResponseStatusException): ProblemDetail {
+        return ProblemDetail.forStatusAndDetail(ex.statusCode, ex.reason ?: "Request error")
+    }
+
     @ExceptionHandler(Exception::class)
     fun handleGenericException(ex: Exception): ProblemDetail {
         logger.error("Unhandled server exception: {}", ex.message, ex)

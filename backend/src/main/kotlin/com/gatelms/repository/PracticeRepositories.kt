@@ -1,8 +1,10 @@
 package com.gatelms.repository
 
 import com.gatelms.entity.AttemptAnswer
+import com.gatelms.entity.ExamMode
 import com.gatelms.entity.MistakeLog
 import com.gatelms.entity.MockAttempt
+import com.gatelms.entity.MockAttemptStatus
 import com.gatelms.entity.MockExam
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -14,10 +16,19 @@ import java.time.Instant
 import java.util.UUID
 
 @Repository
-interface MockExamRepository : JpaRepository<MockExam, UUID>
+interface MockExamRepository : JpaRepository<MockExam, UUID> {
+    fun findByModeOrderByCreatedAtDesc(mode: ExamMode): List<MockExam>
+}
 
 @Repository
-interface MockAttemptRepository : JpaRepository<MockAttempt, UUID>
+interface MockAttemptRepository : JpaRepository<MockAttempt, UUID> {
+    fun findByMockExamIdOrderByStartedAtDesc(mockId: UUID): List<MockAttempt>
+    fun findByStatusOrderBySubmittedAtAsc(status: MockAttemptStatus): List<MockAttempt>
+    fun findByStatusAndStartedAtBefore(status: MockAttemptStatus, threshold: Instant): List<MockAttempt>
+    @Query("SELECT MAX(a.totalScore) FROM MockAttempt a WHERE a.mockExam.id = :mockId AND a.status = 'SUBMITTED'")
+    fun findMaxScoreByMockExamId(@Param("mockId") mockId: UUID): Double?
+    fun countByMockExamIdAndStatus(mockId: UUID, status: MockAttemptStatus): Long
+}
 
 @Repository
 interface AttemptAnswerRepository : JpaRepository<AttemptAnswer, UUID> {

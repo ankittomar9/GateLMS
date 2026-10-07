@@ -80,4 +80,28 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
 
     @Query("SELECT q.subject.slug, q.subject.name, q.type, coalesce(q.difficulty, 'UNSPECIFIED'), count(q) FROM Question q WHERE q.subject IS NOT NULL GROUP BY q.subject.slug, q.subject.name, q.type, q.difficulty ORDER BY q.subject.name, q.type")
     fun countDistribution(): List<Array<Any>>
+
+    @Query(
+        value = """
+            SELECT q.* FROM questions q
+            WHERE q.subject_id = :subjectId
+              AND q.type = :type
+              AND (:marks IS NULL OR q.marks = :marks)
+              AND (CAST(:filterCuration AS boolean) = FALSE OR q.curation_status IN (:curationStatuses))
+              AND (CAST(:filterDifficulty AS boolean) = FALSE OR q.difficulty IN (:difficulties))
+            ORDER BY RANDOM()
+            LIMIT :limit
+        """,
+        nativeQuery = true
+    )
+    fun findCandidatesForAssembly(
+        @Param("subjectId") subjectId: String,
+        @Param("type") type: String,
+        @Param("marks") marks: Int?,
+        @Param("filterCuration") filterCuration: Boolean,
+        @Param("curationStatuses") curationStatuses: List<String>,
+        @Param("filterDifficulty") filterDifficulty: Boolean,
+        @Param("difficulties") difficulties: List<String>,
+        @Param("limit") limit: Int
+    ): List<Question>
 }

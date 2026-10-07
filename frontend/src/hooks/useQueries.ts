@@ -23,6 +23,16 @@ import {
   MistakeReviewRequest,
   MistakeDto,
   TopicMasteryStatsDto,
+  CreateMockTemplateRequest,
+  MockTemplateSummaryDto,
+  StartMockAttemptResponse,
+  UpsertAnswerRequest,
+  UpsertAnswerResponse,
+  SubmitMockAttemptRequest,
+  SubmitMockAttemptResponse,
+  MockResultResponse,
+  MockAttemptHistoryDto,
+  MockTrendDto,
 } from '../api/types';
 
 export function useSubjects() {
@@ -248,6 +258,85 @@ export function useTopicMasteryStats() {
   return useQuery({
     queryKey: ['mastery-stats'],
     queryFn: () => apiClient.get<TopicMasteryStatsDto[]>('/stats/mastery'),
+  });
+}
+
+export function useMockTemplates() {
+  return useQuery({
+    queryKey: ['mock-templates'],
+    queryFn: () => apiClient.get<MockTemplateSummaryDto[]>('/mocks'),
+  });
+}
+
+export function useMockTemplate(id: string) {
+  return useQuery({
+    queryKey: ['mock-template', id],
+    queryFn: () => apiClient.get<MockTemplateSummaryDto>(`/mocks/${id}`),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCreateMockTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateMockTemplateRequest) =>
+      apiClient.post<MockTemplateSummaryDto>('/mocks', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mock-templates'] });
+    },
+  });
+}
+
+export function useStartMockAttempt(mockId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post<StartMockAttemptResponse>(`/mocks/${mockId}/attempts`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mock-attempts', mockId] });
+    },
+  });
+}
+
+export function useUpsertAttemptAnswer(attemptId: string) {
+  return useMutation({
+    mutationFn: ({ questionId, data }: { questionId: string; data: UpsertAnswerRequest }) =>
+      apiClient.patch<UpsertAnswerResponse>(`/attempts/${attemptId}/answers/${questionId}`, data),
+  });
+}
+
+export function useSubmitMockAttempt(attemptId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data?: SubmitMockAttemptRequest) =>
+      apiClient.post<SubmitMockAttemptResponse>(`/attempts/${attemptId}/submit`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mock-result', attemptId] });
+      queryClient.invalidateQueries({ queryKey: ['mock-trend'] });
+    },
+  });
+}
+
+export function useMockResult(attemptId: string) {
+  return useQuery({
+    queryKey: ['mock-result', attemptId],
+    queryFn: () => apiClient.get<MockResultResponse>(`/attempts/${attemptId}/result`),
+    enabled: Boolean(attemptId),
+  });
+}
+
+export function useMockAttemptHistory(mockId: string) {
+  return useQuery({
+    queryKey: ['mock-attempts', mockId],
+    queryFn: () => apiClient.get<MockAttemptHistoryDto[]>(`/mocks/${mockId}/attempts`),
+    enabled: Boolean(mockId),
+  });
+}
+
+export function useMockTrend() {
+  return useQuery({
+    queryKey: ['mock-trend'],
+    queryFn: () => apiClient.get<MockTrendDto[]>('/stats/mock-trend'),
   });
 }
 

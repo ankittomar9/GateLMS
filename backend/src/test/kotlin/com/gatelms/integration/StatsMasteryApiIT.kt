@@ -48,7 +48,7 @@ class StatsMasteryApiIT : BaseIntegrationTest() {
 
     @Test
     fun `getMasteryStats reflects overdue mistakes in dueReviewsCount`() {
-        val question = questionRepository.findAll().first()
+        val question = questionRepository.findAll().first { it.topic != null }
         val topicId = question.topic!!.id
 
         // Create a mistake for this question
