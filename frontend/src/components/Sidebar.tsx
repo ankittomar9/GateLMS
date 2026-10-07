@@ -14,7 +14,8 @@ import {
   PenLine,
   Activity,
   NotebookPen,
-  RotateCcw
+  RotateCcw,
+  FileClock
 } from 'lucide-react';
 import { useDesign } from '../context/DesignContext';
 
@@ -26,6 +27,7 @@ export const Sidebar: React.FC = () => {
 
   const pathname = location.pathname;
   const isDashboard = pathname === '/';
+  const isPyp = pathname.startsWith('/pyp');
   const isInsights = pathname.startsWith('/insights');
   const isRevision = pathname.startsWith('/revision');
   const isNotes = pathname.startsWith('/notes');
@@ -226,6 +228,15 @@ export const Sidebar: React.FC = () => {
               >
                 <Clock className={`w-4 h-4 ${isMocks ? 'text-ds-accent' : 'text-ds-success'}`} />
                 <span>Mock Tests</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/pyp')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isPyp)}`}
+              >
+                <FileClock className={`w-4 h-4 ${isPyp ? 'text-ds-accent' : 'text-ds-warning'}`} />
+                <span>PYP Papers</span>
               </button>
 
               <button

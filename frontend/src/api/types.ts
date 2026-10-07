@@ -155,6 +155,7 @@ export interface PracticeSessionCreateRequest {
   marks?: number;
   curationStatus?: string;
   count?: number;
+  year?: number;
 }
 
 export interface PracticeQuestionDto {
@@ -285,6 +286,7 @@ export interface MockTemplateSummaryDto {
   sections: BlueprintSection[];
   bestScore?: number | null;
   attemptCount: number;
+  shortfallWarnings?: string[];
 }
 
 export interface MockAttemptSectionDto {
@@ -437,4 +439,21 @@ export interface QuestionValidationResultDto {
   fieldErrors: Record<string, string>;
   warnings: string[];
 }
+
+export interface PypYearStatsDto {
+  year: number;
+  total: number;
+  bySubject: Record<string, number>;
+}
+
+export interface PypCoverageDto {
+  fullPaperYears: number[];
+  partialYears: number[];
+}
+
+export interface PypStatsResponse {
+  years: PypYearStatsDto[];
+  coverage: PypCoverageDto;
+}
+
 

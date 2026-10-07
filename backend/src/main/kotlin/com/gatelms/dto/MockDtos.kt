@@ -13,11 +13,15 @@ data class BlueprintSection(
 
 data class BlueprintQuestionPool(
     val curationStatus: List<String>? = listOf("ACCEPTED", "UNREVIEWED"),
-    val difficulty: List<String>? = null
+    val difficulty: List<String>? = null,
+    val year: Int? = null,
+    val source: String? = null
 )
 
 data class MockBlueprint(
     val title: String? = null,
+    val year: Int? = null,
+    val source: String? = null,
     val sections: List<BlueprintSection> = emptyList(),
     val questionPool: BlueprintQuestionPool? = null,
     val shuffle: Boolean = true
@@ -42,7 +46,8 @@ data class MockTemplateSummaryDto(
     val createdAt: Instant,
     val sections: List<BlueprintSection>,
     val bestScore: Double? = null,
-    val attemptCount: Int = 0
+    val attemptCount: Int = 0,
+    val shortfallWarnings: List<String> = emptyList()
 )
 
 data class MockAttemptSectionDto(

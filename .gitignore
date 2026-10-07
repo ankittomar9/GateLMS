@@ -39,4 +39,9 @@ uploads/notes/*.pdf
 uploads/temp/
 seed-data/so-raw/
 backend/seed-data/so-raw/
+seed-data/pyp-raw/
+backend/seed-data/pyp-raw/
+seed-data/pyp-src/
+backend/seed-data/pyp-src/
 docker-data/notes/
+

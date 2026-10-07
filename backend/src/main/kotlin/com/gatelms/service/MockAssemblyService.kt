@@ -45,6 +45,9 @@ class MockAssemblyService(
         val filterDifficulty = !blueprint.questionPool?.difficulty.isNullOrEmpty()
         val difficulties = blueprint.questionPool?.difficulty ?: emptyList()
 
+        val targetYear = blueprint.year ?: blueprint.questionPool?.year
+        val targetSource = blueprint.source ?: blueprint.questionPool?.source
+
         for (section in blueprint.sections) {
             val subject = subjectRepository.findById(section.subjectId).orElseThrow {
                 ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid subjectId in blueprint section: ${section.subjectId}")
@@ -59,6 +62,8 @@ class MockAssemblyService(
                     type = "MCQ",
                     requestedCount = section.mcq,
                     marks = section.marks,
+                    year = targetYear,
+                    source = targetSource,
                     filterCuration = filterCuration,
                     curationStatuses = curationStatuses,
                     filterDifficulty = filterDifficulty,
@@ -79,6 +84,8 @@ class MockAssemblyService(
                     type = "MSQ",
                     requestedCount = section.msq,
                     marks = section.marks,
+                    year = targetYear,
+                    source = targetSource,
                     filterCuration = filterCuration,
                     curationStatuses = curationStatuses,
                     filterDifficulty = filterDifficulty,
@@ -99,6 +106,8 @@ class MockAssemblyService(
                     type = "NAT",
                     requestedCount = section.nat,
                     marks = section.marks,
+                    year = targetYear,
+                    source = targetSource,
                     filterCuration = filterCuration,
                     curationStatuses = curationStatuses,
                     filterDifficulty = filterDifficulty,
@@ -114,6 +123,8 @@ class MockAssemblyService(
 
             if (blueprint.shuffle) {
                 sectionQuestions.shuffle()
+            } else {
+                sectionQuestions.sortBy { it.marks }
             }
 
             sectionsDtoList.add(
@@ -138,6 +149,8 @@ class MockAssemblyService(
         type: String,
         requestedCount: Int,
         marks: Int?,
+        year: Int?,
+        source: String?,
         filterCuration: Boolean,
         curationStatuses: List<String>,
         filterDifficulty: Boolean,
@@ -152,6 +165,8 @@ class MockAssemblyService(
                 subjectId = subjectId,
                 type = type,
                 marks = marks,
+                year = year,
+                source = source,
                 filterCuration = filterCuration,
                 curationStatuses = if (filterCuration) curationStatuses else listOf("DUMMY"),
                 filterDifficulty = filterDifficulty,
@@ -171,6 +186,8 @@ class MockAssemblyService(
                 subjectId = subjectId,
                 type = type,
                 marks = null,
+                year = year,
+                source = source,
                 filterCuration = filterCuration,
                 curationStatuses = if (filterCuration) curationStatuses else listOf("DUMMY"),
                 filterDifficulty = filterDifficulty,

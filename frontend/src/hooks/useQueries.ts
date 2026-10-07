@@ -36,6 +36,7 @@ import {
   QuestionUpsertDto,
   QuestionValidationResultDto,
 } from '../api/types';
+import { pypApi } from '../api/pypApi';
 
 export function useSubjects() {
   return useQuery({
@@ -420,4 +421,22 @@ export function useUpdateQuestion() {
     },
   });
 }
+
+export function usePypStats() {
+  return useQuery({
+    queryKey: ['pyp-stats'],
+    queryFn: () => pypApi.getPypStats(),
+  });
+}
+
+export function useGeneratePypMock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (year: number) => pypApi.generatePypMock(year),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mock-templates'] });
+    },
+  });
+}
+
 

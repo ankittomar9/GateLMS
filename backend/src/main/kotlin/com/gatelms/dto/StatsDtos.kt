@@ -52,3 +52,20 @@ data class DistributionStatsDto(
     val total: Long,
     val distribution: List<DistributionItemDto>
 )
+
+data class PypYearStatsDto(
+    val year: Int,
+    val total: Long,
+    val bySubject: Map<String, Long>
+)
+
+data class PypCoverageDto(
+    val fullPaperYears: List<Int>,
+    val partialYears: List<Int>
+)
+
+data class PypStatsResponse(
+    val years: List<PypYearStatsDto>,
+    val coverage: PypCoverageDto
+)
+

@@ -270,6 +270,38 @@ export const QuestionsPage: React.FC = () => {
             <span>Reset</span>
           </button>
         </div>
+
+        {/* Year Quick-Filter Row */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-ds-border text-xs font-mono" data-testid="year-quick-filters">
+          <span className="text-ds-muted text-[11px] font-sans mr-1 shrink-0">Year:</span>
+          <button
+            type="button"
+            data-testid="year-filter-all"
+            onClick={() => handleFilterChange('year', undefined)}
+            className={`px-2.5 py-1 rounded-ds text-xs transition-colors shrink-0 ${
+              !yearParam
+                ? 'bg-ds-accent text-ds-accent-contrast font-medium'
+                : 'bg-ds-surface-input border border-ds-border text-ds-secondary hover:text-ds-primary'
+            }`}
+          >
+            All
+          </button>
+          {[2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015].map((yr) => (
+            <button
+              key={yr}
+              type="button"
+              data-testid={`year-filter-${yr}`}
+              onClick={() => handleFilterChange('year', String(yr))}
+              className={`px-2.5 py-1 rounded-ds text-xs transition-colors shrink-0 ${
+                yearParam === yr
+                  ? 'bg-ds-accent text-ds-accent-contrast font-medium'
+                  : 'bg-ds-surface-input border border-ds-border text-ds-secondary hover:text-ds-primary'
+              }`}
+            >
+              {yr}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Error Banner */}
@@ -318,6 +350,14 @@ export const QuestionsPage: React.FC = () => {
                   <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${getTypeBadge(q.type)}`}>
                     {q.type}
                   </span>
+                  {(q.source === 'GATE_PYP' || q.externalId?.startsWith('PYP-')) && (
+                    <span
+                      data-testid="pyp-badge"
+                      className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold border text-ds-accent bg-ds-accent-soft border-ds-accent/30"
+                    >
+                      PYP {q.year}
+                    </span>
+                  )}
                   <span className="text-ds-muted font-mono text-[11px]">
                     {q.marks} {q.marks === 1 ? 'Mark' : 'Marks'}
                   </span>

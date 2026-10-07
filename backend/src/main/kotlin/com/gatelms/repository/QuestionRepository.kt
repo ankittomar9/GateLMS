@@ -90,9 +90,11 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
             WHERE q.subject_id = :subjectId
               AND q.type = :type
               AND (:marks IS NULL OR q.marks = :marks)
+              AND (:year IS NULL OR q.year = :year)
+              AND (:source IS NULL OR q.source = :source)
               AND (CAST(:filterCuration AS boolean) = FALSE OR q.curation_status IN (:curationStatuses))
               AND (CAST(:filterDifficulty AS boolean) = FALSE OR q.difficulty IN (:difficulties))
-            ORDER BY RANDOM()
+            ORDER BY CASE WHEN :year IS NOT NULL THEN q.marks ELSE RANDOM() END ASC, q.id ASC
             LIMIT :limit
         """,
         nativeQuery = true
@@ -101,12 +103,28 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
         @Param("subjectId") subjectId: String,
         @Param("type") type: String,
         @Param("marks") marks: Int?,
+        @Param("year") year: Int? = null,
+        @Param("source") source: String? = null,
         @Param("filterCuration") filterCuration: Boolean,
         @Param("curationStatuses") curationStatuses: List<String>,
         @Param("filterDifficulty") filterDifficulty: Boolean,
         @Param("difficulties") difficulties: List<String>,
         @Param("limit") limit: Int
     ): List<Question>
+
+    @Query("""
+        SELECT q.year, q.subject.slug, count(q)
+        FROM Question q
+        WHERE q.source = 'GATE_PYP' AND q.year IS NOT NULL AND q.subject IS NOT NULL
+        GROUP BY q.year, q.subject.slug
+        ORDER BY q.year DESC
+    """)
+    fun countPypGroupedByYearAndSubject(): List<Array<Any>>
+
+    @Query("SELECT q FROM Question q WHERE q.year = :year AND q.source = 'GATE_PYP' ORDER BY q.marks ASC, q.externalId ASC")
+    fun findPypByYear(@Param("year") year: Int): List<Question>
+
+    fun findByYear(year: Int): List<Question>
 
     @Query("""
         SELECT COUNT(q) FROM Question q

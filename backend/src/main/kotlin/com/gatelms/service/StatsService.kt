@@ -106,4 +106,53 @@ class StatsService(
             distribution = items
         )
     }
+
+    fun getPypStats(): PypStatsResponse {
+        val rows = questionRepository.countPypGroupedByYearAndSubject()
+        val groupedByYear = rows.groupBy { it[0] as Int }
+
+        val yearsList = mutableListOf<PypYearStatsDto>()
+        val fullPaperYears = mutableListOf<Int>()
+        val partialYears = mutableListOf<Int>()
+
+        for ((year, yearRows) in groupedByYear) {
+            val bySubject = mutableMapOf<String, Long>()
+            var total = 0L
+            for (r in yearRows) {
+                val slug = r[1] as String
+                val cnt = r[2] as Long
+                bySubject[slug] = cnt
+                total += cnt
+            }
+
+            val gaCount = bySubject["general-aptitude"] ?: 0L
+            val coreCount = total - gaCount
+
+            if (total == 65L && gaCount == 10L && coreCount == 55L) {
+                fullPaperYears.add(year)
+            } else {
+                partialYears.add(year)
+            }
+
+            yearsList.add(
+                PypYearStatsDto(
+                    year = year,
+                    total = total,
+                    bySubject = bySubject
+                )
+            )
+        }
+
+        yearsList.sortByDescending { it.year }
+        fullPaperYears.sortDescending()
+        partialYears.sortDescending()
+
+        return PypStatsResponse(
+            years = yearsList,
+            coverage = PypCoverageDto(
+                fullPaperYears = fullPaperYears,
+                partialYears = partialYears
+            )
+        )
+    }
 }

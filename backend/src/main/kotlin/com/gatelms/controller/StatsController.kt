@@ -60,4 +60,9 @@ class StatsController(
     fun getTrends(@RequestParam(defaultValue = "90") days: Int): TrendsResponse {
         return rollupService.getTrends(days)
     }
+
+    @GetMapping("/pyp")
+    fun getPypStats(): PypStatsResponse {
+        return statsService.getPypStats()
+    }
 }

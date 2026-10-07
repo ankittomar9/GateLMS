@@ -12,6 +12,7 @@ import {
 import { useDesign } from '../../context/DesignContext';
 import { CurationProgressTile } from './CurationProgressTile';
 import { ReadinessSummaryCard } from './ReadinessSummaryCard';
+import { PypDashboardTile } from './PypDashboardTile';
 
 export const BentoDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -349,8 +350,11 @@ export const BentoDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 6. Curation Progress Tile */}
-      <CurationProgressTile />
+      {/* 6. Curation Progress & PYP Paper Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CurationProgressTile />
+        <PypDashboardTile />
+      </div>
     </div>
   );
 };
