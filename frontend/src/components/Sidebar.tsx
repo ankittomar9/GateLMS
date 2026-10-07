@@ -10,7 +10,8 @@ import {
   ChevronRight, 
   AlertCircle,
   GraduationCap,
-  ClipboardCheck
+  ClipboardCheck,
+  PenLine
 } from 'lucide-react';
 import { useDesign } from '../context/DesignContext';
 
@@ -25,6 +26,7 @@ export const Sidebar: React.FC = () => {
   const isSyllabus = pathname.startsWith('/syllabus');
   const isQuestions = pathname.startsWith('/questions');
   const isCuration = pathname.startsWith('/curation');
+  const isAuthor = pathname.startsWith('/author');
   const isPractice = pathname.startsWith('/practice');
   const isMistakes = pathname.startsWith('/mistakes');
   const isMocks = pathname.startsWith('/mocks');
@@ -103,6 +105,15 @@ export const Sidebar: React.FC = () => {
               >
                 <ClipboardCheck className={`w-4 h-4 ${isCuration ? 'text-ds-accent' : 'text-ds-muted'}`} />
                 <span>Curation Queue</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/author')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isAuthor)}`}
+              >
+                <PenLine className={`w-4 h-4 ${isAuthor ? 'text-ds-accent' : 'text-ds-muted'}`} />
+                <span>Author Question</span>
               </button>
 
               {/* Practice Clusters */}

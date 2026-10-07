@@ -34,6 +34,7 @@ class QuestionServiceTest {
     @BeforeEach
     fun setUp() {
         clearAllMocks()
+        every { questionRepository.findByExternalId(any()) } returns null
         questionService = QuestionService(
             questionRepository = questionRepository,
             subjectRepository = subjectRepository,

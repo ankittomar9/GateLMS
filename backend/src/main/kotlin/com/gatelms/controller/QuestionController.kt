@@ -56,6 +56,11 @@ class QuestionController(
         return questionService.getQuestionById(id)
     }
 
+    @PostMapping("/validate")
+    fun validateQuestion(@RequestBody dto: QuestionUpsertDto): com.gatelms.dto.QuestionValidationResultDto {
+        return questionService.validateUpsert(dto)
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createQuestion(@Valid @RequestBody dto: QuestionUpsertDto): QuestionDto {

@@ -93,3 +93,9 @@ data class CurationUpdateRequest(
     val status: String? = null,
     val note: String? = null
 )
+
+data class QuestionValidationResultDto(
+    val valid: Boolean,
+    val fieldErrors: Map<String, String> = emptyMap(),
+    val warnings: List<String> = emptyList()
+)

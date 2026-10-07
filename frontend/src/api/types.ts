@@ -411,3 +411,30 @@ export interface MockTrendDto {
   percentileLike?: number | null;
 }
 
+export interface QuestionUpsertDto {
+  externalId?: string;
+  subjectId: string;
+  topicId: string;
+  year?: number;
+  type: QuestionType;
+  marks: number;
+  statement: string;
+  optionsJson?: string;
+  correctOptions?: string;
+  numericMin?: number;
+  numericMax?: number;
+  explanation?: string;
+  gateOverflowUrl?: string;
+  source?: string;
+  curationStatus?: string;
+  curationNote?: string;
+  difficulty?: string;
+  version?: number;
+}
+
+export interface QuestionValidationResultDto {
+  valid: boolean;
+  fieldErrors: Record<string, string>;
+  warnings: string[];
+}
+
