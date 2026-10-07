@@ -12,6 +12,12 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.*
 import java.time.LocalDate
 
+private fun <T> anyNonNull(): T {
+    org.mockito.ArgumentMatchers.any<T>()
+    @Suppress("UNCHECKED_CAST")
+    return null as T
+}
+
 class PlanGenerationTest {
 
     private lateinit var studyPlanRepository: StudyPlanRepository
@@ -20,6 +26,8 @@ class PlanGenerationTest {
     private lateinit var topicRepository: TopicRepository
     private lateinit var questionRepository: QuestionRepository
     private lateinit var attemptAnswerRepository: AttemptAnswerRepository
+    private lateinit var topicMasteryRepository: TopicMasteryRepository
+    private lateinit var currentUserProvider: com.gatelms.security.CurrentUserProvider
     private lateinit var readinessService: ReadinessService
     private val objectMapper = ObjectMapper()
 
@@ -29,10 +37,10 @@ class PlanGenerationTest {
     private val subjectOs = Subject(id = "CS-OS", name = "Operating Systems", slug = "cs-os", cluster = "CS", avgWeightage = 8.0)
     private val subjectTOC = Subject(id = "CS-TOC", name = "Theory of Computation", slug = "cs-toc", cluster = "CS", avgWeightage = 6.0)
 
-    private val topicAlgo1 = Topic(id = "top-algo-1", subject = subjectAlgo, name = "Sorting", masteryLevel = 3)
-    private val topicAlgo2 = Topic(id = "top-algo-2", subject = subjectAlgo, name = "Dynamic Programming", masteryLevel = 1)
-    private val topicOs1 = Topic(id = "top-os-1", subject = subjectOs, name = "Scheduling", masteryLevel = 2)
-    private val topicTOC1 = Topic(id = "top-toc-1", subject = subjectTOC, name = "Regular Languages", masteryLevel = 4)
+    private val topicAlgo1 = Topic(id = "top-algo-1", subject = subjectAlgo, name = "Sorting")
+    private val topicAlgo2 = Topic(id = "top-algo-2", subject = subjectAlgo, name = "Dynamic Programming")
+    private val topicOs1 = Topic(id = "top-os-1", subject = subjectOs, name = "Scheduling")
+    private val topicTOC1 = Topic(id = "top-toc-1", subject = subjectTOC, name = "Regular Languages")
 
     @BeforeEach
     fun setup() {
@@ -42,10 +50,14 @@ class PlanGenerationTest {
         topicRepository = mock(TopicRepository::class.java)
         questionRepository = mock(QuestionRepository::class.java)
         attemptAnswerRepository = mock(AttemptAnswerRepository::class.java)
+        topicMasteryRepository = mock(TopicMasteryRepository::class.java)
+        currentUserProvider = mock(com.gatelms.security.CurrentUserProvider::class.java)
         readinessService = mock(ReadinessService::class.java)
 
-        `when`(studyPlanRepository.save(any())).thenAnswer { it.arguments[0] }
-        `when`(planItemRepository.saveAll(any<List<PlanItem>>())).thenAnswer { it.arguments[0] }
+        `when`(currentUserProvider.getCurrentUserId()).thenReturn(java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"))
+        `when`(topicMasteryRepository.findByUserId(anyNonNull())).thenReturn(emptyList())
+        `when`(studyPlanRepository.save(anyNonNull())).thenAnswer { it.arguments[0] }
+        `when`(planItemRepository.saveAll(anyNonNull<List<PlanItem>>())).thenAnswer { it.arguments[0] }
 
         planService = PlanService(
             studyPlanRepository = studyPlanRepository,
@@ -54,7 +66,9 @@ class PlanGenerationTest {
             topicRepository = topicRepository,
             questionRepository = questionRepository,
             attemptAnswerRepository = attemptAnswerRepository,
+            topicMasteryRepository = topicMasteryRepository,
             readinessService = readinessService,
+            currentUserProvider = currentUserProvider,
             objectMapper = objectMapper
         )
     }
@@ -99,7 +113,7 @@ class PlanGenerationTest {
             arrayOf("top-toc-1", 10L)
         )
         `when`(questionRepository.countQuestionsGroupedByTopic()).thenReturn(counts)
-        `when`(attemptAnswerRepository.count()).thenReturn(25L)
+        `when`(attemptAnswerRepository.countDistinctQuestionId(anyNonNull())).thenReturn(25L)
 
         val readinessResp = com.gatelms.dto.ReadinessResponse(
             readiness = 46,
@@ -131,7 +145,7 @@ class PlanGenerationTest {
     fun `3 fresh-system degenerates to weightage_only + reasoning recorded`() {
         `when`(subjectRepository.findAll()).thenReturn(listOf(subjectAlgo, subjectOs))
         `when`(topicRepository.findAll()).thenReturn(listOf(topicAlgo1, topicOs1))
-        `when`(attemptAnswerRepository.count()).thenReturn(0L)
+        `when`(attemptAnswerRepository.countDistinctQuestionId(anyNonNull())).thenReturn(0L)
         val counts: List<Array<Any>> = listOf(
             arrayOf("top-algo-1", 5L),
             arrayOf("top-os-1", 5L)
@@ -164,7 +178,7 @@ class PlanGenerationTest {
         `when`(subjectRepository.findAll()).thenReturn(listOf(subjectAlgo))
         // topicAlgo1 has questions, topicAlgo2 has ZERO questions in bank
         `when`(topicRepository.findAll()).thenReturn(listOf(topicAlgo1, topicAlgo2))
-        `when`(attemptAnswerRepository.count()).thenReturn(5L)
+        `when`(attemptAnswerRepository.countDistinctQuestionId(anyNonNull())).thenReturn(5L)
         val counts: List<Array<Any>> = listOf(
             arrayOf("top-algo-1", 10L)
             // top-algo-2 omitted => 0 questions
@@ -198,7 +212,7 @@ class PlanGenerationTest {
     fun `5 deterministic — two calls, same output`() {
         `when`(subjectRepository.findAll()).thenReturn(listOf(subjectAlgo, subjectOs))
         `when`(topicRepository.findAll()).thenReturn(listOf(topicAlgo1, topicOs1))
-        `when`(attemptAnswerRepository.count()).thenReturn(10L)
+        `when`(attemptAnswerRepository.countDistinctQuestionId(anyNonNull())).thenReturn(10L)
         val counts: List<Array<Any>> = listOf(
             arrayOf("top-algo-1", 15L),
             arrayOf("top-os-1", 15L)

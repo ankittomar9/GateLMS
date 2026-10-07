@@ -16,13 +16,14 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
     @Query(
         value = """
             SELECT q.* FROM questions q
+            LEFT JOIN question_progress qp ON qp.question_id = q.id AND qp.user_id = :userId
             WHERE (:subjectId IS NULL OR q.subject_id = :subjectId)
               AND (:topicId IS NULL OR q.topic_id = :topicId)
               AND (:type IS NULL OR q.type = :type)
               AND (:year IS NULL OR q.year = :year)
-              AND (:pass1Status IS NULL OR q.pass1_status = :pass1Status)
-              AND (:pass2Status IS NULL OR q.pass2_status = :pass2Status)
-              AND (:bookmarked IS NULL OR q.is_bookmarked = :bookmarked)
+              AND (:pass1Status IS NULL OR COALESCE(qp.pass1_status, 'PENDING') = :pass1Status)
+              AND (:pass2Status IS NULL OR COALESCE(qp.pass2_status, 'PENDING') = :pass2Status)
+              AND (:bookmarked IS NULL OR COALESCE(qp.is_bookmarked, FALSE) = :bookmarked)
               AND (:curationStatus IS NULL OR q.curation_status = :curationStatus)
               AND (:source IS NULL OR q.source = :source)
               AND (:difficulty IS NULL OR q.difficulty = :difficulty)
@@ -36,13 +37,14 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
         """,
         countQuery = """
             SELECT count(*) FROM questions q
+            LEFT JOIN question_progress qp ON qp.question_id = q.id AND qp.user_id = :userId
             WHERE (:subjectId IS NULL OR q.subject_id = :subjectId)
               AND (:topicId IS NULL OR q.topic_id = :topicId)
               AND (:type IS NULL OR q.type = :type)
               AND (:year IS NULL OR q.year = :year)
-              AND (:pass1Status IS NULL OR q.pass1_status = :pass1Status)
-              AND (:pass2Status IS NULL OR q.pass2_status = :pass2Status)
-              AND (:bookmarked IS NULL OR q.is_bookmarked = :bookmarked)
+              AND (:pass1Status IS NULL OR COALESCE(qp.pass1_status, 'PENDING') = :pass1Status)
+              AND (:pass2Status IS NULL OR COALESCE(qp.pass2_status, 'PENDING') = :pass2Status)
+              AND (:bookmarked IS NULL OR COALESCE(qp.is_bookmarked, FALSE) = :bookmarked)
               AND (:curationStatus IS NULL OR q.curation_status = :curationStatus)
               AND (:source IS NULL OR q.source = :source)
               AND (:difficulty IS NULL OR q.difficulty = :difficulty)
@@ -51,6 +53,7 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
         nativeQuery = true
     )
     fun findWithFilters(
+        @Param("userId") userId: UUID,
         @Param("subjectId") subjectId: String?,
         @Param("topicId") topicId: String?,
         @Param("type") type: String?,
@@ -72,8 +75,13 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
     @Query("SELECT q.type, count(q) FROM Question q GROUP BY q.type")
     fun countGroupedByType(): List<Array<Any>>
 
-    @Query("SELECT q.pass1Status, count(q) FROM Question q GROUP BY q.pass1Status")
-    fun countGroupedByPass1Status(): List<Array<Any>>
+    @Query("""
+        SELECT COALESCE(qp.pass1Status, com.gatelms.entity.Pass1Status.PENDING), count(q)
+        FROM Question q
+        LEFT JOIN QuestionProgress qp ON qp.id.questionId = q.id AND qp.id.userId = :userId
+        GROUP BY COALESCE(qp.pass1Status, com.gatelms.entity.Pass1Status.PENDING)
+    """)
+    fun countGroupedByPass1Status(@Param("userId") userId: UUID): List<Array<Any>>
 
     @Query("SELECT q.curationStatus, count(q) FROM Question q GROUP BY q.curationStatus")
     fun countGroupedByCurationStatus(): List<Array<Any>>
@@ -131,36 +139,45 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
 
     @Query("""
         SELECT COUNT(q) FROM Question q
-        WHERE q.pass1Status IN (com.gatelms.entity.Pass1Status.FAILED, com.gatelms.entity.Pass1Status.ASSISTED)
-          AND q.pass2Status = com.gatelms.entity.Pass2Status.PENDING
+        JOIN QuestionProgress qp ON qp.id.questionId = q.id AND qp.id.userId = :userId
+        WHERE qp.pass1Status IN (com.gatelms.entity.Pass1Status.FAILED, com.gatelms.entity.Pass1Status.ASSISTED)
+          AND qp.pass2Status = com.gatelms.entity.Pass2Status.PENDING
     """)
-    fun countPass2Pending(): Long
+    fun countPass2Pending(@Param("userId") userId: UUID): Long
 
     @Query("""
         SELECT q FROM Question q
-        WHERE q.pass1Status IN (com.gatelms.entity.Pass1Status.FAILED, com.gatelms.entity.Pass1Status.ASSISTED)
-          AND q.pass2Status = com.gatelms.entity.Pass2Status.PENDING
+        JOIN QuestionProgress qp ON qp.id.questionId = q.id AND qp.id.userId = :userId
+        WHERE qp.pass1Status IN (com.gatelms.entity.Pass1Status.FAILED, com.gatelms.entity.Pass1Status.ASSISTED)
+          AND qp.pass2Status = com.gatelms.entity.Pass2Status.PENDING
           AND (:subjectId IS NULL OR q.subject.id = :subjectId)
           AND (:topicId IS NULL OR q.topic.id = :topicId)
-        ORDER BY q.updatedAt DESC NULLS LAST, q.id ASC
+        ORDER BY qp.lastAttemptedAt DESC NULLS LAST, q.id ASC
     """)
     fun findPass2Candidates(
+        @Param("userId") userId: UUID,
         @Param("subjectId") subjectId: String?,
         @Param("topicId") topicId: String?,
         pageable: Pageable
     ): List<Question>
 
-    @Query("SELECT COUNT(q) FROM Question q WHERE q.isBookmarked = TRUE")
-    fun countBookmarked(): Long
+    @Query("""
+        SELECT COUNT(q) FROM Question q
+        JOIN QuestionProgress qp ON qp.id.questionId = q.id AND qp.id.userId = :userId
+        WHERE qp.isBookmarked = TRUE
+    """)
+    fun countBookmarked(@Param("userId") userId: UUID): Long
 
     @Query("""
         SELECT q FROM Question q
-        WHERE q.isBookmarked = TRUE
+        JOIN QuestionProgress qp ON qp.id.questionId = q.id AND qp.id.userId = :userId
+        WHERE qp.isBookmarked = TRUE
           AND (:subjectId IS NULL OR q.subject.id = :subjectId)
           AND (:topicId IS NULL OR q.topic.id = :topicId)
-        ORDER BY q.bookmarkedAt DESC NULLS LAST, q.id ASC
+        ORDER BY qp.bookmarkedAt DESC NULLS LAST, q.id ASC
     """)
     fun findBookmarkedCandidates(
+        @Param("userId") userId: UUID,
         @Param("subjectId") subjectId: String?,
         @Param("topicId") topicId: String?,
         pageable: Pageable
@@ -168,14 +185,15 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
 
     @Query("""
         SELECT q FROM Question q
-        JOIN q.topic t
-        WHERE t.nextRevisionDue IS NOT NULL
-          AND t.nextRevisionDue <= :now
+        JOIN TopicMastery tm ON tm.id.topicId = q.topic.id AND tm.id.userId = :userId
+        WHERE tm.nextRevisionDue IS NOT NULL
+          AND tm.nextRevisionDue <= :now
           AND (:subjectId IS NULL OR q.subject.id = :subjectId)
-          AND (:topicId IS NULL OR t.id = :topicId)
-        ORDER BY t.nextRevisionDue ASC, q.id ASC
+          AND (:topicId IS NULL OR q.topic.id = :topicId)
+        ORDER BY tm.nextRevisionDue ASC, q.id ASC
     """)
     fun findDueTopicCandidates(
+        @Param("userId") userId: UUID,
         @Param("now") now: java.time.Instant,
         @Param("subjectId") subjectId: String?,
         @Param("topicId") topicId: String?,

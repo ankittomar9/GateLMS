@@ -22,6 +22,9 @@ class PracticeSessionApiIT : BaseIntegrationTest() {
     lateinit var questionRepository: QuestionRepository
 
     @Autowired
+    lateinit var questionProgressRepository: com.gatelms.repository.QuestionProgressRepository
+
+    @Autowired
     lateinit var subjectRepository: SubjectRepository
 
     @Autowired
@@ -32,6 +35,8 @@ class PracticeSessionApiIT : BaseIntegrationTest() {
 
     @Autowired
     lateinit var objectMapper: ObjectMapper
+
+    private val operatorId = java.util.UUID.fromString("00000000-0000-0000-0000-000000000001")
 
     @BeforeEach
     fun setUp() {
@@ -109,12 +114,12 @@ class PracticeSessionApiIT : BaseIntegrationTest() {
         assertNotNull(verdict.explanation)
         assertTrue(verdict.marksAwarded >= 0.0)
 
-        val updatedQ = questionRepository.findById(question.id).get()
+        val qp = questionProgressRepository.findByIdUserIdAndIdQuestionId(operatorId, question.id).get()
         if (verdict.correct) {
-            assertEquals(Pass1Status.SOLVED, updatedQ.pass1Status)
+            assertEquals(Pass1Status.SOLVED, qp.pass1Status)
             assertFalse(verdict.mistakeLogPrompt)
         } else {
-            assertEquals(Pass1Status.FAILED, updatedQ.pass1Status)
+            assertEquals(Pass1Status.FAILED, qp.pass1Status)
             assertTrue(verdict.mistakeLogPrompt)
         }
     }
@@ -140,8 +145,8 @@ class PracticeSessionApiIT : BaseIntegrationTest() {
         assertNotNull(verdict.explanation)
         assertFalse(verdict.mistakeLogPrompt)
 
-        val updatedQ = questionRepository.findById(question.id).get()
-        assertEquals(Pass1Status.ASSISTED, updatedQ.pass1Status)
+        val qp = questionProgressRepository.findByIdUserIdAndIdQuestionId(operatorId, question.id).get()
+        assertEquals(Pass1Status.ASSISTED, qp.pass1Status)
     }
 
     @Test

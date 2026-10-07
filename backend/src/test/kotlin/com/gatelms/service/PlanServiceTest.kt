@@ -21,6 +21,8 @@ class PlanServiceTest {
     private lateinit var topicRepository: TopicRepository
     private lateinit var questionRepository: QuestionRepository
     private lateinit var attemptAnswerRepository: AttemptAnswerRepository
+    private lateinit var topicMasteryRepository: TopicMasteryRepository
+    private lateinit var currentUserProvider: com.gatelms.security.CurrentUserProvider
     private lateinit var readinessService: ReadinessService
     private val objectMapper = ObjectMapper()
 
@@ -34,7 +36,11 @@ class PlanServiceTest {
         topicRepository = mock(TopicRepository::class.java)
         questionRepository = mock(QuestionRepository::class.java)
         attemptAnswerRepository = mock(AttemptAnswerRepository::class.java)
+        topicMasteryRepository = mock(TopicMasteryRepository::class.java)
+        currentUserProvider = mock(com.gatelms.security.CurrentUserProvider::class.java)
         readinessService = mock(ReadinessService::class.java)
+
+        `when`(currentUserProvider.getCurrentUserId()).thenReturn(UUID.fromString("00000000-0000-0000-0000-000000000001"))
 
         planService = PlanService(
             studyPlanRepository = studyPlanRepository,
@@ -43,7 +49,9 @@ class PlanServiceTest {
             topicRepository = topicRepository,
             questionRepository = questionRepository,
             attemptAnswerRepository = attemptAnswerRepository,
+            topicMasteryRepository = topicMasteryRepository,
             readinessService = readinessService,
+            currentUserProvider = currentUserProvider,
             objectMapper = objectMapper
         )
     }

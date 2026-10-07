@@ -6,6 +6,7 @@ import com.gatelms.entity.*
 import com.gatelms.error.EntityNotFoundException
 import com.gatelms.error.ValidationException
 import com.gatelms.repository.*
+import com.gatelms.security.CurrentUserProvider
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -19,6 +20,10 @@ class PracticeService(
     private val mockAttemptRepository: MockAttemptRepository,
     private val attemptAnswerRepository: AttemptAnswerRepository,
     private val topicRepository: TopicRepository,
+    private val questionProgressRepository: QuestionProgressRepository,
+    private val topicMasteryRepository: TopicMasteryRepository,
+    private val topicMasteryService: TopicMasteryService,
+    private val currentUserProvider: CurrentUserProvider,
     private val gradingService: GradingService,
     private val objectMapper: ObjectMapper,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -36,9 +41,11 @@ class PracticeService(
     @Transactional
     fun createSession(request: PracticeSessionCreateRequest): PracticeSessionResponse {
         val count = request.count.coerceIn(1, 50)
+        val userId = currentUserProvider.getCurrentUserId()
 
         val pageable = PageRequest.of(0, count)
         val questionsPage = questionRepository.findWithFilters(
+            userId = userId,
             subjectId = request.subjectId?.ifBlank { null },
             topicId = request.topicId?.ifBlank { null },
             type = request.questionType?.name,
@@ -63,6 +70,7 @@ class PracticeService(
             initialList
         } else {
             val fallbackPage = questionRepository.findWithFilters(
+                userId = userId,
                 subjectId = request.subjectId?.ifBlank { null },
                 topicId = request.topicId?.ifBlank { null },
                 type = request.questionType?.name,
@@ -98,6 +106,7 @@ class PracticeService(
         val savedExam = mockExamRepository.save(mockExam)
 
         val attempt = MockAttempt(
+            userId = userId,
             mockExam = savedExam,
             status = MockAttemptStatus.IN_PROGRESS
         )
@@ -151,7 +160,9 @@ class PracticeService(
         )
         val savedExam = mockExamRepository.save(mockExam)
 
+        val userId = currentUserProvider.getCurrentUserId()
         val attempt = MockAttempt(
+            userId = userId,
             mockExam = savedExam,
             status = MockAttemptStatus.IN_PROGRESS
         )
@@ -190,7 +201,8 @@ class PracticeService(
 
     @Transactional
     fun submitAnswer(attemptId: UUID, submission: PracticeAnswerSubmission): PracticeVerdictResponse {
-        val attempt = mockAttemptRepository.findById(attemptId).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val attempt = mockAttemptRepository.findByIdAndUserId(attemptId, currentUserId).orElseThrow {
             EntityNotFoundException("Practice session attempt not found with id: $attemptId")
         }
         val question = questionRepository.findById(submission.questionId).orElseThrow {
@@ -221,7 +233,8 @@ class PracticeService(
             activityDate = java.time.LocalDate.now(),
             correct = grading.isCorrect,
             seconds = submission.timeSpentSeconds ?: 0,
-            mode = "practice"
+            mode = "practice",
+            userId = currentUserId
         )
 
         // Plan auto-progress hook (SPEC §2.3)
@@ -234,44 +247,52 @@ class PracticeService(
                     date = java.time.LocalDate.now(),
                     topicId = topicId,
                     count = 1,
-                    minutes = minutesSpent
+                    minutes = minutesSpent,
+                    userId = currentUserId
                 )
             } catch (e: Exception) {
                 logger.warn("Plan progress hook failure ignored during practice grading: ${e.message}", e)
             }
         }
 
-        // Auto-update Question pass1_status & pass2_status
-        question.pass1Status = if (grading.isCorrect) Pass1Status.SOLVED else Pass1Status.FAILED
-        question.lastAttemptedAt = Instant.now()
-        if (attempt.mockExam?.mode == ExamMode.WEAKNESS_DRILL) {
-            question.pass2Status = if (grading.isCorrect) Pass2Status.SOLVED else Pass2Status.FAILED
-        } else if (question.pass1Status in listOf(Pass1Status.FAILED, Pass1Status.ASSISTED)) {
-            question.pass2Status = Pass2Status.PENDING
+        // Auto-update QuestionProgress pass1_status & pass2_status for this user
+        val progress = questionProgressRepository.findByIdUserIdAndIdQuestionId(currentUserId, qId).orElseGet {
+            QuestionProgress(id = QuestionProgressId(userId = currentUserId, questionId = qId))
         }
-        questionRepository.save(question)
+        progress.pass1Status = if (grading.isCorrect) Pass1Status.SOLVED else Pass1Status.FAILED
+        progress.lastAttemptedAt = Instant.now()
+        if (attempt.mockExam?.mode == ExamMode.WEAKNESS_DRILL) {
+            progress.pass2Status = if (grading.isCorrect) Pass2Status.SOLVED else Pass2Status.FAILED
+        } else if (progress.pass1Status in listOf(Pass1Status.FAILED, Pass1Status.ASSISTED)) {
+            progress.pass2Status = Pass2Status.PENDING
+        }
+        questionProgressRepository.save(progress)
 
-        // Mastery auto-flow (§2.4)
+        // Mastery auto-flow (§2.4) via TopicMastery
         val topic = question.topic
         val updatedMastery = if (topic != null) {
-            if (grading.isCorrect) {
-                topic.masteryLevel = minOf(5, topic.masteryLevel + 1)
+            val mastery = topicMasteryService.getMastery(topic.id, currentUserId)
+            val newLevel = if (grading.isCorrect) {
+                minOf(5, mastery.masteryLevel + 1)
             } else {
-                topic.masteryLevel = maxOf(0, topic.masteryLevel - 1)
-                topic.nextRevisionDue = Instant.now().plus(java.time.Duration.ofDays(3))
+                maxOf(0, mastery.masteryLevel - 1)
             }
-            topic.lastRevisedAt = Instant.now()
-            val savedTopic = topicRepository.save(topic)
-            savedTopic.masteryLevel
+            mastery.masteryLevel = newLevel
+            if (!grading.isCorrect) {
+                mastery.nextRevisionDue = Instant.now().plus(java.time.Duration.ofDays(3))
+            }
+            mastery.lastRevisedAt = Instant.now()
+            topicMasteryRepository.save(mastery)
+            newLevel
         } else {
             0
         }
 
         // Engagement achievements hook (SPEC §2.3)
         try {
-            achievementService?.checkOnAnswerSubmitted()
+            achievementService?.checkOnAnswerSubmitted(currentUserId)
             if (updatedMastery >= 5) {
-                achievementService?.checkOnTopicMastery(updatedMastery)
+                achievementService?.checkOnTopicMastery(updatedMastery, currentUserId)
             }
         } catch (e: Exception) {
             logger.warn("Achievement check failed in practice grading: ${e.message}", e)
@@ -291,7 +312,8 @@ class PracticeService(
 
     @Transactional
     fun skipQuestion(attemptId: UUID, questionId: UUID) {
-        val attempt = mockAttemptRepository.findById(attemptId).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val attempt = mockAttemptRepository.findByIdAndUserId(attemptId, currentUserId).orElseThrow {
             EntityNotFoundException("Practice session attempt not found with id: $attemptId")
         }
         val question = questionRepository.findById(questionId).orElseThrow {
@@ -308,7 +330,8 @@ class PracticeService(
 
     @Transactional
     fun revealQuestion(attemptId: UUID, questionId: UUID): PracticeVerdictResponse {
-        val attempt = mockAttemptRepository.findById(attemptId).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val attempt = mockAttemptRepository.findByIdAndUserId(attemptId, currentUserId).orElseThrow {
             EntityNotFoundException("Practice session attempt not found with id: $attemptId")
         }
         val question = questionRepository.findById(questionId).orElseThrow {
@@ -324,10 +347,18 @@ class PracticeService(
         ans.marksAwarded = 0.0
         attemptAnswerRepository.save(ans)
 
-        // Reveal marks pass1 as ASSISTED and enters pass2 as PENDING
-        question.pass1Status = Pass1Status.ASSISTED
-        question.pass2Status = Pass2Status.PENDING
-        questionRepository.save(question)
+        // Reveal marks pass1 as ASSISTED and enters pass2 as PENDING for this user
+        val progress = questionProgressRepository.findByIdUserIdAndIdQuestionId(currentUserId, qId).orElseGet {
+            QuestionProgress(id = QuestionProgressId(userId = currentUserId, questionId = qId))
+        }
+        progress.pass1Status = Pass1Status.ASSISTED
+        progress.pass2Status = Pass2Status.PENDING
+        progress.lastAttemptedAt = Instant.now()
+        questionProgressRepository.save(progress)
+
+        val topicMastery = question.topic?.id?.let { tId ->
+            topicMasteryRepository.findByIdUserIdAndIdTopicId(currentUserId, tId).orElse(null)?.masteryLevel
+        } ?: 0
 
         return PracticeVerdictResponse(
             correct = false,
@@ -336,14 +367,15 @@ class PracticeService(
             numericMin = question.numericMin,
             numericMax = question.numericMax,
             explanation = question.explanation,
-            topicMastery = question.topic?.masteryLevel ?: 0,
+            topicMastery = topicMastery,
             mistakeLogPrompt = false
         )
     }
 
     @Transactional
     fun finishSession(attemptId: UUID): PracticeFinishResponse {
-        val attempt = mockAttemptRepository.findById(attemptId).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val attempt = mockAttemptRepository.findByIdAndUserId(attemptId, currentUserId).orElseThrow {
             EntityNotFoundException("Practice session attempt not found with id: $attemptId")
         }
 

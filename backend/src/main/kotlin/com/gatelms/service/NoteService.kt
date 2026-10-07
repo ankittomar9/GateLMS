@@ -8,6 +8,7 @@ import com.gatelms.error.ValidationException
 import com.gatelms.repository.NoteRepository
 import com.gatelms.repository.SubjectRepository
 import com.gatelms.repository.TopicRepository
+import com.gatelms.security.CurrentUserProvider
 import org.springframework.core.io.Resource
 import org.springframework.data.domain.PageRequest
 import org.springframework.orm.ObjectOptimisticLockingFailureException
@@ -22,7 +23,8 @@ class NoteService(
     private val noteRepository: NoteRepository,
     private val subjectRepository: SubjectRepository,
     private val topicRepository: TopicRepository,
-    private val noteStorageService: NoteStorageService
+    private val noteStorageService: NoteStorageService,
+    private val currentUserProvider: CurrentUserProvider
 ) {
 
     @Transactional(readOnly = true)
@@ -52,8 +54,10 @@ class NoteService(
             null
         }
 
+        val currentUserId = currentUserProvider.getCurrentUserId()
         val pageable = PageRequest.of(Math.max(0, page), Math.max(1, size))
         val pageResult = noteRepository.findNotes(
+            userId = currentUserId,
             subjectId = subjectId?.ifBlank { null },
             topicId = topicId?.ifBlank { null },
             kind = normalizedKind,
@@ -75,7 +79,8 @@ class NoteService(
 
     @Transactional(readOnly = true)
     fun getNote(id: UUID): NoteDto {
-        val note = noteRepository.findById(id).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val note = noteRepository.findByIdAndUserId(id, currentUserId).orElseThrow {
             EntityNotFoundException("Note not found with id $id")
         }
         return note.toDto()
@@ -107,6 +112,7 @@ class NoteService(
         }
 
         val note = Note(
+            userId = currentUserProvider.getCurrentUserId(),
             title = request.title.trim(),
             contentMd = request.contentMd.trim(),
             filePath = null,
@@ -147,6 +153,7 @@ class NoteService(
 
         val note = Note(
             id = noteId,
+            userId = currentUserProvider.getCurrentUserId(),
             title = title.trim(),
             filePath = fileInfo.relativePath,
             originalFilename = fileInfo.originalFilename,
@@ -164,7 +171,8 @@ class NoteService(
 
     @Transactional
     fun updateNote(id: UUID, request: UpdateNoteRequest): NoteDto {
-        val note = noteRepository.findById(id).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val note = noteRepository.findByIdAndUserId(id, currentUserId).orElseThrow {
             EntityNotFoundException("Note not found with id $id")
         }
 
@@ -215,7 +223,8 @@ class NoteService(
 
     @Transactional
     fun togglePin(id: UUID): NoteDto {
-        val note = noteRepository.findById(id).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val note = noteRepository.findByIdAndUserId(id, currentUserId).orElseThrow {
             EntityNotFoundException("Note not found with id $id")
         }
         note.isPinned = !note.isPinned
@@ -225,7 +234,8 @@ class NoteService(
 
     @Transactional
     fun deleteNote(id: UUID) {
-        val note = noteRepository.findById(id).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val note = noteRepository.findByIdAndUserId(id, currentUserId).orElseThrow {
             EntityNotFoundException("Note not found with id $id")
         }
         noteStorageService.deleteNoteFiles(id)
@@ -234,7 +244,8 @@ class NoteService(
 
     @Transactional(readOnly = true)
     fun getNoteFile(id: UUID): Pair<Note, Resource> {
-        val note = noteRepository.findById(id).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val note = noteRepository.findByIdAndUserId(id, currentUserId).orElseThrow {
             EntityNotFoundException("Note not found with id $id")
         }
         val filePath = note.filePath ?: throw EntityNotFoundException("Note does not have an attached file")

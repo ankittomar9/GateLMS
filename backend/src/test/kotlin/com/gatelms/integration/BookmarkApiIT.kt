@@ -4,9 +4,12 @@ import com.gatelms.dto.BookmarkRequest
 import com.gatelms.dto.QuestionDto
 import com.gatelms.dto.QuestionUpsertDto
 import com.gatelms.entity.Question
+import com.gatelms.entity.QuestionProgress
+import com.gatelms.entity.QuestionProgressId
 import com.gatelms.entity.QuestionType
 import com.gatelms.entity.Subject
 import com.gatelms.entity.Topic
+import com.gatelms.repository.QuestionProgressRepository
 import com.gatelms.repository.QuestionRepository
 import com.gatelms.repository.SubjectRepository
 import com.gatelms.repository.TopicRepository
@@ -25,16 +28,21 @@ class BookmarkApiIT : BaseIntegrationTest() {
     lateinit var questionRepository: QuestionRepository
 
     @Autowired
+    lateinit var questionProgressRepository: QuestionProgressRepository
+
+    @Autowired
     lateinit var subjectRepository: SubjectRepository
 
     @Autowired
     lateinit var topicRepository: TopicRepository
 
+    private val operatorId = UUID.fromString("00000000-0000-0000-0000-000000000001")
     private lateinit var subject: Subject
     private lateinit var topic: Topic
 
     @BeforeEach
     fun setup() {
+        questionProgressRepository.deleteAll()
         questionRepository.deleteAll()
 
         subject = subjectRepository.findById("subj_dbms").orElseGet {
@@ -53,9 +61,7 @@ class BookmarkApiIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "A",
-            isBookmarked = false,
-            bookmarkedAt = null
+            correctOptions = "A"
         ))
 
         // Bookmark = true
@@ -71,9 +77,9 @@ class BookmarkApiIT : BaseIntegrationTest() {
         assertNotNull(bookmarkedDto.bookmarkedAt)
 
         // Verify in DB
-        val qInDb = questionRepository.findById(q.id!!).get()
-        assertTrue(qInDb.isBookmarked)
-        assertNotNull(qInDb.bookmarkedAt)
+        val qp = questionProgressRepository.findByIdUserIdAndIdQuestionId(operatorId, q.id!!).get()
+        assertTrue(qp.isBookmarked)
+        assertNotNull(qp.bookmarkedAt)
 
         // Bookmark = false
         val unbookmarkResp = restTemplate.exchange(
@@ -87,9 +93,9 @@ class BookmarkApiIT : BaseIntegrationTest() {
         assertFalse(unbookmarkedDto.isBookmarked)
         assertNull(unbookmarkedDto.bookmarkedAt)
 
-        val qInDb2 = questionRepository.findById(q.id!!).get()
-        assertFalse(qInDb2.isBookmarked)
-        assertNull(qInDb2.bookmarkedAt)
+        val qp2 = questionProgressRepository.findByIdUserIdAndIdQuestionId(operatorId, q.id!!).get()
+        assertFalse(qp2.isBookmarked)
+        assertNull(qp2.bookmarkedAt)
     }
 
     @Test
@@ -146,8 +152,12 @@ class BookmarkApiIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "A",
-            isBookmarked = true
+            correctOptions = "A"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, q1.id!!),
+            isBookmarked = true,
+            bookmarkedAt = java.time.Instant.now()
         ))
 
         val q2 = questionRepository.save(Question(
@@ -155,7 +165,10 @@ class BookmarkApiIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "B",
+            correctOptions = "B"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, q2.id!!),
             isBookmarked = false
         ))
 
@@ -164,8 +177,12 @@ class BookmarkApiIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "C",
-            isBookmarked = true
+            correctOptions = "C"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, q3.id!!),
+            isBookmarked = true,
+            bookmarkedAt = java.time.Instant.now()
         ))
 
         val filterResp = restTemplate.getForEntity(

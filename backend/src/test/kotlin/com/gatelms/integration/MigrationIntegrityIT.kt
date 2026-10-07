@@ -34,7 +34,7 @@ class MigrationIntegrityIT : BaseIntegrationTest() {
             mockId
         )
         jdbcTemplate.update(
-            "INSERT INTO mock_attempts (id, mock_id) VALUES (?, ?)",
+            "INSERT INTO mock_attempts (id, mock_id, user_id) VALUES (?, ?, '00000000-0000-0000-0000-000000000001'::uuid)",
             attemptId, mockId
         )
         jdbcTemplate.update(

@@ -15,7 +15,8 @@ interface NoteRepository : JpaRepository<Note, UUID> {
     @Query(
         value = """
             SELECT n.* FROM notes n
-            WHERE (:subjectId IS NULL OR n.subject_id = :subjectId)
+            WHERE n.user_id = :userId
+              AND (:subjectId IS NULL OR n.subject_id = :subjectId)
               AND (:topicId IS NULL OR n.topic_id = :topicId)
               AND (
                 :kind IS NULL 
@@ -34,7 +35,8 @@ interface NoteRepository : JpaRepository<Note, UUID> {
         """,
         countQuery = """
             SELECT count(*) FROM notes n
-            WHERE (:subjectId IS NULL OR n.subject_id = :subjectId)
+            WHERE n.user_id = :userId
+              AND (:subjectId IS NULL OR n.subject_id = :subjectId)
               AND (:topicId IS NULL OR n.topic_id = :topicId)
               AND (
                 :kind IS NULL 
@@ -50,6 +52,7 @@ interface NoteRepository : JpaRepository<Note, UUID> {
         nativeQuery = true
     )
     fun findNotes(
+        @Param("userId") userId: UUID,
         @Param("subjectId") subjectId: String?,
         @Param("topicId") topicId: String?,
         @Param("kind") kind: String?,
@@ -57,4 +60,6 @@ interface NoteRepository : JpaRepository<Note, UUID> {
         @Param("pinnedFirst") pinnedFirst: Boolean,
         pageable: Pageable
     ): Page<Note>
+
+    fun findByIdAndUserId(id: UUID, userId: UUID): java.util.Optional<Note>
 }

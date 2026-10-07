@@ -22,6 +22,9 @@ class MasteryUpdateIT : BaseIntegrationTest() {
     lateinit var topicRepository: TopicRepository
 
     @Autowired
+    lateinit var topicMasteryRepository: com.gatelms.repository.TopicMasteryRepository
+
+    @Autowired
     lateinit var subjectRepository: SubjectRepository
 
     @Autowired
@@ -29,6 +32,8 @@ class MasteryUpdateIT : BaseIntegrationTest() {
 
     @Autowired
     lateinit var objectMapper: ObjectMapper
+
+    private val operatorId = java.util.UUID.fromString("00000000-0000-0000-0000-000000000001")
 
     @BeforeEach
     fun setUp() {
@@ -48,8 +53,12 @@ class MasteryUpdateIT : BaseIntegrationTest() {
     fun `wrong answer decrements mastery level and respects floor 0`() {
         val anyQ = questionRepository.findAll().first { it.topic != null }
         val topic = anyQ.topic!!
-        topic.masteryLevel = 0
-        topicRepository.save(topic)
+        topicMasteryRepository.save(
+            com.gatelms.entity.TopicMastery(
+                id = com.gatelms.entity.TopicMasteryId(operatorId, topic.id),
+                masteryLevel = 0
+            )
+        )
 
         val createReq = PracticeSessionCreateRequest(
             topicId = topic.id,
@@ -73,17 +82,21 @@ class MasteryUpdateIT : BaseIntegrationTest() {
         assertFalse(verdict.correct)
         assertEquals(0, verdict.topicMastery, "Mastery level must floor at 0")
 
-        val reloadedTopic = topicRepository.findById(topic.id).get()
-        assertEquals(0, reloadedTopic.masteryLevel)
-        assertNotNull(reloadedTopic.lastRevisedAt)
+        val reloaded = topicMasteryRepository.findByIdUserIdAndIdTopicId(operatorId, topic.id).get()
+        assertEquals(0, reloaded.masteryLevel)
+        assertNotNull(reloaded.lastRevisedAt)
     }
 
     @Test
     fun `correct answer increments mastery level and respects cap 5`() {
         val anyQ = questionRepository.findAll().first { it.topic != null }
         val topic = anyQ.topic!!
-        topic.masteryLevel = 5
-        topicRepository.save(topic)
+        topicMasteryRepository.save(
+            com.gatelms.entity.TopicMastery(
+                id = com.gatelms.entity.TopicMasteryId(operatorId, topic.id),
+                masteryLevel = 5
+            )
+        )
 
         val createReq = PracticeSessionCreateRequest(
             topicId = topic.id,
@@ -109,8 +122,8 @@ class MasteryUpdateIT : BaseIntegrationTest() {
 
         if (verdict.correct) {
             assertEquals(5, verdict.topicMastery, "Mastery level must cap at 5")
-            val reloadedTopic = topicRepository.findById(topic.id).get()
-            assertEquals(5, reloadedTopic.masteryLevel)
+            val reloaded = topicMasteryRepository.findByIdUserIdAndIdTopicId(operatorId, topic.id).get()
+            assertEquals(5, reloaded.masteryLevel)
         }
     }
 
@@ -118,8 +131,12 @@ class MasteryUpdateIT : BaseIntegrationTest() {
     fun `sequential transitions update mastery level and update lastRevisedAt`() {
         val anyQ = questionRepository.findAll().first { it.topic != null }
         val topic = anyQ.topic!!
-        topic.masteryLevel = 2
-        topicRepository.save(topic)
+        topicMasteryRepository.save(
+            com.gatelms.entity.TopicMastery(
+                id = com.gatelms.entity.TopicMasteryId(operatorId, topic.id),
+                masteryLevel = 2
+            )
+        )
 
         val createReq = PracticeSessionCreateRequest(
             topicId = topic.id,
@@ -141,8 +158,8 @@ class MasteryUpdateIT : BaseIntegrationTest() {
         ).body!!
 
         assertEquals(1, verdict1.topicMastery)
-        val intermediateTopic = topicRepository.findById(topic.id).get()
-        assertEquals(1, intermediateTopic.masteryLevel)
-        assertNotNull(intermediateTopic.lastRevisedAt)
+        val intermediate = topicMasteryRepository.findByIdUserIdAndIdTopicId(operatorId, topic.id).get()
+        assertEquals(1, intermediate.masteryLevel)
+        assertNotNull(intermediate.lastRevisedAt)
     }
 }

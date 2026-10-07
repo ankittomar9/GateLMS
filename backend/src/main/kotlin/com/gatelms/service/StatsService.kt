@@ -5,6 +5,7 @@ import com.gatelms.entity.Pass1Status
 import com.gatelms.entity.QuestionType
 import com.gatelms.repository.QuestionRepository
 import com.gatelms.repository.SubjectRepository
+import com.gatelms.security.CurrentUserProvider
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -12,7 +13,8 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class StatsService(
     private val questionRepository: QuestionRepository,
-    private val subjectRepository: SubjectRepository
+    private val subjectRepository: SubjectRepository,
+    private val currentUserProvider: CurrentUserProvider
 ) {
 
     fun getStatsSummary(): StatsSummaryDto {
@@ -35,7 +37,8 @@ class StatsService(
             nat = typeCounts[QuestionType.NAT] ?: 0L
         )
 
-        val pass1Counts = questionRepository.countGroupedByPass1Status().associate {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val pass1Counts = questionRepository.countGroupedByPass1Status(currentUserId).associate {
             (it[0] as Pass1Status) to (it[1] as Long)
         }
         val pass1 = Pass1CountDto(

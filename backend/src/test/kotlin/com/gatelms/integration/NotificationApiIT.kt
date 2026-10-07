@@ -33,6 +33,9 @@ class NotificationApiIT : BaseIntegrationTest() {
     lateinit var topicRepository: TopicRepository
 
     @Autowired
+    lateinit var topicMasteryRepository: com.gatelms.repository.TopicMasteryRepository
+
+    @Autowired
     lateinit var studyPlanRepository: StudyPlanRepository
 
     @Autowired
@@ -40,6 +43,8 @@ class NotificationApiIT : BaseIntegrationTest() {
 
     @Autowired
     lateinit var mistakeLogRepository: MistakeLogRepository
+
+    private val operatorId = java.util.UUID.fromString("00000000-0000-0000-0000-000000000001")
 
     @BeforeEach
     fun cleanUp() {
@@ -56,12 +61,7 @@ class NotificationApiIT : BaseIntegrationTest() {
     }
 
     private fun resetTopics() {
-        topicRepository.findAll().forEach { t ->
-            if (t.nextRevisionDue != null) {
-                t.nextRevisionDue = null
-                topicRepository.save(t)
-            }
-        }
+        topicMasteryRepository.deleteAll()
     }
 
     @Test
@@ -188,15 +188,18 @@ class NotificationApiIT : BaseIntegrationTest() {
 
         // Create a due topic for today
         val topic = topicRepository.findAll().first()
-        val topicId = topic.id
-        val origDue = topic.nextRevisionDue
         try {
-            topic.nextRevisionDue = Instant.now().minusSeconds(3600)
-            topicRepository.save(topic)
+            topicMasteryRepository.save(
+                com.gatelms.entity.TopicMastery(
+                    id = com.gatelms.entity.TopicMasteryId(operatorId, topic.id),
+                    nextRevisionDue = Instant.now().minusSeconds(3600)
+                )
+            )
 
             // Create a plan item for today
             val plan = studyPlanRepository.save(
                 StudyPlan(
+                    userId = operatorId,
                     title = "Test Morning Plan",
                     startDate = LocalDate.now(),
                     endDate = LocalDate.now().plusDays(7)
@@ -219,10 +222,7 @@ class NotificationApiIT : BaseIntegrationTest() {
             assertTrue(allNotifs.any { it.type == NotificationType.REVISION_DUE })
             assertTrue(allNotifs.any { it.type == NotificationType.PLAN_DUE })
         } finally {
-            topicRepository.findById(topicId).ifPresent { freshTopic ->
-                freshTopic.nextRevisionDue = origDue
-                topicRepository.save(freshTopic)
-            }
+            topicMasteryRepository.deleteAll()
         }
     }
 }

@@ -5,6 +5,8 @@ import { router } from './router';
 import { DesignProvider } from './context/DesignContext';
 import { LayoutProvider } from './context/LayoutContext';
 
+import { AuthProvider } from './context/AuthContext';
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -18,11 +20,13 @@ export const queryClient = new QueryClient({
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <DesignProvider>
-        <LayoutProvider>
-          <RouterProvider router={router} />
-        </LayoutProvider>
-      </DesignProvider>
+      <AuthProvider>
+        <DesignProvider>
+          <LayoutProvider>
+            <RouterProvider router={router} />
+          </LayoutProvider>
+        </DesignProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

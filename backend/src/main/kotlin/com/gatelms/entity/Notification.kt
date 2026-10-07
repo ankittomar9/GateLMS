@@ -10,6 +10,9 @@ class Notification(
     @Id
     val id: UUID = UUID.randomUUID(),
 
+    @Column(name = "user_id", nullable = false)
+    val userId: UUID = UUID.fromString("00000000-0000-0000-0000-000000000001"),
+
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 30)
     val type: NotificationType,

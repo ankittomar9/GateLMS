@@ -14,6 +14,9 @@ class StudyPlan(
     @Column(name = "id", nullable = false)
     var id: UUID = UUID.randomUUID(),
 
+    @Column(name = "user_id", nullable = false)
+    var userId: UUID = UUID.fromString("00000000-0000-0000-0000-000000000001"),
+
     @Column(name = "title", length = 200, nullable = false)
     var title: String = "",
 

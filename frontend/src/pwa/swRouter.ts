@@ -25,7 +25,12 @@ export function matchStrategy(url: string, options: RouteMatchOptions = {}): Fet
   const pathname = parsedUrl.pathname;
   const isGet = method === 'GET';
 
-  // 1. Navigation requests (document/page transition)
+  // 1. Auth routes (/login) -> strictly network-only (never cached by SW)
+  if (pathname === '/login' || pathname.startsWith('/login/')) {
+    return 'NETWORK_ONLY';
+  }
+
+  // 2. Navigation requests (document/page transition)
   if (isGet && (options.mode === 'navigate' || options.destination === 'document')) {
     return 'NAVIGATION';
   }

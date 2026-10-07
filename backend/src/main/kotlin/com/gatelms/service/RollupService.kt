@@ -5,24 +5,29 @@ import com.gatelms.dto.Rolling7Stats
 import com.gatelms.dto.TrendsResponse
 import com.gatelms.error.ValidationException
 import com.gatelms.repository.DailyRollupRepository
+import com.gatelms.security.CurrentUserProvider
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
+import java.util.UUID
 
 @Service
 class RollupService(
-    private val dailyRollupRepository: DailyRollupRepository
+    private val dailyRollupRepository: DailyRollupRepository,
+    private val currentUserProvider: CurrentUserProvider
 ) {
 
     @Transactional
-    fun recordAnswer(activityDate: LocalDate, correct: Boolean, seconds: Int, mode: String) {
+    fun recordAnswer(activityDate: LocalDate, correct: Boolean, seconds: Int, mode: String, userId: UUID? = null) {
+        val currentUserId = userId ?: currentUserProvider.getCurrentUserId()
         val isPractice = mode.equals("practice", ignoreCase = true)
         val minutesPracticed = if (isPractice) Math.max(0, (seconds + 59) / 60) else 0
         val minutesMocked = if (!isPractice) Math.max(0, (seconds + 59) / 60) else 0
 
         dailyRollupRepository.upsertRollup(
+            userId = currentUserId,
             activityDate = activityDate,
             questionsAnswered = 1,
             correctAnswers = if (correct) 1 else 0,
@@ -37,9 +42,12 @@ class RollupService(
         activityDate: LocalDate,
         questionsAnswered: Int,
         correctAnswers: Int,
-        minutesMocked: Int
+        minutesMocked: Int,
+        userId: UUID? = null
     ) {
+        val currentUserId = userId ?: currentUserProvider.getCurrentUserId()
         dailyRollupRepository.upsertRollup(
+            userId = currentUserId,
             activityDate = activityDate,
             questionsAnswered = questionsAnswered,
             correctAnswers = correctAnswers,
@@ -58,9 +66,10 @@ class RollupService(
             )
         }
 
+        val currentUserId = currentUserProvider.getCurrentUserId()
         val today = LocalDate.now()
         val startDate = today.minusDays((days - 1).toLong())
-        val records = dailyRollupRepository.findByActivityDateBetween(startDate, today)
+        val records = dailyRollupRepository.findByActivityDateBetween(currentUserId, startDate, today)
             .associateBy { it.activityDate }
 
         val filledDays = mutableListOf<DayRollupDto>()

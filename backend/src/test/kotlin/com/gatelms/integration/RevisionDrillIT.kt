@@ -35,6 +35,13 @@ class RevisionDrillIT : BaseIntegrationTest() {
     @Autowired
     lateinit var attemptAnswerRepository: AttemptAnswerRepository
 
+    @Autowired
+    lateinit var questionProgressRepository: QuestionProgressRepository
+
+    @Autowired
+    lateinit var topicMasteryRepository: TopicMasteryRepository
+
+    private val operatorId = UUID.fromString("00000000-0000-0000-0000-000000000001")
     private lateinit var subject: Subject
     private lateinit var topic: Topic
 
@@ -44,6 +51,8 @@ class RevisionDrillIT : BaseIntegrationTest() {
         attemptAnswerRepository.deleteAll()
         mockAttemptRepository.deleteAll()
         mockExamRepository.deleteAll()
+        questionProgressRepository.deleteAll()
+        topicMasteryRepository.deleteAll()
         questionRepository.deleteAll()
 
         subject = subjectRepository.findById("subj_cn").orElseGet {
@@ -51,7 +60,7 @@ class RevisionDrillIT : BaseIntegrationTest() {
         }
 
         topic = topicRepository.findById("top_cn_tcp").orElseGet {
-            topicRepository.save(Topic(id = "top_cn_tcp", subject = subject, name = "TCP and Congestion", slug = "tcp", masteryLevel = 3))
+            topicRepository.save(Topic(id = "top_cn_tcp", subject = subject, name = "TCP and Congestion", slug = "tcp"))
         }
     }
 
@@ -64,7 +73,10 @@ class RevisionDrillIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "A",
+            correctOptions = "A"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, q1.id!!),
             pass1Status = Pass1Status.FAILED,
             pass2Status = Pass2Status.PENDING
         ))
@@ -74,13 +86,17 @@ class RevisionDrillIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "B",
+            correctOptions = "B"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, q2.id!!),
             pass1Status = Pass1Status.FAILED,
             pass2Status = Pass2Status.PENDING
         ))
 
         // Mistake 2 was due earlier than Mistake 1
         mistakeLogRepository.save(MistakeLog(
+            userId = operatorId,
             question = q1,
             errorCategory = MistakeErrorCategory.CONCEPTUAL,
             correctiveTakeaway = "Review sliding window",
@@ -90,6 +106,7 @@ class RevisionDrillIT : BaseIntegrationTest() {
         ))
 
         mistakeLogRepository.save(MistakeLog(
+            userId = operatorId,
             question = q2,
             errorCategory = MistakeErrorCategory.CONCEPTUAL,
             correctiveTakeaway = "Review slow start threshold",
@@ -119,7 +136,10 @@ class RevisionDrillIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "A",
+            correctOptions = "A"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, qFailed.id!!),
             pass1Status = Pass1Status.FAILED,
             pass2Status = Pass2Status.PENDING
         ))
@@ -129,7 +149,10 @@ class RevisionDrillIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "B",
+            correctOptions = "B"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, qAssisted.id!!),
             pass1Status = Pass1Status.ASSISTED,
             pass2Status = Pass2Status.PENDING
         ))
@@ -139,7 +162,10 @@ class RevisionDrillIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "C",
+            correctOptions = "C"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, qSolved.id!!),
             pass1Status = Pass1Status.SOLVED,
             pass2Status = Pass2Status.PENDING // should NOT be included because pass1 is SOLVED
         ))
@@ -178,7 +204,10 @@ class RevisionDrillIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "A",
+            correctOptions = "A"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, q.id!!),
             pass1Status = Pass1Status.FAILED,
             pass2Status = Pass2Status.PENDING
         ))
@@ -207,9 +236,9 @@ class RevisionDrillIT : BaseIntegrationTest() {
         assertTrue(verdictResp.body!!.correct)
 
         // Verify Question pass2_status is now SOLVED
-        val updatedQ = questionRepository.findById(q.id!!).get()
-        assertEquals(Pass2Status.SOLVED, updatedQ.pass2Status)
-        assertNotNull(updatedQ.lastAttemptedAt)
+        val updatedQp = questionProgressRepository.findByIdUserIdAndIdQuestionId(operatorId, q.id!!).get()
+        assertEquals(Pass2Status.SOLVED, updatedQp.pass2Status)
+        assertNotNull(updatedQp.lastAttemptedAt)
     }
 
     @Test
@@ -219,7 +248,10 @@ class RevisionDrillIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "B",
+            correctOptions = "B"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, q.id!!),
             pass1Status = Pass1Status.FAILED,
             pass2Status = Pass2Status.PENDING
         ))
@@ -247,17 +279,17 @@ class RevisionDrillIT : BaseIntegrationTest() {
         assertFalse(verdictResp.body!!.correct)
 
         // Verify Question pass2_status is now FAILED
-        val updatedQ = questionRepository.findById(q.id!!).get()
-        assertEquals(Pass2Status.FAILED, updatedQ.pass2Status)
-        assertNotNull(updatedQ.lastAttemptedAt)
+        val updatedQp = questionProgressRepository.findByIdUserIdAndIdQuestionId(operatorId, q.id!!).get()
+        assertEquals(Pass2Status.FAILED, updatedQp.pass2Status)
+        assertNotNull(updatedQp.lastAttemptedAt)
 
         // Verify topic next_revision_due is set to approx now + 3 days
-        val updatedTopic = topicRepository.findById(topic.id).get()
-        assertNotNull(updatedTopic.nextRevisionDue)
+        val updatedMastery = topicMasteryRepository.findByIdUserIdAndIdTopicId(operatorId, topic.id).get()
+        assertNotNull(updatedMastery.nextRevisionDue)
         val expectedDueMin = Instant.now().plus(2, ChronoUnit.DAYS)
         val expectedDueMax = Instant.now().plus(4, ChronoUnit.DAYS)
-        assertTrue(updatedTopic.nextRevisionDue!!.isAfter(expectedDueMin))
-        assertTrue(updatedTopic.nextRevisionDue!!.isBefore(expectedDueMax))
+        assertTrue(updatedMastery.nextRevisionDue!!.isAfter(expectedDueMin))
+        assertTrue(updatedMastery.nextRevisionDue!!.isBefore(expectedDueMax))
     }
 
     @Test
@@ -267,7 +299,10 @@ class RevisionDrillIT : BaseIntegrationTest() {
             subject = subject,
             topic = topic,
             type = QuestionType.MCQ,
-            correctOptions = "D",
+            correctOptions = "D"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, q.id!!),
             pass1Status = Pass1Status.FAILED,
             pass2Status = Pass2Status.PENDING
         ))
@@ -287,8 +322,8 @@ class RevisionDrillIT : BaseIntegrationTest() {
         )
         assertEquals(HttpStatus.OK, skipResp.statusCode)
 
-        val updatedQ = questionRepository.findById(q.id!!).get()
-        assertEquals(Pass2Status.PENDING, updatedQ.pass2Status, "Skipped question should remain PENDING")
+        val updatedQp = questionProgressRepository.findByIdUserIdAndIdQuestionId(operatorId, q.id!!).get()
+        assertEquals(Pass2Status.PENDING, updatedQp.pass2Status, "Skipped question should remain PENDING")
     }
 
     @Test
@@ -302,6 +337,7 @@ class RevisionDrillIT : BaseIntegrationTest() {
         ))
 
         val mistake = mistakeLogRepository.save(MistakeLog(
+            userId = operatorId,
             question = q,
             errorCategory = MistakeErrorCategory.MISREAD,
             correctiveTakeaway = "Remember scaling by 4 bytes",

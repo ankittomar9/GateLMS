@@ -89,12 +89,13 @@ class EngagementApiIT : BaseIntegrationTest() {
     @Test
     fun `3 engagement summary computes real streak from rollups`() {
         val today = LocalDate.now()
+        val operatorId = java.util.UUID.fromString("00000000-0000-0000-0000-000000000001")
         // Save activity for today and yesterday
         dailyRollupRepository.save(
-            DailyRollup(activityDate = today, questionsAnswered = 25)
+            DailyRollup(userId = operatorId, activityDate = today, questionsAnswered = 25)
         )
         dailyRollupRepository.save(
-            DailyRollup(activityDate = today.minusDays(1), questionsAnswered = 15)
+            DailyRollup(userId = operatorId, activityDate = today.minusDays(1), questionsAnswered = 15)
         )
 
         val summary = restTemplate.getForEntity(

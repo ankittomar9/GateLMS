@@ -93,6 +93,7 @@ class QuestionController(
         return questionService.updateStatus(id, dto)
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{id}/curation")
     fun updateCuration(
         @PathVariable id: UUID,

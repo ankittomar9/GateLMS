@@ -5,6 +5,7 @@ import com.gatelms.entity.UserGoal
 import com.gatelms.error.ValidationException
 import com.gatelms.repository.DailyRollupRepository
 import com.gatelms.repository.UserGoalRepository
+import com.gatelms.security.CurrentUserProvider
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -16,16 +17,18 @@ class EngagementService(
     private val userGoalRepository: UserGoalRepository,
     private val dailyRollupRepository: DailyRollupRepository,
     private val achievementService: AchievementService,
+    private val currentUserProvider: CurrentUserProvider,
     @Autowired(required = false)
     private val revisionService: RevisionService? = null
 ) {
 
     @Transactional
     fun getSummary(): EngagementSummaryResponse {
+        val currentUserId = currentUserProvider.getCurrentUserId()
         val userGoal = getOrCreateGoal()
         val today = LocalDate.now()
 
-        val rollups = dailyRollupRepository.findAllByOrderByActivityDateDesc()
+        val rollups = dailyRollupRepository.findAllByUserIdOrderByActivityDateDesc(currentUserId)
         val activityMap = rollups.associate { it.activityDate to it.questionsAnswered }
 
         val streakResult = StreakCalculator.computeStreak(
@@ -92,8 +95,10 @@ class EngagementService(
     }
 
     private fun getOrCreateGoal(): UserGoal {
-        return userGoalRepository.findFirstByOrderByUpdatedAtDesc() ?: run {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        return userGoalRepository.findFirstByUserIdOrderByUpdatedAtDesc(currentUserId) ?: run {
             val newGoal = UserGoal(
+                userId = currentUserId,
                 dailyTargetQuestions = 20,
                 streakProtection = true,
                 updatedAt = Instant.now()

@@ -1,4 +1,9 @@
 spring:
+  session:
+    store-type: jdbc
+    jdbc:
+      initialize-schema: never
+      table-name: SPRING_SESSION
   flyway:
     enabled: true
     baseline-on-migrate: true

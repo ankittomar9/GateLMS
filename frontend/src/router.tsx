@@ -19,11 +19,21 @@ import { RevisionPage } from './pages/RevisionPage';
 import { PYPPage } from './pages/PYPPage';
 import { PlannerPage } from './pages/PlannerPage';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { LoginPage } from './pages/LoginPage';
+import { RequireAuth } from './components/auth/RequireAuth';
 
 export const router = createBrowserRouter([
   {
+    path: '/login',
+    element: <LoginPage />,
+  },
+  {
     path: '/',
-    element: <Layout />,
+    element: (
+      <RequireAuth>
+        <Layout />
+      </RequireAuth>
+    ),
     children: [
       {
         index: true,
