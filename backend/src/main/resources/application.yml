@@ -39,8 +39,8 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
+      max-file-size: 15MB
+      max-request-size: 15MB
 
 management:
   endpoints:
@@ -93,4 +93,14 @@ app:
     whisper:
       local-endpoint: ${WHISPER_ENDPOINT:http://localhost:8178/inference}
       stt-provider: ${STT_PROVIDER:auto}
+    http:
+      connect-timeout-ms: 3000
+      chat-read-timeout-ms: 60000
+      stt-read-timeout-ms: 90000
+      status-read-timeout-ms: 2000
+      max-retries: 1
+    quota:
+      chat-per-hour: 20
+      transcribe-per-10min: 10
+      status-per-hour: 60
 

@@ -78,7 +78,7 @@ export const AiStudioProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [byokKeys, setByokKeys] = useState<Record<string, string>>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem(STORAGE_KEY_BYOK);
+        const saved = sessionStorage.getItem(STORAGE_KEY_BYOK);
         if (saved) return JSON.parse(saved);
       } catch {}
     }
@@ -141,7 +141,7 @@ export const AiStudioProvider: React.FC<{ children: ReactNode }> = ({ children }
     setByokKeys((prev) => {
       const next = { ...prev, [provider]: key.trim() };
       if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_BYOK, JSON.stringify(next));
+        sessionStorage.setItem(STORAGE_KEY_BYOK, JSON.stringify(next));
       }
       return next;
     });

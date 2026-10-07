@@ -61,12 +61,14 @@ self.addEventListener('fetch', function (event) {
   var pathname = url.pathname;
   var method = request.method.toUpperCase();
 
-  // Auth routes (/login, /api/v1/auth/*) -> strictly network-only (never cached or intercepted by SW)
+  // Auth & AI routes (/login, /api/v1/auth/*, /api/v1/ai/*) -> strictly network-only (never cached or intercepted by SW)
   if (
     pathname === '/login' ||
     pathname.indexOf('/login/') === 0 ||
     pathname.indexOf('/api/v1/auth/') === 0 ||
-    pathname.indexOf('/auth/') === 0
+    pathname.indexOf('/auth/') === 0 ||
+    pathname.indexOf('/api/v1/ai/') === 0 ||
+    pathname.indexOf('/api/ai/') === 0
   ) {
     event.respondWith(fetch(request));
     return;

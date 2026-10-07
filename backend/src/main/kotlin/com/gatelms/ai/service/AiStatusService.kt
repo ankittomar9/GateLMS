@@ -11,6 +11,10 @@ class AiStatusService(
     private val aiProperties: AiProperties,
     private val whisperTranscriptionService: WhisperTranscriptionService
 ) {
+    private var lastOllamaCheckTime = 0L
+    private var lastOllamaStatus = false
+    private val ollamaCacheTtlMs = 30000L // AM-18 / §3.5 30s TTL
+
     fun getProvidersStatus(byokKey: String?, targetProvider: String?): List<ProviderStatusDto> {
         val result = mutableListOf<ProviderStatusDto>()
 
@@ -84,15 +88,24 @@ class AiStatusService(
     }
 
     private fun isOllamaRunning(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastOllamaCheckTime < ollamaCacheTtlMs) {
+            return lastOllamaStatus
+        }
         return try {
             val endpoint = aiProperties.providers.ollama.endpoint.ifBlank { "http://localhost:11434" }.removeSuffix("/")
             val url = "$endpoint/api/tags"
             val conn = URI.create(url).toURL().openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            conn.connectTimeout = 800
-            conn.readTimeout = 800
-            conn.responseCode == 200
+            conn.connectTimeout = aiProperties.http.statusReadTimeoutMs.toInt()
+            conn.readTimeout = aiProperties.http.statusReadTimeoutMs.toInt()
+            val isRunning = conn.responseCode == 200
+            lastOllamaStatus = isRunning
+            lastOllamaCheckTime = now
+            isRunning
         } catch (_: Exception) {
+            lastOllamaStatus = false
+            lastOllamaCheckTime = now
             false
         }
     }

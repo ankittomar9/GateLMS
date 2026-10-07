@@ -17,7 +17,8 @@ import {
   Minimize2,
   ChevronRight,
   Loader2,
-  KeyRound
+  KeyRound,
+  ShieldAlert
 } from 'lucide-react';
 import { useAiStudio } from '../../context/AiStudioContext';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
@@ -55,9 +56,13 @@ export const AiStudioDrawer: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  });
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const activeApiKey = byokKeys[selectedProvider] || '';
 
@@ -65,6 +70,27 @@ export const AiStudioDrawer: React.FC = () => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   }, []);
+
+  // Responsive window resize listener (AM-16)
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Esc key collapses drawer (AM-16)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        abortControllerRef.current?.abort();
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isOpen, setIsOpen]);
 
   // Voice recording integration using audio-encoder and whisper sidecar
   const {
@@ -91,7 +117,7 @@ export const AiStudioDrawer: React.FC = () => {
 
   // Drag-to-resize sidecar drawer
   useEffect(() => {
-    if (!isDragging) return;
+    if (!isDragging || isMobile) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = window.innerWidth - e.clientX;
@@ -108,7 +134,7 @@ export const AiStudioDrawer: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, setWidth]);
+  }, [isDragging, isMobile, setWidth]);
 
   // Auto-scroll on new message
   useEffect(() => {
@@ -118,6 +144,11 @@ export const AiStudioDrawer: React.FC = () => {
   const handleSendPrompt = async (promptOverride?: string, mode: 'HINT' | 'EXPLANATION' | 'GENERAL' = 'GENERAL') => {
     const textToSend = promptOverride || inputPrompt;
     if (!textToSend.trim() || isLoading) return;
+
+    // AM-15: Abort any pending turn before starting a new one
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     const userMessage: ChatMessage = { role: 'user', content: textToSend.trim() };
     addMessage(userMessage);
@@ -132,15 +163,16 @@ export const AiStudioDrawer: React.FC = () => {
           messages: [...messages, userMessage],
           provider: selectedProvider,
           model: selectedModel,
-          apiKey: activeApiKey || undefined,
           mode,
           questionContext: activeQuestion || undefined,
         },
-        activeApiKey || undefined
+        activeApiKey || undefined,
+        controller.signal
       );
 
       addMessage({ role: 'assistant', content: res.reply });
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
       const errMsg = err.message || 'AI generation failed. Please check your provider or key.';
       addMessage({
         role: 'assistant',
@@ -164,22 +196,38 @@ export const AiStudioDrawer: React.FC = () => {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
+  const handleClose = () => {
+    abortControllerRef.current?.abort();
+    setIsOpen(false);
+  };
+
+  const handleClear = () => {
+    abortControllerRef.current?.abort();
+    clearMessages();
+  };
+
   if (!isOpen) return null;
+
+  const isLiveAttempt = Boolean(activeQuestion?.isLiveAttempt);
 
   return (
     <div
-      style={{ width: `${width}px` }}
+      role="complementary"
+      aria-label="AI Studio"
+      style={{ width: isMobile ? '100%' : `${width}px` }}
       data-testid="ai-studio-drawer"
       className="fixed right-0 top-0 bottom-0 z-40 bg-ds-surface border-l border-ds-border shadow-2xl flex flex-col transition-all duration-75 select-none"
     >
-      {/* 1. Left border drag handle for resizing */}
-      <div
-        onMouseDown={() => setIsDragging(true)}
-        className={`absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-ds-accent/60 transition-colors z-50 ${
-          isDragging ? 'bg-ds-accent' : 'bg-transparent'
-        }`}
-        title="Drag to resize AI Studio"
-      />
+      {/* 1. Left border drag handle for resizing (disabled on mobile) */}
+      {!isMobile && (
+        <div
+          onMouseDown={() => setIsDragging(true)}
+          className={`absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-ds-accent/60 transition-colors z-50 ${
+            isDragging ? 'bg-ds-accent' : 'bg-transparent'
+          }`}
+          title="Drag to resize AI Studio"
+        />
+      )}
 
       {/* 2. Top Header Bar */}
       <div className="h-14 px-4 border-b border-ds-border flex items-center justify-between bg-ds-surface shrink-0">
@@ -204,6 +252,7 @@ export const AiStudioDrawer: React.FC = () => {
             value={selectedProvider}
             onChange={(e) => setSelectedProvider(e.target.value)}
             className="text-[11px] font-medium bg-ds-surface-input border border-ds-border rounded-ds px-2 py-1 text-ds-primary focus:outline-none focus:border-ds-accent cursor-pointer"
+            aria-label="Select AI Provider"
           >
             {PROVIDER_OPTIONS.map((opt) => (
               <option key={opt.id} value={opt.id}>
@@ -222,6 +271,7 @@ export const AiStudioDrawer: React.FC = () => {
                 : 'text-ds-muted hover:text-ds-primary border-ds-border hover:bg-ds-surface-raised'
             }`}
             title="Configure API Keys & Providers"
+            aria-label="Configure API Keys"
           >
             <Settings className="w-3.5 h-3.5" />
           </button>
@@ -229,9 +279,10 @@ export const AiStudioDrawer: React.FC = () => {
           {/* Clear Chat Button */}
           <button
             type="button"
-            onClick={clearMessages}
+            onClick={handleClear}
             className="p-1.5 text-ds-muted hover:text-red-400 rounded-ds border border-ds-border hover:bg-ds-surface-raised transition-colors"
             title="Clear Chat History"
+            aria-label="Clear Chat History"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -239,9 +290,10 @@ export const AiStudioDrawer: React.FC = () => {
           {/* Close / Collapse Drawer */}
           <button
             type="button"
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
             className="p-1.5 text-ds-muted hover:text-ds-primary rounded-ds border border-ds-border hover:bg-ds-surface-raised transition-colors ml-1"
             title="Close AI Studio (Ctrl+J)"
+            aria-label="Close AI Studio"
           >
             <X className="w-4 h-4" />
           </button>
@@ -250,7 +302,7 @@ export const AiStudioDrawer: React.FC = () => {
 
       {/* Toast Notification Banner */}
       {toastMessage && (
-        <div className="bg-ds-accent/90 text-ds-accent-contrast px-3 py-1.5 text-xs font-semibold flex items-center justify-between animate-fadeIn shrink-0">
+        <div aria-live="polite" className="bg-ds-accent/90 text-ds-accent-contrast px-3 py-1.5 text-xs font-semibold flex items-center justify-between animate-fadeIn shrink-0">
           <span>{toastMessage}</span>
           <button type="button" onClick={() => setToastMessage(null)} className="text-white/80 hover:text-white">
             <X className="w-3 h-3" />
@@ -258,7 +310,7 @@ export const AiStudioDrawer: React.FC = () => {
         </div>
       )}
 
-      {/* 3. BYOK Settings Drawer/Overlay */}
+      {/* 3. BYOK Settings Drawer/Overlay (AM-12 Privacy Notice, AM-13 sessionStorage) */}
       {showSettings && (
         <div className="p-4 bg-ds-surface-raised border-b border-ds-border space-y-3 shrink-0 animate-fadeIn text-xs">
           <div className="flex items-center justify-between font-bold text-ds-primary">
@@ -270,6 +322,7 @@ export const AiStudioDrawer: React.FC = () => {
               type="button"
               onClick={() => setShowSettings(false)}
               className="text-ds-muted hover:text-ds-primary"
+              aria-label="Close Settings"
             >
               ✕
             </button>
@@ -291,17 +344,26 @@ export const AiStudioDrawer: React.FC = () => {
                 disabled={selectedProvider === 'OLLAMA'}
                 onChange={(e) => setByokKey(selectedProvider, e.target.value)}
                 className="w-full bg-ds-surface-input border border-ds-border rounded-ds px-2.5 py-1 text-xs text-ds-primary placeholder:text-ds-muted focus:outline-none focus:border-ds-accent disabled:opacity-50"
+                aria-label={`${selectedProvider} API Key`}
               />
             </div>
 
-            <div className="text-[10px] text-ds-muted leading-relaxed">
-              Keys are securely stored in your browser's <code className="font-mono">localStorage</code>. If blank, server environment variables (<code className="font-mono">GROQ_API_KEY</code>, <code className="font-mono">GEMINI_API_KEY</code>) are used automatically.
+            <div className="text-[10px] text-ds-muted leading-relaxed space-y-1">
+              <p>
+                Keys are temporarily stored in your browser's <code className="font-mono">sessionStorage</code> (cleared when browser session ends). If blank, server environment variables are used automatically.
+              </p>
+              <p className="text-[10px] text-amber-500/90 font-medium flex items-start gap-1">
+                <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Privacy Disclosure</strong>: Cloud providers receive your question text and prompts. LOCAL (Ollama / whisper.cpp) is 100% offline with zero egress.
+                </span>
+              </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* 4. Active Question Context Card (If on a Question page) */}
+      {/* 4. Active Question Context Card (PED-1 Hint-gating during live attempts) */}
       {activeQuestion && (
         <div className="m-3 p-3 rounded-ds bg-ds-surface-raised border border-ds-border-strong space-y-2 shrink-0">
           <div className="flex items-center justify-between text-[11px]">
@@ -323,7 +385,7 @@ export const AiStudioDrawer: React.FC = () => {
             </p>
           )}
 
-          {/* Quick Action Chips */}
+          {/* Quick Action Chips (PED-1) */}
           <div className="flex flex-wrap gap-1.5 pt-1 border-t border-ds-border/60">
             <button
               type="button"
@@ -339,11 +401,18 @@ export const AiStudioDrawer: React.FC = () => {
 
             <button
               type="button"
+              disabled={isLiveAttempt}
               onClick={() => {
+                if (isLiveAttempt) return;
                 const prompt = `Solve this problem step-by-step with complete formulas and proof: "${activeQuestion.statement || ''}". Options: ${activeQuestion.optionsJson || 'N/A'}`;
                 handleSendPrompt(prompt, 'EXPLANATION');
               }}
-              className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-ds bg-ds-surface border border-ds-border text-ds-primary hover:border-ds-accent transition-all"
+              title={isLiveAttempt ? 'Unlocks after you submit the attempt' : 'Solve problem step-by-step'}
+              className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-ds border transition-all ${
+                isLiveAttempt
+                  ? 'bg-ds-surface border-ds-border text-ds-muted/60 opacity-50 cursor-not-allowed'
+                  : 'bg-ds-surface border-ds-border text-ds-primary hover:border-ds-accent'
+              }`}
             >
               <BookOpen className="w-3 h-3" />
               <span>📐 Step-by-Step</span>
@@ -365,7 +434,10 @@ export const AiStudioDrawer: React.FC = () => {
       )}
 
       {/* 5. Chat History Feed */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4 select-text">
+      <div 
+        aria-live="polite" 
+        className="flex-1 p-4 overflow-y-auto space-y-4 select-text"
+      >
         {messages.map((msg, index) => {
           const isUser = msg.role === 'user';
           return (
@@ -429,7 +501,7 @@ export const AiStudioDrawer: React.FC = () => {
       {isRecording && (
         <div className="px-4 py-2 bg-red-500/10 border-t border-red-500/30 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <span className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
+            <span className="w-3 h-3 rounded-full bg-red-500 animate-ping motion-reduce:animate-none" />
             <span className="text-xs font-mono font-bold text-red-500">
               REC {String(Math.floor(durationSec / 60)).padStart(2, '0')}:
               {String(durationSec % 60).padStart(2, '0')}
@@ -486,6 +558,7 @@ export const AiStudioDrawer: React.FC = () => {
             placeholder={isRecording ? 'Listening to speech...' : 'Ask question, explain approach, or dictate...'}
             disabled={isRecording}
             className="w-full bg-transparent px-3 py-2 text-xs text-ds-primary placeholder:text-ds-muted resize-none focus:outline-none leading-relaxed"
+            aria-label="Ask AI Studio question"
           />
 
           <div className="flex items-center gap-1 p-1.5">
@@ -495,9 +568,10 @@ export const AiStudioDrawer: React.FC = () => {
               onClick={isRecording ? stopRecording : startRecording}
               disabled={isTranscribing}
               title={isRecording ? 'Stop Recording' : 'Dictate with Whisper Speech-to-Text'}
+              aria-label={isRecording ? 'Stop Recording' : 'Dictate with Whisper'}
               className={`p-1.5 rounded-md transition-all ${
                 isRecording
-                  ? 'bg-red-500 text-white animate-pulse'
+                  ? 'bg-red-500 text-white animate-pulse motion-reduce:animate-none'
                   : 'text-ds-muted hover:text-ds-primary hover:bg-ds-surface-raised'
               }`}
             >
@@ -511,6 +585,7 @@ export const AiStudioDrawer: React.FC = () => {
               onClick={() => handleSendPrompt()}
               className="p-1.5 rounded-md bg-ds-accent text-ds-accent-contrast disabled:opacity-40 hover:bg-ds-accent-hover transition-all"
               title="Send message (Enter)"
+              aria-label="Send message"
             >
               <Send className="w-4 h-4" />
             </button>

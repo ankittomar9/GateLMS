@@ -4,9 +4,13 @@ import com.gatelms.ai.dto.AiChatRequest
 import com.gatelms.ai.dto.AiChatResponse
 import com.gatelms.ai.dto.ProviderStatusDto
 import com.gatelms.ai.dto.TranscriptionResponse
+import com.gatelms.ai.exception.AiPayloadTooLargeException
+import com.gatelms.ai.exception.AiValidationException
+import com.gatelms.ai.security.AiRateLimiter
 import com.gatelms.ai.service.AiChatService
 import com.gatelms.ai.service.AiStatusService
 import com.gatelms.ai.service.WhisperTranscriptionService
+import com.gatelms.security.CurrentUserProvider
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -18,39 +22,46 @@ import org.springframework.web.multipart.MultipartFile
 class AiController(
     private val whisperTranscriptionService: WhisperTranscriptionService,
     private val aiChatService: AiChatService,
-    private val aiStatusService: AiStatusService
+    private val aiStatusService: AiStatusService,
+    private val currentUserProvider: CurrentUserProvider,
+    private val aiRateLimiter: AiRateLimiter
 ) {
     private val log = LoggerFactory.getLogger(AiController::class.java)
+
+    companion object {
+        const val MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024L // 15 MB (AM-7)
+        const val MAX_PROMPT_CONTEXT_CHARS = 400
+    }
 
     @PostMapping(value = ["/transcribe"], consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun transcribeAudio(
         @RequestHeader(value = "X-AI-Key", required = false) headerApiKey: String?,
         @RequestParam(value = "file", required = false) file: MultipartFile?,
-        @RequestParam(value = "audio", required = false) audio: MultipartFile?,
-        @RequestParam(value = "apiKey", required = false) queryApiKey: String?,
         @RequestParam(value = "model", required = false) model: String?,
         @RequestParam(value = "promptContext", required = false) promptContext: String?,
         @RequestParam(value = "lang", required = false, defaultValue = "en") lang: String?,
         @RequestParam(value = "provider", required = false) provider: String?
     ): ResponseEntity<TranscriptionResponse> {
-        val targetFile = file ?: audio
-        if (targetFile == null || targetFile.isEmpty) {
-            return ResponseEntity.badRequest().body(
-                TranscriptionResponse(
-                    text = "",
-                    status = "EMPTY_FILE",
-                    provider = "GATE",
-                    message = "No audio file provided in request."
-                )
-            )
+        val userId = currentUserProvider.getCurrentUserId()
+        aiRateLimiter.checkTranscribeLimit(userId)
+
+        if (file == null || file.isEmpty) {
+            throw AiValidationException("No audio file provided in request (multipart field 'file' is required).")
         }
 
-        val effectiveApiKey = if (!headerApiKey.isNullOrBlank()) headerApiKey else queryApiKey
-        log.info("🎙️ Audio transcribe requested: name={}, size={} bytes, provider={}", targetFile.originalFilename, targetFile.size, provider)
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            throw AiPayloadTooLargeException("Audio file size (${file.size} bytes) exceeds limit of 15MB.")
+        }
+
+        if (!promptContext.isNullOrBlank() && promptContext.length > MAX_PROMPT_CONTEXT_CHARS) {
+            throw AiPayloadTooLargeException("Prompt context length (${promptContext.length}) exceeds 400 characters.")
+        }
+
+        log.debug("🎙️ Audio transcribe requested: name={}, size={} bytes, provider={}", file.originalFilename, file.size, provider)
 
         val result = whisperTranscriptionService.transcribeAudio(
-            audioFile = targetFile,
-            customApiKey = effectiveApiKey,
+            audioFile = file,
+            customApiKey = headerApiKey,
             customModel = model,
             promptContext = promptContext,
             lang = lang,
@@ -64,7 +75,10 @@ class AiController(
         @RequestHeader(value = "X-AI-Key", required = false) headerApiKey: String?,
         @RequestBody request: AiChatRequest
     ): ResponseEntity<AiChatResponse> {
-        log.info("🤖 AI Chat turn received: provider={}, model={}, mode={}, messagesCount={}",
+        val userId = currentUserProvider.getCurrentUserId()
+        aiRateLimiter.checkChatLimit(userId)
+
+        log.debug("🤖 AI Chat turn received: provider={}, model={}, mode={}, messagesCount={}",
             request.provider, request.model, request.mode, request.messages.size)
 
         val response = aiChatService.chat(request, headerApiKey)
@@ -76,6 +90,9 @@ class AiController(
         @RequestHeader(value = "X-AI-Key", required = false) headerApiKey: String?,
         @RequestParam(value = "provider", required = false) queryProvider: String?
     ): ResponseEntity<List<ProviderStatusDto>> {
+        val userId = currentUserProvider.getCurrentUserId()
+        aiRateLimiter.checkStatusLimit(userId)
+
         val statusList = aiStatusService.getProvidersStatus(headerApiKey, queryProvider)
         return ResponseEntity.ok(statusList)
     }

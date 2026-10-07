@@ -23,15 +23,17 @@ data class QuestionContextDto(
     val marks: Int? = null,
     val subjectName: String? = null,
     val topicName: String? = null,
+    val subjectId: String? = null,
+    val topicId: String? = null,
     val optionsJson: String? = null,
-    val selectedAnswer: String? = null
+    val selectedAnswer: String? = null,
+    val isLiveAttempt: Boolean? = false
 )
 
 data class AiChatRequest(
     val messages: List<ChatMessageDto> = emptyList(),
     val provider: String? = "GROQ", // GROQ, GEMINI, OPENAI, OLLAMA
     val model: String? = null,
-    val apiKey: String? = null,
     val mode: String? = "GENERAL", // "HINT", "EXPLANATION", "GENERAL"
     val questionContext: QuestionContextDto? = null
 )

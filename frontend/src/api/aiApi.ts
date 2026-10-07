@@ -27,13 +27,13 @@ export interface QuestionContext {
   topicId?: string | null;
   optionsJson?: string | null;
   selectedAnswer?: string | null;
+  isLiveAttempt?: boolean;
 }
 
 export interface AiChatRequest {
   messages: ChatMessage[];
   provider?: string;
   model?: string;
-  apiKey?: string;
   mode?: 'HINT' | 'EXPLANATION' | 'GENERAL';
   questionContext?: QuestionContext;
 }
@@ -67,9 +67,9 @@ export const aiApi = {
     const isWav = audioBlob.type.includes('wav');
     const filename = isWav ? 'audio.wav' : 'audio.webm';
 
+    // AM-1: BYOK is header-only; no apiKey in multipart form-data
     const formData = new FormData();
     formData.append('file', audioBlob, filename);
-    if (options.apiKey) formData.append('apiKey', options.apiKey);
     if (options.promptContext) formData.append('promptContext', options.promptContext);
     if (options.provider) formData.append('provider', options.provider);
     if (options.lang) formData.append('lang', options.lang);
@@ -87,22 +87,31 @@ export const aiApi = {
       signal: options.signal,
     });
 
+    // AM-14: 401 parity with apiClient -> redirect to /login
+    if (res.status === 401) {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        const next = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/login?next=${next}`;
+      }
+    }
+
     if (!res.ok) {
       let errJson: any = null;
       try {
         errJson = await res.json();
       } catch {}
-      throw new ApiError(res.status, errJson?.message || 'Transcription failed', errJson?.fieldErrors, errJson?.detail);
+      throw new ApiError(res.status, errJson?.detail || errJson?.message || 'Transcription failed', errJson?.fieldErrors, errJson?.detail);
     }
 
     return res.json();
   },
 
-  chat: async (request: AiChatRequest, apiKey?: string): Promise<AiChatResponse> => {
+  chat: async (request: AiChatRequest, apiKey?: string, signal?: AbortSignal): Promise<AiChatResponse> => {
     const headers: Record<string, string> = {};
     if (apiKey) headers['X-AI-Key'] = apiKey;
 
-    return apiClient.post<AiChatResponse>('/ai/chat', request, { headers });
+    // AM-15: Support AbortSignal
+    return apiClient.post<AiChatResponse>('/ai/chat', request, { headers, signal });
   },
 
   getProvidersStatus: async (apiKey?: string, provider?: string): Promise<ProviderStatus[]> => {

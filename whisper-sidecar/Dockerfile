@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# GateLMS - Local Whisper.cpp Neural Speech-to-Text Sidecar (SPEC-003)
+# GateLMS - Local Whisper.cpp Neural Speech-to-Text Sidecar (SPEC-003 / AM-26)
 # Zero cloud egress, 100% local speech-to-text inference on port :8178.
 # -----------------------------------------------------------------------------
 FROM ubuntu:22.04
@@ -18,8 +18,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Clone whisper.cpp
-RUN git clone --depth 1 https://github.com/ggerganov/whisper.cpp.git .
+# Clone whisper.cpp pinned to stable release commit SHA (AM-26)
+ARG WHISPER_COMMIT=v1.7.4
+RUN git clone https://github.com/ggerganov/whisper.cpp.git . && \
+    git checkout ${WHISPER_COMMIT}
 
 # Build with whisper server support
 RUN cmake -B build -DWHISPER_BUILD_SERVER=ON && \
@@ -33,6 +35,9 @@ ENV WHISPER_MODEL=${WHISPER_MODEL}
 # Download neural speech-to-text model
 RUN mkdir -p models && \
     wget -q --show-progress https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${WHISPER_MODEL} -O models/${WHISPER_MODEL}
+
+# Named volume for models to avoid redownloading across rebuilds (AM-26)
+VOLUME ["/app/models"]
 
 EXPOSE 8178
 

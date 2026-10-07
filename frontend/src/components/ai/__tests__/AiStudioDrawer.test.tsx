@@ -34,6 +34,7 @@ const ContextSetter: React.FC<{ initialOpen: boolean; activeQuestion: any }> = (
 describe('AiStudioDrawer Component', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     vi.clearAllMocks();
   });
 
@@ -77,7 +78,7 @@ describe('AiStudioDrawer Component', () => {
     expect(screen.getByText(/⚠️ Traps/i)).toBeDefined();
   });
 
-  it('4 allows switching provider and stores key in BYOK settings modal', async () => {
+  it('4 allows switching provider and stores key in BYOK settings modal (AM-13 sessionStorage)', async () => {
     const user = userEvent.setup();
     render(<TestWrapper initialOpen={true} />);
 
@@ -92,8 +93,43 @@ describe('AiStudioDrawer Component', () => {
     await user.type(keyInput, 'gsk_test_mock_secret_key');
     expect(keyInput).toHaveValue('gsk_test_mock_secret_key');
 
-    // Verify written to localStorage
-    const stored = JSON.parse(localStorage.getItem('gatelms_byok_keys') || '{}');
+    // Verify written to sessionStorage (AM-13)
+    const stored = JSON.parse(sessionStorage.getItem('gatelms_byok_keys') || '{}');
     expect(stored['GROQ']).toBe('gsk_test_mock_secret_key');
+  });
+
+  it('5 enforces role="complementary" and aria-label="AI Studio" accessibility landmarks', () => {
+    render(<TestWrapper initialOpen={true} />);
+    const drawer = screen.getByRole('complementary', { name: /AI Studio/i });
+    expect(drawer).toBeDefined();
+    expect(drawer.getAttribute('aria-label')).toBe('AI Studio');
+  });
+
+  it('6 PED-1 hint-gating: disables Step-by-Step button during live attempts', () => {
+    const liveQuestion = {
+      id: 'q-live-1',
+      statement: 'Find minimum number of page faults.',
+      isLiveAttempt: true,
+    };
+
+    render(<TestWrapper initialOpen={true} activeQuestion={liveQuestion} />);
+
+    const stepBtn = screen.getByRole('button', { name: /Step-by-Step/i });
+    expect(stepBtn).toBeDisabled();
+    expect(stepBtn.getAttribute('title')).toBe('Unlocks after you submit the attempt');
+
+    const hintBtn = screen.getByRole('button', { name: /Hint Only/i });
+    expect(hintBtn).not.toBeDisabled();
+  });
+
+  it('7 AM-16 Esc key collapses open AI Studio drawer', async () => {
+    render(<TestWrapper initialOpen={true} />);
+    expect(screen.getByTestId('ai-studio-drawer')).toBeDefined();
+
+    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('ai-studio-drawer')).toBeNull();
+    });
   });
 });
