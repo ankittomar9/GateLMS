@@ -25,6 +25,8 @@ export const Sidebar: React.FC = () => {
   const isSyllabus = pathname.startsWith('/syllabus');
   const isQuestions = pathname.startsWith('/questions');
   const isCuration = pathname.startsWith('/curation');
+  const isPractice = pathname.startsWith('/practice');
+  const isMistakes = pathname.startsWith('/mistakes');
 
   // Active item styling: 3px left border on aurora & sky, background tint on tuf & ink
   const getActiveNavClass = (isActive: boolean) => {
@@ -102,50 +104,60 @@ export const Sidebar: React.FC = () => {
                 <span>Curation Queue</span>
               </button>
 
-              {/* Collapsible Practice */}
+              {/* Practice Clusters */}
               <div>
-                <button
-                  type="button"
-                  onClick={() => setPracticeOpen(!practiceOpen)}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-ds text-ds-secondary hover:text-ds-primary hover:bg-ds-surface font-medium transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <Code2 className="w-4 h-4 text-ds-muted" />
+                <div className={`w-full flex items-center justify-between px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isPractice)}`}>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/practice')}
+                    className="flex items-center gap-3 flex-1 text-left"
+                  >
+                    <Code2 className={`w-4 h-4 ${isPractice ? 'text-ds-accent' : 'text-ds-muted'}`} />
                     <span>Practice Clusters</span>
-                  </div>
-                  {practiceOpen ? (
-                    <ChevronDown className="w-3.5 h-3.5 text-ds-muted" />
-                  ) : (
-                    <ChevronRight className="w-3.5 h-3.5 text-ds-muted" />
-                  )}
-                </button>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPracticeOpen(!practiceOpen);
+                    }}
+                    className="p-1 hover:bg-ds-surface rounded-ds text-ds-muted hover:text-ds-primary"
+                    aria-label="Toggle practice clusters"
+                  >
+                    {practiceOpen ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
 
                 {practiceOpen && (
                   <div className="pl-9 pr-1 py-1 space-y-0.5 text-xs">
                     <button
                       type="button"
-                      onClick={() => navigate('/questions?q=discrete')}
+                      onClick={() => navigate('/practice?subject=subj_discrete_math')}
                       className="w-full text-left py-1.5 px-2 rounded-ds text-ds-muted hover:text-ds-primary hover:bg-ds-surface-hover transition-all"
                     >
                       Discrete Math & Logic
                     </button>
                     <button
                       type="button"
-                      onClick={() => navigate('/questions?q=pointer')}
+                      onClick={() => navigate('/practice?subject=subj_prog_ds')}
                       className="w-full text-left py-1.5 px-2 rounded-ds text-ds-muted hover:text-ds-primary hover:bg-ds-surface-hover transition-all"
                     >
                       C Pointers & DSA
                     </button>
                     <button
                       type="button"
-                      onClick={() => navigate('/questions?q=operating')}
+                      onClick={() => navigate('/practice?subject=subj_os')}
                       className="w-full text-left py-1.5 px-2 rounded-ds text-ds-muted hover:text-ds-primary hover:bg-ds-surface-hover transition-all"
                     >
                       OS / DBMS / Networks
                     </button>
                     <button
                       type="button"
-                      onClick={() => navigate('/questions?q=compiler')}
+                      onClick={() => navigate('/practice?subject=subj_toc')}
                       className="w-full text-left py-1.5 px-2 rounded-ds text-ds-muted hover:text-ds-primary hover:bg-ds-surface-hover transition-all"
                     >
                       TOC & Compilers
@@ -156,10 +168,10 @@ export const Sidebar: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => navigate('/questions?pass1Status=FLAGGED')}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium text-ds-secondary hover:text-ds-primary hover:bg-ds-surface transition-all"
+                onClick={() => navigate('/mistakes')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isMistakes)}`}
               >
-                <AlertCircle className="w-4 h-4 text-ds-danger" />
+                <AlertCircle className={`w-4 h-4 ${isMistakes ? 'text-ds-accent' : 'text-ds-danger'}`} />
                 <span>Mistake Notebook</span>
               </button>
             </div>

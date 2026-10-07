@@ -143,3 +143,105 @@ export interface DistributionStatsResponse {
   total: number;
   distribution: DistributionItem[];
 }
+
+export type ExamMode = 'MOCK' | 'PRACTICE' | 'WEAKNESS_DRILL';
+export type AttemptAnswerState = 'NOT_VISITED' | 'NOT_ANSWERED' | 'ANSWERED' | 'MARKED_FOR_REVIEW' | 'ANSWERED_AND_MARKED';
+export type MistakeErrorCategory = 'CONCEPTUAL' | 'CALCULATION' | 'MSQ_TRAP' | 'MISREAD';
+
+export interface PracticeSessionCreateRequest {
+  subjectId?: string;
+  topicId?: string;
+  questionType?: QuestionType;
+  marks?: number;
+  curationStatus?: string;
+  count?: number;
+}
+
+export interface PracticeQuestionDto {
+  id: string;
+  externalId: string | null;
+  type: QuestionType;
+  marks: number;
+  statement: string;
+  optionsJson: string | null;
+  topicId: string | null;
+  subjectId: string | null;
+  year: number | null;
+}
+
+export interface PracticeSessionResponse {
+  sessionId: string;
+  attemptId: string;
+  questions: PracticeQuestionDto[];
+  totalQuestions: number;
+}
+
+export interface PracticeAnswerSubmission {
+  questionId: string;
+  selectedOptions?: string;
+  numericAnswer?: number;
+  timeSpentSeconds?: number;
+}
+
+export interface PracticeVerdictResponse {
+  correct: boolean;
+  marksAwarded: number;
+  correctOptions?: string | null;
+  numericMin?: number | null;
+  numericMax?: number | null;
+  explanation?: string | null;
+  topicMastery: number;
+  mistakeLogPrompt: boolean;
+}
+
+export interface PracticeTopicSummary {
+  topicId: string;
+  name: string;
+  correct: number;
+  total: number;
+}
+
+export interface PracticeFinishResponse {
+  correct: number;
+  wrong: number;
+  skipped: number;
+  totalQuestions: number;
+  timeSpentSeconds: number;
+  byTopic: PracticeTopicSummary[];
+}
+
+export interface MistakeCreateRequest {
+  questionId: string;
+  attemptAnswerId?: string | null;
+  errorCategory: MistakeErrorCategory;
+  description?: string;
+  correctiveTakeaway: string;
+}
+
+export interface MistakeReviewRequest {
+  resolved?: boolean;
+}
+
+export interface MistakeDto {
+  id: string;
+  questionId: string;
+  questionExternalId: string | null;
+  questionStatement: string;
+  attemptAnswerId: string | null;
+  errorCategory: MistakeErrorCategory;
+  description: string | null;
+  correctiveTakeaway: string;
+  loggedAt: string;
+  reviewCount: number;
+  nextReviewAt: string | null;
+  resolved: boolean;
+}
+
+export interface TopicMasteryStatsDto {
+  topicId: string;
+  topicName: string;
+  subjectId: string;
+  masteryLevel: number;
+  dueReviewsCount: number;
+}
+

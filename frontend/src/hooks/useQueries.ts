@@ -14,6 +14,15 @@ import {
   CurationStatus,
   CurationStatsResponse,
   DistributionStatsResponse,
+  PracticeSessionCreateRequest,
+  PracticeSessionResponse,
+  PracticeAnswerSubmission,
+  PracticeVerdictResponse,
+  PracticeFinishResponse,
+  MistakeCreateRequest,
+  MistakeReviewRequest,
+  MistakeDto,
+  TopicMasteryStatsDto,
 } from '../api/types';
 
 export function useSubjects() {
@@ -158,3 +167,87 @@ export function useDistributionStats() {
     queryFn: () => apiClient.get<DistributionStatsResponse>('/stats/distribution'),
   });
 }
+
+export function useCreatePracticeSession() {
+  return useMutation({
+    mutationFn: (data: PracticeSessionCreateRequest) =>
+      apiClient.post<PracticeSessionResponse>('/practice/sessions', data),
+  });
+}
+
+export function useSubmitPracticeAnswer(attemptId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PracticeAnswerSubmission) =>
+      apiClient.post<PracticeVerdictResponse>(`/practice/sessions/${attemptId}/answers`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mastery-stats'] });
+    },
+  });
+}
+
+export function useSkipPracticeQuestion(attemptId: string) {
+  return useMutation({
+    mutationFn: (questionId: string) =>
+      apiClient.post<void>(`/practice/sessions/${attemptId}/skip`, { questionId }),
+  });
+}
+
+export function useRevealPracticeQuestion(attemptId: string) {
+  return useMutation({
+    mutationFn: (questionId: string) =>
+      apiClient.post<PracticeVerdictResponse>(`/practice/sessions/${attemptId}/reveal`, { questionId }),
+  });
+}
+
+export function useFinishPracticeSession(attemptId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post<PracticeFinishResponse>(`/practice/sessions/${attemptId}/finish`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mastery-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['stats-summary'] });
+    },
+  });
+}
+
+export function useMistakes(params?: { resolved?: boolean; due?: boolean; page?: number; size?: number }) {
+  return useQuery({
+    queryKey: ['mistakes', params],
+    queryFn: () =>
+      apiClient.get<PageResponse<MistakeDto>>('/mistakes', { params }),
+  });
+}
+
+export function useCreateMistake() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: MistakeCreateRequest) =>
+      apiClient.post<MistakeDto>('/mistakes', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mistakes'] });
+      queryClient.invalidateQueries({ queryKey: ['mastery-stats'] });
+    },
+  });
+}
+
+export function useReviewMistake() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: MistakeReviewRequest }) =>
+      apiClient.patch<MistakeDto>(`/mistakes/${id}/review`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mistakes'] });
+      queryClient.invalidateQueries({ queryKey: ['mastery-stats'] });
+    },
+  });
+}
+
+export function useTopicMasteryStats() {
+  return useQuery({
+    queryKey: ['mastery-stats'],
+    queryFn: () => apiClient.get<TopicMasteryStatsDto[]>('/stats/mastery'),
+  });
+}
+

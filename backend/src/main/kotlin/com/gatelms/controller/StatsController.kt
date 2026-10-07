@@ -9,7 +9,8 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/stats")
 class StatsController(
-    private val statsService: StatsService
+    private val statsService: StatsService,
+    private val mistakeService: com.gatelms.service.MistakeService
 ) {
 
     @GetMapping("/summary")
@@ -25,5 +26,10 @@ class StatsController(
     @GetMapping("/distribution")
     fun getDistributionStats(): com.gatelms.dto.DistributionStatsDto {
         return statsService.getDistributionStats()
+    }
+
+    @GetMapping("/mastery")
+    fun getMasteryStats(): List<com.gatelms.dto.TopicMasteryStatsDto> {
+        return mistakeService.getMasteryStats()
     }
 }
