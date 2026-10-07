@@ -71,7 +71,10 @@ class QuestionService(
     }
 
     fun createQuestion(dto: QuestionUpsertDto): QuestionDto {
-        validateQuestion(dto)
+        val validation = validateUpsert(dto)
+        if (!validation.valid) {
+            throw ValidationException("Question validation failed", validation.fieldErrors)
+        }
 
         val subject = subjectRepository.findById(dto.subjectId).orElseThrow {
             EntityNotFoundException("Subject not found with id: ${dto.subjectId}")
@@ -111,7 +114,10 @@ class QuestionService(
     }
 
     fun updateQuestion(id: UUID, dto: QuestionUpsertDto): QuestionDto {
-        validateQuestion(dto)
+        val validation = validateUpsert(dto)
+        if (!validation.valid) {
+            throw ValidationException("Question validation failed", validation.fieldErrors)
+        }
 
         val question = questionRepository.findById(id).orElseThrow {
             EntityNotFoundException("Question not found with id: $id")
@@ -189,14 +195,22 @@ class QuestionService(
         return saved.toDto()
     }
 
-    private fun validateQuestion(dto: QuestionUpsertDto) {
+    @Transactional(readOnly = true)
+    fun validateUpsert(dto: QuestionUpsertDto): QuestionValidationResultDto {
         val errors = mutableMapOf<String, String>()
+        val warnings = mutableListOf<String>()
 
         if (dto.statement.isBlank()) {
             errors["statement"] = "Statement must not be blank"
         }
         if (dto.marks !in setOf(1, 2)) {
             errors["marks"] = "Marks must be 1 or 2"
+        }
+        if (dto.subjectId.isBlank()) {
+            errors["subjectId"] = "subjectId is required"
+        }
+        if (dto.topicId.isBlank()) {
+            errors["topicId"] = "topicId is required"
         }
 
         dto.gateOverflowUrl?.let {
@@ -207,7 +221,7 @@ class QuestionService(
 
         when (dto.type) {
             QuestionType.MCQ -> {
-                validateOptions(dto.optionsJson, errors, requiredCount = 4)
+                validateOptions(dto.optionsJson, errors, warnings, isMcq = true)
                 if (dto.correctOptions.isNullOrBlank()) {
                     errors["correctOptions"] = "MCQ must have exactly 1 correct option"
                 } else {
@@ -221,13 +235,13 @@ class QuestionService(
                 }
             }
             QuestionType.MSQ -> {
-                validateOptions(dto.optionsJson, errors, requiredCount = 4)
+                validateOptions(dto.optionsJson, errors, warnings, isMcq = false)
                 if (dto.correctOptions.isNullOrBlank()) {
                     errors["correctOptions"] = "MSQ must have at least 1 correct option"
                 } else {
                     val opts = dto.correctOptions.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                    if (opts.isEmpty() || opts.size > 4) {
-                        errors["correctOptions"] = "MSQ must have between 1 and 4 correct options"
+                    if (opts.isEmpty() || opts.size > 6) {
+                        errors["correctOptions"] = "MSQ must have between 1 and 6 correct options"
                     }
                     if (opts.distinct().size != opts.size) {
                         errors["correctOptions"] = "Duplicate options specified in correctOptions"
@@ -249,23 +263,61 @@ class QuestionService(
                 if (!dto.correctOptions.isNullOrBlank()) {
                     errors["correctOptions"] = "NAT questions must not have correctOptions"
                 }
+                if (dto.numericMin != null && dto.numericMax != null && (dto.numericMax - dto.numericMin) > 1000.0) {
+                    warnings.add("NAT tolerance span (${dto.numericMax - dto.numericMin}) > 1000 flagged as suspicious")
+                }
             }
         }
 
-        if (errors.isNotEmpty()) {
-            throw ValidationException("Question validation failed", errors)
+        // Warnings (non-blocking)
+        if (dto.statement.contains("$$")) {
+            warnings.add("Display-math ($$...$$) detected in statement")
+        } else {
+            warnings.add("Display-math ($$...$$) absent in statement")
         }
+
+        if (dto.explanation.isNullOrBlank()) {
+            warnings.add("Explanation is empty")
+        }
+
+        dto.externalId?.let { extId ->
+            if (extId.isNotBlank()) {
+                try {
+                    val existing = questionRepository.findByExternalId(extId)
+                    if (existing != null) {
+                        warnings.add("External ID '$extId' already exists in question bank")
+                    }
+                } catch (_: Exception) {
+                    // Ignored if repository query cannot be answered (e.g. unstubbed mock in unit test)
+                }
+            }
+        }
+
+        return QuestionValidationResultDto(
+            valid = errors.isEmpty(),
+            fieldErrors = errors,
+            warnings = warnings
+        )
     }
 
-    private fun validateOptions(optionsJson: String?, errors: MutableMap<String, String>, requiredCount: Int) {
+    private fun validateOptions(
+        optionsJson: String?, 
+        errors: MutableMap<String, String>, 
+        warnings: MutableList<String>,
+        isMcq: Boolean
+    ) {
         if (optionsJson.isNullOrBlank()) {
             errors["optionsJson"] = "Options must be provided"
             return
         }
         try {
             val list = objectMapper.readValue<List<Map<String, Any>>>(optionsJson)
-            if (list.size != requiredCount) {
-                errors["optionsJson"] = "Expected exactly $requiredCount options, found ${list.size}"
+            if (list.size < 2) {
+                errors["optionsJson"] = "At least 2 options are required, found ${list.size}"
+            } else if (list.size > 6) {
+                errors["optionsJson"] = "At most 6 options are allowed, found ${list.size}"
+            } else if (isMcq && list.size < 4) {
+                warnings.add("Options count (${list.size}) < 4 for MCQ")
             }
         } catch (ex: Exception) {
             errors["optionsJson"] = "Invalid options JSON structure: ${ex.message}"

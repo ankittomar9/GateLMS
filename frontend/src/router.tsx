@@ -6,6 +6,7 @@ import { SyllabusPage } from './pages/SyllabusPage';
 import { QuestionsPage } from './pages/QuestionsPage';
 import { QuestionDetailPage } from './pages/QuestionDetailPage';
 import { CurationQueuePage } from './pages/CurationQueuePage';
+import { AuthoringPage } from './pages/AuthoringPage';
 import { PracticePage } from './pages/PracticePage';
 import { PracticeRunnerPage } from './pages/PracticeRunnerPage';
 import { MistakeNotebookPage } from './pages/MistakeNotebookPage';
@@ -37,6 +38,10 @@ export const router = createBrowserRouter([
       {
         path: 'curation',
         element: <CurationQueuePage />,
+      },
+      {
+        path: 'author',
+        element: <AuthoringPage />,
       },
       {
         path: 'practice',

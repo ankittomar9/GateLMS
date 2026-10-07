@@ -33,6 +33,8 @@ import {
   MockResultResponse,
   MockAttemptHistoryDto,
   MockTrendDto,
+  QuestionUpsertDto,
+  QuestionValidationResultDto,
 } from '../api/types';
 
 export function useSubjects() {
@@ -337,6 +339,38 @@ export function useMockTrend() {
   return useQuery({
     queryKey: ['mock-trend'],
     queryFn: () => apiClient.get<MockTrendDto[]>('/stats/mock-trend'),
+  });
+}
+
+export function useValidateQuestion() {
+  return useMutation({
+    mutationFn: (dto: QuestionUpsertDto) =>
+      apiClient.post<QuestionValidationResultDto>('/questions/validate', dto),
+  });
+}
+
+export function useCreateQuestion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: QuestionUpsertDto) =>
+      apiClient.post<QuestionDetail>('/questions', dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['questions'] });
+      queryClient.invalidateQueries({ queryKey: ['stats-summary'] });
+    },
+  });
+}
+
+export function useUpdateQuestion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: QuestionUpsertDto }) =>
+      apiClient.put<QuestionDetail>(`/questions/${id}`, dto),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['question', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['questions'] });
+      queryClient.invalidateQueries({ queryKey: ['stats-summary'] });
+    },
   });
 }
 
