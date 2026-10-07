@@ -5,6 +5,7 @@ import { LayoutSwitcher } from './LayoutSwitcher';
 import { useDesign } from '../context/DesignContext';
 import { StreakChip } from './engagement/StreakChip';
 import { NotificationBell } from './engagement/NotificationBell';
+import { InstallPrompt } from './pwa/InstallPrompt';
 
 export const Header: React.FC = () => {
   const { currentDesign } = useDesign();
@@ -37,6 +38,9 @@ export const Header: React.FC = () => {
 
         {/* Universal Notification Bell Center */}
         <NotificationBell />
+
+        {/* PWA Install Prompt Button */}
+        <InstallPrompt />
 
         {/* Quick Action (TUF Classic only) */}
         {currentDesign === 'tuf' && (

@@ -69,6 +69,12 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
     throw new ApiError(response.status, message, fieldErrors, errorData?.detail);
   }
 
+  if (response.headers && response.headers.get('X-From-Cache') === '1') {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gatelms:cached-response'));
+    }
+  }
+
   if (response.status === 204) {
     return {} as T;
   }
