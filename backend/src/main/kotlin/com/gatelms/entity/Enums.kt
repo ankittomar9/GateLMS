@@ -38,3 +38,30 @@ enum class QuestionDifficulty {
     MEDIUM,
     HARD
 }
+
+enum class ExamMode {
+    MOCK,
+    PRACTICE,
+    WEAKNESS_DRILL
+}
+
+enum class MockAttemptStatus {
+    IN_PROGRESS,
+    SUBMITTED,
+    ABANDONED
+}
+
+enum class AttemptAnswerState {
+    NOT_VISITED,
+    NOT_ANSWERED,
+    ANSWERED,
+    MARKED_FOR_REVIEW,
+    ANSWERED_AND_MARKED
+}
+
+enum class MistakeErrorCategory {
+    CONCEPTUAL,
+    CALCULATION,
+    MSQ_TRAP,
+    MISREAD
+}
