@@ -26,7 +26,10 @@ class PracticeService(
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private val rollupService: RollupService? = null,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private val planProgressService: PlanProgressService? = null
+    private val planProgressService: PlanProgressService? = null,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    private val achievementService: AchievementService? = null
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(PracticeService::class.java)
 
@@ -262,6 +265,16 @@ class PracticeService(
             savedTopic.masteryLevel
         } else {
             0
+        }
+
+        // Engagement achievements hook (SPEC §2.3)
+        try {
+            achievementService?.checkOnAnswerSubmitted()
+            if (updatedMastery >= 5) {
+                achievementService?.checkOnTopicMastery(updatedMastery)
+            }
+        } catch (e: Exception) {
+            logger.warn("Achievement check failed in practice grading: ${e.message}", e)
         }
 
         return PracticeVerdictResponse(

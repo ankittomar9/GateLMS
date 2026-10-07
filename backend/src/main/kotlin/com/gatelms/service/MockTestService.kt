@@ -30,7 +30,9 @@ class MockTestService(
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private val rollupService: RollupService? = null,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private val planProgressService: PlanProgressService? = null
+    private val planProgressService: PlanProgressService? = null,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val achievementService: AchievementService? = null
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(MockTestService::class.java)
 
@@ -478,6 +480,13 @@ class MockTestService(
             }
         } catch (e: Exception) {
             logger.warn("Plan progress hook failure ignored during mock attempt submit: ${e.message}", e)
+        }
+
+        // Engagement achievements hook (SPEC §2.3)
+        try {
+            achievementService?.checkOnMockSubmitted(score = totScore, maxScore = maxMarks)
+        } catch (e: Exception) {
+            logger.warn("Achievement check failed in mock attempt submit: ${e.message}", e)
         }
 
         return SubmitMockAttemptResponse(

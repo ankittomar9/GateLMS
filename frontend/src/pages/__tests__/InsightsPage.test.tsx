@@ -2,8 +2,10 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InsightsPage } from '../InsightsPage';
 import { readinessApi, ReadinessResponse, HeatmapResponse, TrendsResponse, ExamCountdown } from '../../api/readinessApi';
+import * as queryHooks from '../../hooks/useQueries';
 
 // Mock recharts ResponsiveContainer to render children reliably in JSDOM
 vi.mock('recharts', async () => {
@@ -92,13 +94,32 @@ const mockCountdownFixture: ExamCountdown = {
 };
 
 describe('InsightsPage Component Tests', () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     vi.restoreAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.spyOn(queryHooks, 'useAchievements').mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as any);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
+
+  const renderWithProviders = () => {
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <InsightsPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+  };
 
   it('1. score hero renders readiness + components from fixture', async () => {
     vi.spyOn(readinessApi, 'getReadiness').mockResolvedValue(mockReadinessFixture);
@@ -106,11 +127,7 @@ describe('InsightsPage Component Tests', () => {
     vi.spyOn(readinessApi, 'getTrends').mockResolvedValue(mockTrendsFixture);
     vi.spyOn(readinessApi, 'getCountdown').mockResolvedValue(mockCountdownFixture);
 
-    render(
-      <MemoryRouter>
-        <InsightsPage />
-      </MemoryRouter>
-    );
+    renderWithProviders();
 
     await waitFor(() => {
       expect(screen.getByTestId('score-hero')).toBeDefined();
@@ -134,11 +151,7 @@ describe('InsightsPage Component Tests', () => {
     vi.spyOn(readinessApi, 'getTrends').mockResolvedValue(mockTrendsFixture);
     vi.spyOn(readinessApi, 'getCountdown').mockResolvedValue(mockCountdownFixture);
 
-    render(
-      <MemoryRouter>
-        <InsightsPage />
-      </MemoryRouter>
-    );
+    renderWithProviders();
 
     await waitFor(() => {
       expect(screen.getByTestId('mastery-heatmap-card')).toBeDefined();
@@ -167,11 +180,7 @@ describe('InsightsPage Component Tests', () => {
     vi.spyOn(readinessApi, 'getTrends').mockResolvedValue(mockTrendsFixture);
     vi.spyOn(readinessApi, 'getCountdown').mockResolvedValue(mockCountdownFixture);
 
-    render(
-      <MemoryRouter>
-        <InsightsPage />
-      </MemoryRouter>
-    );
+    renderWithProviders();
 
     await waitFor(() => {
       expect(screen.getByTestId('mastery-heatmap-card')).toBeDefined();
@@ -193,11 +202,7 @@ describe('InsightsPage Component Tests', () => {
     vi.spyOn(readinessApi, 'getTrends').mockResolvedValue(mockTrendsFixture);
     vi.spyOn(readinessApi, 'getCountdown').mockResolvedValue(mockCountdownFixture);
 
-    render(
-      <MemoryRouter>
-        <InsightsPage />
-      </MemoryRouter>
-    );
+    renderWithProviders();
 
     await waitFor(() => {
       expect(screen.getByTestId('radar-chart-card')).toBeDefined();
@@ -212,11 +217,7 @@ describe('InsightsPage Component Tests', () => {
     vi.spyOn(readinessApi, 'getTrends').mockResolvedValue(mockTrendsFixture);
     vi.spyOn(readinessApi, 'getCountdown').mockResolvedValue(mockCountdownFixture);
 
-    render(
-      <MemoryRouter>
-        <InsightsPage />
-      </MemoryRouter>
-    );
+    renderWithProviders();
 
     await waitFor(() => {
       expect(screen.getByTestId('trends-chart-card')).toBeDefined();
@@ -233,11 +234,7 @@ describe('InsightsPage Component Tests', () => {
     vi.spyOn(readinessApi, 'getTrends').mockResolvedValue(mockTrendsFixture);
     vi.spyOn(readinessApi, 'getCountdown').mockResolvedValue(mockCountdownFixture);
 
-    render(
-      <MemoryRouter>
-        <InsightsPage />
-      </MemoryRouter>
-    );
+    renderWithProviders();
 
     await waitFor(() => {
       expect(screen.getByTestId('countdown-card')).toBeDefined();
@@ -259,11 +256,7 @@ describe('InsightsPage Component Tests', () => {
     vi.spyOn(readinessApi, 'getTrends').mockResolvedValue({ days: [], rolling7: { accuracy: 0, volume: 0 } });
     vi.spyOn(readinessApi, 'getCountdown').mockResolvedValue(mockCountdownFixture);
 
-    render(
-      <MemoryRouter>
-        <InsightsPage />
-      </MemoryRouter>
-    );
+    renderWithProviders();
 
     await waitFor(() => {
       expect(screen.getByTestId('insights-empty-state')).toBeDefined();
@@ -279,11 +272,7 @@ describe('InsightsPage Component Tests', () => {
     vi.spyOn(readinessApi, 'getTrends').mockResolvedValue(mockTrendsFixture);
     vi.spyOn(readinessApi, 'getCountdown').mockResolvedValue(mockCountdownFixture);
 
-    render(
-      <MemoryRouter>
-        <InsightsPage />
-      </MemoryRouter>
-    );
+    renderWithProviders();
 
     await waitFor(() => {
       expect(screen.getByTestId('formula-toggle-btn')).toBeDefined();

@@ -55,6 +55,9 @@ interface AttemptAnswerRepository : JpaRepository<AttemptAnswer, UUID> {
         nativeQuery = true
     )
     fun findLatestDistinctVerdicts(): List<LatestAnswerProjection>
+
+    @Query("SELECT COUNT(DISTINCT aa.question.id) FROM AttemptAnswer aa")
+    fun countDistinctQuestionId(): Long
 }
 
 interface LatestAnswerProjection {
@@ -112,4 +115,7 @@ interface MistakeLogRepository : JpaRepository<MistakeLog, UUID> {
         @Param("topicId") topicId: String?,
         pageable: Pageable
     ): List<MistakeLog>
+
+    @Query("SELECT COALESCE(SUM(m.reviewCount), 0) FROM MistakeLog m")
+    fun sumReviewCounts(): Long
 }

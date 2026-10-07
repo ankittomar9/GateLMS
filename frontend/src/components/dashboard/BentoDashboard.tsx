@@ -14,6 +14,7 @@ import { CurationProgressTile } from './CurationProgressTile';
 import { ReadinessSummaryCard } from './ReadinessSummaryCard';
 import { PypDashboardTile } from './PypDashboardTile';
 import { TodayCard } from '../planner/TodayCard';
+import { GoalRing } from '../engagement/GoalRing';
 
 export const BentoDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -83,6 +84,8 @@ export const BentoDashboard: React.FC = () => {
       <ReadinessSummaryCard />
 
       <TodayCard />
+
+      <GoalRing />
 
       {/* Bento Grid Container */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

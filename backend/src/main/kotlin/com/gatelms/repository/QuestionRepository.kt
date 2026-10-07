@@ -78,6 +78,9 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
     @Query("SELECT q.curationStatus, count(q) FROM Question q GROUP BY q.curationStatus")
     fun countGroupedByCurationStatus(): List<Array<Any>>
 
+    @Query("SELECT count(q) FROM Question q WHERE q.curationStatus IN ('ACCEPTED', 'REJECTED')")
+    fun countCurationDecisions(): Long
+
     @Query("SELECT q.subject.id, q.subject.name, q.curationStatus, count(q) FROM Question q WHERE q.subject IS NOT NULL GROUP BY q.subject.id, q.subject.name, q.curationStatus")
     fun countCurationGroupedBySubject(): List<Array<Any>>
 

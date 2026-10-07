@@ -27,7 +27,9 @@ class MistakeService(
     private val attemptAnswerRepository: AttemptAnswerRepository,
     private val topicRepository: TopicRepository,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private val planProgressService: PlanProgressService? = null
+    private val planProgressService: PlanProgressService? = null,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val achievementService: AchievementService? = null
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(MistakeService::class.java)
 
@@ -125,6 +127,13 @@ class MistakeService(
             } catch (e: Exception) {
                 logger.warn("Plan progress hook failure ignored during mistake review: ${e.message}", e)
             }
+        }
+
+        // Engagement achievements hook (SPEC §2.3)
+        try {
+            achievementService?.checkOnMistakeReviewed()
+        } catch (e: Exception) {
+            logger.warn("Achievement check failed in mistake review: ${e.message}", e)
         }
 
         return saved.toDto()

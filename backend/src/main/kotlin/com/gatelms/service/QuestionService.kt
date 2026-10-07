@@ -27,7 +27,9 @@ class QuestionService(
     private val topicRepository: TopicRepository,
     private val objectMapper: ObjectMapper,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null
+    private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val achievementService: AchievementService? = null
 ) {
 
     @Transactional(readOnly = true)
@@ -213,6 +215,11 @@ class QuestionService(
 
         if (status == "ACCEPTED" || status == "REJECTED") {
             gateLmsMetrics?.recordCurationDecision(status.lowercase())
+            try {
+                achievementService?.checkOnCurationDecision()
+            } catch (e: Exception) {
+                // Ignore failure in achievement check
+            }
         }
 
         val saved = questionRepository.saveAndFlush(question)

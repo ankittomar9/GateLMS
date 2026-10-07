@@ -11,8 +11,11 @@ import {
   TrendingUp, 
   RotateCcw,
   BookOpen,
-  Info
+  Info,
+  Trophy,
+  Lock
 } from 'lucide-react';
+import { useAchievements } from '../hooks/useQueries';
 import { 
   RadarChart, 
   PolarGrid, 
@@ -42,6 +45,7 @@ export const InsightsPage: React.FC = () => {
   const [showFormula, setShowFormula] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const { data: achievements = [], isLoading: loadingAchievements } = useAchievements();
 
   useEffect(() => {
     let mounted = true;
@@ -526,6 +530,98 @@ export const InsightsPage: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Achievements & Milestones Strip */}
+      <div className="space-y-4 pt-6 border-t border-ds-border" data-testid="achievements-strip">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-ds-primary flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-ds-accent" />
+              <span>Achievements & Milestones</span>
+            </h2>
+            <p className="text-xs text-ds-muted">
+              Dynamically awarded upon reaching genuine milestone events. No fake progress bars.
+            </p>
+          </div>
+          <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-ds-surface-raised border border-ds-border text-ds-secondary self-start sm:self-auto">
+            {achievements.filter((a) => a.earnedAt).length} / {achievements.length} Unlocked
+          </span>
+        </div>
+
+        {loadingAchievements ? (
+          <div className="py-8 text-center text-xs text-ds-muted font-mono animate-pulse">
+            Loading achievement records...
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {achievements.map((item) => {
+              const isUnlocked = !!item.earnedAt;
+              return (
+                <div
+                  key={item.code}
+                  data-testid={`achievement-card-${item.code}`}
+                  className={`p-4 rounded-ds border transition-all flex flex-col justify-between ${
+                    isUnlocked
+                      ? 'bg-ds-surface border-ds-accent/40 shadow-sm'
+                      : 'bg-ds-surface/40 border-ds-border/60 opacity-60'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div
+                        className={`w-8 h-8 rounded-ds flex items-center justify-center shrink-0 ${
+                          isUnlocked
+                            ? 'bg-ds-accent-soft text-ds-accent border border-ds-accent/30'
+                            : 'bg-ds-surface-raised text-ds-muted border border-ds-border'
+                        }`}
+                      >
+                        {isUnlocked ? (
+                          <Trophy className="w-4 h-4" />
+                        ) : (
+                          <Lock className="w-4 h-4 text-ds-muted" />
+                        )}
+                      </div>
+                      <span
+                        data-testid={isUnlocked ? `achievement-unlocked-${item.code}` : `achievement-locked-${item.code}`}
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold ${
+                          isUnlocked
+                            ? 'bg-ds-success/15 text-ds-success border border-ds-success/30'
+                            : 'bg-ds-surface-raised text-ds-muted border border-ds-border'
+                        }`}
+                      >
+                        {isUnlocked ? 'Unlocked' : 'Locked'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4
+                        className={`text-xs font-bold ${
+                          isUnlocked ? 'text-ds-primary' : 'text-ds-secondary'
+                        }`}
+                      >
+                        {item.title}
+                      </h4>
+                      <p className="text-[11px] text-ds-muted mt-1 leading-snug">
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 mt-3 border-t border-ds-border/50 text-[10px] font-mono text-ds-muted">
+                    {isUnlocked ? (
+                      <span data-testid={`achievement-earned-date-${item.code}`}>
+                        Earned {new Date(item.earnedAt!).toLocaleDateString()}
+                      </span>
+                    ) : (
+                      <span>Milestone Locked</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

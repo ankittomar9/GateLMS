@@ -37,10 +37,12 @@ import {
   QuestionValidationResultDto,
   GeneratePlanRequest,
   UpdatePlanItemStatusRequest,
+  UpdateUserGoalRequest,
 } from '../api/types';
 import { pypApi } from '../api/pypApi';
 import { plannerApi } from '../api/plannerApi';
 import { readinessApi } from '../api/readinessApi';
+import * as engagementApi from '../api/engagementApi';
 
 export function useSubjects() {
   return useQuery({
@@ -505,6 +507,109 @@ export function useReadiness() {
   return useQuery({
     queryKey: ['readiness'],
     queryFn: () => readinessApi.getReadiness(),
+  });
+}
+
+// Phase 4 SPEC 2: Engagement Hooks
+export function useEngagementSummary() {
+  return useQuery({
+    queryKey: ['engagement-summary'],
+    queryFn: () => engagementApi.fetchEngagementSummary(),
+  });
+}
+
+export function useAchievements() {
+  return useQuery({
+    queryKey: ['achievements'],
+    queryFn: () => engagementApi.fetchAchievements(),
+  });
+}
+
+export function useUserGoal() {
+  return useQuery({
+    queryKey: ['user-goal'],
+    queryFn: () => engagementApi.fetchUserGoal(),
+  });
+}
+
+export function useUpdateUserGoal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (req: UpdateUserGoalRequest) => engagementApi.updateUserGoal(req),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-goal'] });
+      queryClient.invalidateQueries({ queryKey: ['engagement-summary'] });
+    },
+  });
+}
+
+export function useNotifications(unreadOnly = false, page = 0, size = 20) {
+  return useQuery({
+    queryKey: ['notifications', unreadOnly, page, size],
+    queryFn: () => engagementApi.fetchNotifications(unreadOnly, page, size),
+  });
+}
+
+export function useTop10Notifications() {
+  return useQuery({
+    queryKey: ['notifications-top10'],
+    queryFn: () => engagementApi.fetchTop10Notifications(),
+  });
+}
+
+export function useUnreadNotificationCount() {
+  return useQuery({
+    queryKey: ['notifications-unread-count'],
+    queryFn: () => engagementApi.fetchUnreadNotificationCount(),
+    refetchInterval: 60000,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => engagementApi.markNotificationRead(id),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['notifications-unread-count'] });
+      const previousCount = queryClient.getQueryData<number>(['notifications-unread-count']);
+      if (previousCount !== undefined && previousCount > 0) {
+        queryClient.setQueryData(['notifications-unread-count'], previousCount - 1);
+      }
+      return { previousCount };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousCount !== undefined) {
+        queryClient.setQueryData(['notifications-unread-count'], context.previousCount);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications-unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications-top10'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => engagementApi.markAllNotificationsRead(),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['notifications-unread-count'] });
+      const previousCount = queryClient.getQueryData<number>(['notifications-unread-count']);
+      queryClient.setQueryData(['notifications-unread-count'], 0);
+      return { previousCount };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousCount !== undefined) {
+        queryClient.setQueryData(['notifications-unread-count'], context.previousCount);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications-unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications-top10'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
   });
 }
 
