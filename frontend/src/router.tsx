@@ -14,6 +14,7 @@ import { MockTestsPage } from './pages/MockTestsPage';
 import { TestRunnerPage } from './pages/TestRunnerPage';
 import { ResultPage } from './pages/ResultPage';
 import { InsightsPage } from './pages/InsightsPage';
+import { NotesPage } from './pages/NotesPage';
 
 export const router = createBrowserRouter([
   {
@@ -27,6 +28,10 @@ export const router = createBrowserRouter([
       {
         path: 'insights',
         element: <InsightsPage />,
+      },
+      {
+        path: 'notes',
+        element: <NotesPage />,
       },
       {
         path: 'syllabus',

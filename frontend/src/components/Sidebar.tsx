@@ -12,7 +12,8 @@ import {
   GraduationCap,
   ClipboardCheck,
   PenLine,
-  Activity
+  Activity,
+  NotebookPen
 } from 'lucide-react';
 import { useDesign } from '../context/DesignContext';
 
@@ -25,6 +26,7 @@ export const Sidebar: React.FC = () => {
   const pathname = location.pathname;
   const isDashboard = pathname === '/';
   const isInsights = pathname.startsWith('/insights');
+  const isNotes = pathname.startsWith('/notes');
   const isSyllabus = pathname.startsWith('/syllabus');
   const isQuestions = pathname.startsWith('/questions');
   const isCuration = pathname.startsWith('/curation');
@@ -226,11 +228,11 @@ export const Sidebar: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => navigate('/syllabus')}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium text-ds-secondary hover:text-ds-primary hover:bg-ds-surface transition-all"
+                onClick={() => navigate('/notes')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isNotes)}`}
               >
-                <FileText className="w-4 h-4 text-ds-warning" />
-                <span>iPad Notes Vault</span>
+                <NotebookPen className={`w-4 h-4 ${isNotes ? 'text-ds-accent' : 'text-ds-warning'}`} />
+                <span>Notes Vault</span>
               </button>
             </div>
           </div>

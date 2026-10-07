@@ -45,6 +45,7 @@ services:
     volumes:
       - ./logs:/app/logs
       - gatelms_uploads:/app/uploads
+      - notes-data:/docker-data/notes
     depends_on:
       postgres:
         condition: service_healthy
@@ -153,6 +154,8 @@ volumes:
     name: gatelms_postgres_data
   gatelms_uploads:
     name: gatelms_uploads
+  notes-data:
+    name: gatelms_notes_data
   loki_data:
     name: gatelms_loki_data
   tempo_data:
