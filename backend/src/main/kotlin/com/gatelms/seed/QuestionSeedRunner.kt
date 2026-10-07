@@ -38,6 +38,10 @@ data class SeedQuestionJson(
     val numericMax: Double? = null,
     val explanation: String? = null,
     val gateOverflowUrl: String? = null,
+    val source: String? = null,
+    val difficulty: String? = null,
+    val curationStatus: String? = null,
+    val curationNote: String? = null,
     val pass1Status: String? = null
 )
 
@@ -55,8 +59,12 @@ class QuestionSeedRunner(
     private val logger = LoggerFactory.getLogger(QuestionSeedRunner::class.java)
 
     override fun run(args: ApplicationArguments?) {
-        logger.info("Initializing GateLMS Question Seed Pipeline from: {}", seedPath)
-        val report = importQuestions(seedPath)
+        val effectivePath = args?.getOptionValues("app.seed.path")?.firstOrNull()
+            ?: args?.getOptionValues("seed.path")?.firstOrNull()
+            ?: seedPath
+
+        logger.info("Initializing GateLMS Question Seed Pipeline from: {}", effectivePath)
+        val report = importQuestions(effectivePath)
         logger.info(
             "[SEED-RECEIPT] total={}, inserted={}, updated={}, rejected={}",
             report.total,
@@ -131,6 +139,10 @@ class QuestionSeedRunner(
                         existing.numericMax = raw.numericMax
                         existing.explanation = raw.explanation
                         existing.gateOverflowUrl = raw.gateOverflowUrl
+                        raw.source?.let { existing.source = it }
+                        raw.difficulty?.let { existing.difficulty = it }
+                        raw.curationStatus?.let { existing.curationStatus = it }
+                        raw.curationNote?.let { existing.curationNote = it }
                         existing.updatedAt = Instant.now()
                         questionRepository.save(existing)
                         updated++
@@ -150,6 +162,10 @@ class QuestionSeedRunner(
                             explanation = raw.explanation,
                             gateOverflowUrl = raw.gateOverflowUrl,
                             isBookmarked = false,
+                            source = raw.source ?: "SAMPLE",
+                            curationStatus = raw.curationStatus ?: "UNREVIEWED",
+                            curationNote = raw.curationNote,
+                            difficulty = raw.difficulty,
                             pass1Status = p1Status,
                             pass2Status = Pass2Status.PENDING
                         )

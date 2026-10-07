@@ -10,7 +10,7 @@ import {
   FileQuestion
 } from 'lucide-react';
 import { useQuestions, useSubjects, useTopics, useToggleBookmark } from '../hooks/useQueries';
-import { QuestionType, Pass1Status, QuestionSummary } from '../api/types';
+import { QuestionType, Pass1Status, QuestionSummary, CurationStatus } from '../api/types';
 
 export const QuestionsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -23,6 +23,7 @@ export const QuestionsPage: React.FC = () => {
   const typeParam = (searchParams.get('type') as QuestionType) || undefined;
   const yearParam = searchParams.get('year') ? Number(searchParams.get('year')) : undefined;
   const pass1StatusParam = (searchParams.get('pass1Status') as Pass1Status) || undefined;
+  const curationStatusParam = (searchParams.get('curationStatus') as CurationStatus) || undefined;
   const bookmarkedParam = searchParams.get('bookmarked') === 'true' ? true : undefined;
   const pageParam = searchParams.get('page') ? Number(searchParams.get('page')) : 0;
 
@@ -66,11 +67,12 @@ export const QuestionsPage: React.FC = () => {
       type: typeParam,
       year: yearParam,
       pass1Status: pass1StatusParam,
+      curationStatus: curationStatusParam,
       bookmarked: bookmarkedParam,
       page: pageParam,
       size: 20,
     }),
-    [qParam, subjectIdParam, topicIdParam, typeParam, yearParam, pass1StatusParam, bookmarkedParam, pageParam]
+    [qParam, subjectIdParam, topicIdParam, typeParam, yearParam, pass1StatusParam, curationStatusParam, bookmarkedParam, pageParam]
   );
 
   const { data, isLoading, error } = useQuestions(queryFilters);
@@ -129,6 +131,18 @@ export const QuestionsPage: React.FC = () => {
     }
   };
 
+  const getCurationBadge = (status?: CurationStatus) => {
+    switch (status) {
+      case 'ACCEPTED':
+        return 'text-ds-success bg-ds-success/10 border-ds-success/30';
+      case 'REJECTED':
+        return 'text-ds-danger bg-ds-danger/10 border-ds-danger/30';
+      case 'UNREVIEWED':
+      default:
+        return 'text-ds-muted bg-ds-surface-raised border-ds-border';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner */}
@@ -166,7 +180,7 @@ export const QuestionsPage: React.FC = () => {
         </div>
 
         {/* Dropdowns Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-3 text-xs">
           {/* Subject Filter */}
           <select
             value={subjectIdParam}
@@ -219,6 +233,19 @@ export const QuestionsPage: React.FC = () => {
             <option value="SOLVED">SOLVED</option>
             <option value="REVISE">REVISE</option>
             <option value="FLAGGED">FLAGGED</option>
+          </select>
+
+          {/* Curation Status Filter */}
+          <select
+            value={curationStatusParam || ''}
+            onChange={(e) => handleFilterChange('curationStatus', e.target.value)}
+            data-testid="curation-status-filter"
+            className="bg-ds-surface-input border border-ds-border rounded-ds px-2.5 py-1.5 text-ds-secondary focus:outline-none focus:border-ds-accent/60"
+          >
+            <option value="">Curation: All</option>
+            <option value="UNREVIEWED">Unreviewed</option>
+            <option value="ACCEPTED">Accepted</option>
+            <option value="REJECTED">Rejected</option>
           </select>
 
           {/* Bookmarked Filter */}
@@ -317,6 +344,12 @@ export const QuestionsPage: React.FC = () => {
 
               {/* Status Chips & Actions */}
               <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                {q.curationStatus && (
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${getCurationBadge(q.curationStatus)}`}>
+                    {q.curationStatus}
+                  </span>
+                )}
+
                 <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${getPass1Badge(q.pass1Status)}`}>
                   {q.pass1Status}
                 </span>

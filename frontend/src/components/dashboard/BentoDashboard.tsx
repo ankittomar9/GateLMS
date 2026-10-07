@@ -10,6 +10,7 @@ import {
   Smile
 } from 'lucide-react';
 import { useDesign } from '../../context/DesignContext';
+import { CurationProgressTile } from './CurationProgressTile';
 
 export const BentoDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -343,6 +344,9 @@ export const BentoDashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* 6. Curation Progress Tile */}
+      <CurationProgressTile />
     </div>
   );
 };

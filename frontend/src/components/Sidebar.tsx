@@ -9,7 +9,8 @@ import {
   ChevronDown, 
   ChevronRight, 
   AlertCircle,
-  GraduationCap
+  GraduationCap,
+  ClipboardCheck
 } from 'lucide-react';
 import { useDesign } from '../context/DesignContext';
 
@@ -23,6 +24,7 @@ export const Sidebar: React.FC = () => {
   const isDashboard = pathname === '/';
   const isSyllabus = pathname.startsWith('/syllabus');
   const isQuestions = pathname.startsWith('/questions');
+  const isCuration = pathname.startsWith('/curation');
 
   // Active item styling: 3px left border on aurora & sky, background tint on tuf & ink
   const getActiveNavClass = (isActive: boolean) => {
@@ -89,6 +91,15 @@ export const Sidebar: React.FC = () => {
               >
                 <Database className={`w-4 h-4 ${isQuestions ? 'text-ds-accent' : 'text-ds-muted'}`} />
                 <span>Question Bank</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/curation')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isCuration)}`}
+              >
+                <ClipboardCheck className={`w-4 h-4 ${isCuration ? 'text-ds-accent' : 'text-ds-muted'}`} />
+                <span>Curation Queue</span>
               </button>
 
               {/* Collapsible Practice */}

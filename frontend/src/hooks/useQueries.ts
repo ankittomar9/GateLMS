@@ -11,6 +11,9 @@ import {
   StatsSummary,
   Pass1Status,
   Pass2Status,
+  CurationStatus,
+  CurationStatsResponse,
+  DistributionStatsResponse,
 } from '../api/types';
 
 export function useSubjects() {
@@ -102,5 +105,56 @@ export function useStatsSummary() {
   return useQuery({
     queryKey: ['stats-summary'],
     queryFn: () => apiClient.get<StatsSummary>('/stats/summary'),
+  });
+}
+
+export function useUpdateCurationStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, note }: { id: string; status: CurationStatus; note?: string }) =>
+      apiClient.patch<QuestionDetail>(`/questions/${id}/curation`, { status, note }),
+    onMutate: async ({ id, status, note }) => {
+      await queryClient.cancelQueries({ queryKey: ['questions'] });
+      const previousQuestions = queryClient.getQueriesData({ queryKey: ['questions'] });
+
+      queryClient.setQueriesData({ queryKey: ['questions'] }, (old: any) => {
+        if (!old || !old.content) return old;
+        return {
+          ...old,
+          content: old.content.map((q: any) =>
+            q.id === id ? { ...q, curationStatus: status, curationNote: note ?? q.curationNote } : q
+          ),
+        };
+      });
+
+      return { previousQuestions };
+    },
+    onError: (_err, _variables, context: any) => {
+      if (context?.previousQuestions) {
+        context.previousQuestions.forEach(([queryKey, data]: [any, any]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['question', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['questions'] });
+      queryClient.invalidateQueries({ queryKey: ['curation-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['distribution-stats'] });
+    },
+  });
+}
+
+export function useCurationStats() {
+  return useQuery({
+    queryKey: ['curation-stats'],
+    queryFn: () => apiClient.get<CurationStatsResponse>('/stats/curation'),
+  });
+}
+
+export function useDistributionStats() {
+  return useQuery({
+    queryKey: ['distribution-stats'],
+    queryFn: () => apiClient.get<DistributionStatsResponse>('/stats/distribution'),
   });
 }

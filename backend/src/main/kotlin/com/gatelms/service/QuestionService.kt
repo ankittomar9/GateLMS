@@ -37,6 +37,9 @@ class QuestionService(
         pass1Status: String?,
         pass2Status: String?,
         bookmarked: Boolean?,
+        curationStatus: String? = null,
+        source: String? = null,
+        difficulty: String? = null,
         q: String?,
         pageable: Pageable
     ): Page<QuestionSummaryDto> {
@@ -50,6 +53,9 @@ class QuestionService(
             pass1Status = pass1Status?.ifBlank { null },
             pass2Status = pass2Status?.ifBlank { null },
             bookmarked = bookmarked,
+            curationStatus = curationStatus?.ifBlank { null },
+            source = source?.ifBlank { null },
+            difficulty = difficulty?.ifBlank { null },
             q = normalizedQ,
             pageable = unpagedSortPageable
         )
@@ -93,7 +99,11 @@ class QuestionService(
             numericMin = dto.numericMin,
             numericMax = dto.numericMax,
             explanation = dto.explanation?.trim(),
-            gateOverflowUrl = dto.gateOverflowUrl?.trim()
+            gateOverflowUrl = dto.gateOverflowUrl?.trim(),
+            source = dto.source ?: "SAMPLE",
+            curationStatus = dto.curationStatus ?: "UNREVIEWED",
+            curationNote = dto.curationNote?.trim(),
+            difficulty = dto.difficulty?.trim()
         )
 
         val saved = questionRepository.save(question)
@@ -133,6 +143,10 @@ class QuestionService(
         question.numericMax = dto.numericMax
         question.explanation = dto.explanation?.trim()
         question.gateOverflowUrl = dto.gateOverflowUrl?.trim()
+        dto.source?.let { question.source = it }
+        dto.curationStatus?.let { question.curationStatus = it }
+        dto.curationNote?.let { question.curationNote = it.trim() }
+        dto.difficulty?.let { question.difficulty = it.trim() }
         question.updatedAt = Instant.now()
 
         val saved = questionRepository.saveAndFlush(question)
@@ -147,6 +161,28 @@ class QuestionService(
         dto.pass1Status?.let { question.pass1Status = it }
         dto.pass2Status?.let { question.pass2Status = it }
         dto.isBookmarked?.let { question.isBookmarked = it }
+        question.updatedAt = Instant.now()
+
+        val saved = questionRepository.saveAndFlush(question)
+        return saved.toDto()
+    }
+
+    fun updateCuration(id: UUID, dto: CurationUpdateRequest): QuestionDto {
+        val question = questionRepository.findById(id).orElseThrow {
+            EntityNotFoundException("Question not found with id: $id")
+        }
+
+        val validStatuses = setOf("ACCEPTED", "REJECTED", "UNREVIEWED")
+        val status = dto.status?.trim()?.uppercase()
+        if (status == null || status !in validStatuses) {
+            throw ValidationException(
+                "Invalid curation status",
+                mapOf("curationStatus" to "Must be one of ACCEPTED, REJECTED, UNREVIEWED")
+            )
+        }
+
+        question.curationStatus = status
+        question.curationNote = dto.note?.trim()
         question.updatedAt = Instant.now()
 
         val saved = questionRepository.saveAndFlush(question)
@@ -251,6 +287,10 @@ class QuestionService(
             pass1Status = pass1Status,
             pass2Status = pass2Status,
             isBookmarked = isBookmarked,
+            source = source,
+            curationStatus = curationStatus,
+            curationNote = curationNote,
+            difficulty = difficulty,
             createdAt = createdAt
         )
     }
@@ -276,6 +316,10 @@ class QuestionService(
             pass1Status = pass1Status,
             pass2Status = pass2Status,
             isBookmarked = isBookmarked,
+            source = source,
+            curationStatus = curationStatus,
+            curationNote = curationNote,
+            difficulty = difficulty,
             createdAt = createdAt,
             updatedAt = updatedAt,
             version = version

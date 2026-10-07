@@ -37,3 +37,5 @@ scratch/
 _inbox/
 uploads/notes/*.pdf
 uploads/temp/
+seed-data/so-raw/
+backend/seed-data/so-raw/

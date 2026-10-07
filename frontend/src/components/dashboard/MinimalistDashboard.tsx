@@ -13,6 +13,7 @@ import {
   Quote
 } from 'lucide-react';
 import { useDesign } from '../../context/DesignContext';
+import { CurationProgressTile } from './CurationProgressTile';
 
 export const MinimalistDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -271,6 +272,9 @@ export const MinimalistDashboard: React.FC = () => {
                 Solve Problem
               </button>
             </div>
+
+            {/* Curation Queue Inline Tile */}
+            <CurationProgressTile />
           </div>
         )}
       </div>
@@ -299,7 +303,7 @@ export const MinimalistDashboard: React.FC = () => {
             Essential GATE Preparation Tools
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-ds-surface border border-ds-border rounded-ds p-5 flex items-start justify-between gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -347,6 +351,8 @@ export const MinimalistDashboard: React.FC = () => {
                 Explore Mocks →
               </button>
             </div>
+
+            <CurationProgressTile />
           </div>
         </div>
       )}

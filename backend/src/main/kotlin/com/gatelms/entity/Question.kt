@@ -71,6 +71,18 @@ class Question(
     @Column(name = "is_bookmarked", nullable = false)
     var isBookmarked: Boolean = false,
 
+    @Column(name = "source", length = 30, nullable = false)
+    var source: String = "SAMPLE",
+
+    @Column(name = "curation_status", length = 20, nullable = false)
+    var curationStatus: String = "UNREVIEWED",
+
+    @Column(name = "curation_note", columnDefinition = "TEXT")
+    var curationNote: String? = null,
+
+    @Column(name = "difficulty", length = 10)
+    var difficulty: String? = null,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now(),
 

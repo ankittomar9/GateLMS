@@ -22,6 +22,10 @@ data class QuestionSummaryDto(
     val pass1Status: Pass1Status,
     val pass2Status: Pass2Status,
     val isBookmarked: Boolean,
+    val source: String = "SAMPLE",
+    val curationStatus: String = "UNREVIEWED",
+    val curationNote: String? = null,
+    val difficulty: String? = null,
     val createdAt: Instant
 )
 
@@ -45,6 +49,10 @@ data class QuestionDto(
     val pass1Status: Pass1Status,
     val pass2Status: Pass2Status,
     val isBookmarked: Boolean,
+    val source: String = "SAMPLE",
+    val curationStatus: String = "UNREVIEWED",
+    val curationNote: String? = null,
+    val difficulty: String? = null,
     val createdAt: Instant,
     val updatedAt: Instant?,
     val version: Int
@@ -68,6 +76,10 @@ data class QuestionUpsertDto(
     val numericMax: Double? = null,
     val explanation: String? = null,
     val gateOverflowUrl: String? = null,
+    val source: String? = null,
+    val curationStatus: String? = null,
+    val curationNote: String? = null,
+    val difficulty: String? = null,
     val version: Int? = null
 )
 
@@ -75,4 +87,9 @@ data class QuestionStatusUpdateDto(
     val pass1Status: Pass1Status? = null,
     val pass2Status: Pass2Status? = null,
     val isBookmarked: Boolean? = null
+)
+
+data class CurationUpdateRequest(
+    val status: String? = null,
+    val note: String? = null
 )

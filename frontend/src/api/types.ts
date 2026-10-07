@@ -1,6 +1,9 @@
 export type QuestionType = 'MCQ' | 'MSQ' | 'NAT';
 export type Pass1Status = 'UNSEEN' | 'SOLVED' | 'REVISE' | 'FLAGGED';
 export type Pass2Status = 'NOT_ATTEMPTED' | 'SOLVED' | 'FAILED' | 'TIMEOUT';
+export type CurationStatus = 'UNREVIEWED' | 'ACCEPTED' | 'REJECTED';
+export type QuestionSource = 'SAMPLE' | 'SO_DERIVED' | 'AUTHORED' | 'GATE_PYP' | 'APT';
+export type QuestionDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 
 export interface SubjectSummary {
   id: string;
@@ -42,11 +45,16 @@ export interface QuestionSummary {
   year: number;
   type: QuestionType;
   marks: number;
-  statementSnippet: string;
+  statement?: string;
+  statementSnippet?: string;
   gateOverflowUrl: string | null;
   isBookmarked: boolean;
   pass1Status: Pass1Status;
   pass2Status: Pass2Status;
+  source?: QuestionSource;
+  curationStatus?: CurationStatus;
+  curationNote?: string | null;
+  difficulty?: QuestionDifficulty | null;
   version: number;
 }
 
@@ -70,6 +78,10 @@ export interface QuestionDetail {
   isBookmarked: boolean;
   pass1Status: Pass1Status;
   pass2Status: Pass2Status;
+  source?: QuestionSource;
+  curationStatus?: CurationStatus;
+  curationNote?: string | null;
+  difficulty?: QuestionDifficulty | null;
   version: number;
 }
 
@@ -81,6 +93,9 @@ export interface QuestionFilterParams {
   year?: number;
   pass1Status?: Pass1Status;
   bookmarked?: boolean;
+  curationStatus?: CurationStatus;
+  source?: QuestionSource;
+  difficulty?: QuestionDifficulty;
   page?: number;
   size?: number;
 }
@@ -99,4 +114,32 @@ export interface StatsSummary {
   questionsBySubject: Record<string, number>;
   questionsByPass1Status: Record<string, number>;
   overallMasteryPercentage: number;
+}
+
+export interface SubjectCurationCount {
+  subjectId: string;
+  name: string;
+  unreviewed: number;
+  accepted: number;
+  rejected: number;
+  total?: number;
+}
+
+export interface CurationStatsResponse {
+  totalQuestions: number;
+  byStatus: Record<string, number>;
+  bySubject: SubjectCurationCount[];
+}
+
+export interface DistributionItem {
+  subjectSlug: string;
+  subjectName: string;
+  type: string;
+  difficulty: string;
+  count: number;
+}
+
+export interface DistributionStatsResponse {
+  total: number;
+  distribution: DistributionItem[];
 }

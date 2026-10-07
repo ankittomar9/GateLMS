@@ -5,6 +5,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { SyllabusPage } from './pages/SyllabusPage';
 import { QuestionsPage } from './pages/QuestionsPage';
 import { QuestionDetailPage } from './pages/QuestionDetailPage';
+import { CurationQueuePage } from './pages/CurationQueuePage';
 
 export const router = createBrowserRouter([
   {
@@ -26,6 +27,10 @@ export const router = createBrowserRouter([
       {
         path: 'questions/:id',
         element: <QuestionDetailPage />,
+      },
+      {
+        path: 'curation',
+        element: <CurationQueuePage />,
       },
     ],
   },
