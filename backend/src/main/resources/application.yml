@@ -60,7 +60,7 @@ management:
 
 app:
   admin:
-    initial-password: ${GATELMS_ADMIN_INITIAL_PASSWORD:admin123}
+    initial-password: ${GATELMS_ADMIN_INITIAL_PASSWORD:}
   cors:
     allowed-origins: http://localhost:5173
   storage:

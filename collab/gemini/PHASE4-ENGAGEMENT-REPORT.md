@@ -222,16 +222,16 @@ if (hasNotificationToday(NotificationType.REVISION_DUE)) {
 
 ## 7. Honest-Judge Register (DEV-N)
 
-The continuous monotonic honest-judge register advances from **DEV-7** through **DEV-12**:
+The continuous monotonic honest-judge register advances from **DEV-15** through **DEV-20**:
 
 | ID | Specification Rule | Production Implementation & Safeguard | Test Receipt |
 |---|---|---|---|
-| **DEV-7** | Pure rollup streak computation | Streak is never stored as an editable counter or decorative static number. It is computed purely on request from `daily_rollups` with $questions\_answered > 0$. Zero activity yields streak 0. | `StreakComputationTest: 1 zero activity yields 0 streak`, `EngagementApiIT: 1 get summary returns calculated streak from rollups` |
-| **DEV-8** | Streak-at-risk honest anchor | When today has zero activity recorded yet, the streak does not break falsely; it counts consecutive active days ending yesterday and marks `streakAtRisk = true`. | `StreakComputationTest: 3 today empty anchors yesterday and sets streakAtRisk true`, `EngagementChrome.test: 1 streak number + risk state from fixture` |
-| **DEV-9** | 30-day single forgiveness protection | `streakProtection = true` forgives exactly one missed day in a rolling 30-day window and logs `protectedDate` explicitly in the summary payload. A second miss breaks the streak immediately. | `StreakComputationTest: 4 single gap day forgiven within 30 days`, `StreakComputationTest: 6 double gap cannot be forgiven twice` |
-| **DEV-10** | Idempotent single-write achievement awards | Database uniqueness constraint `uq_achievement_code` plus `existsByCode` guard ensure milestone achievements and their corresponding notifications are awarded once ever. | `AchievementAwardIT: 1 FIRST_QUESTION awarded once and idempotent on re-trigger` |
-| **DEV-11** | Notification de-dup per (type, date) | Morning and evening scheduled jobs evaluate whether a notification for `type` already exists for today before inserting, preventing noisy spam. | `NotificationApiIT: 1 producer de-dup per type and date prevents duplicate notifications` |
-| **DEV-12** | Transparent locked achievements | Unearned achievements are returned with `earnedAt: null`. The UI renders them as dimmed outlines without fake progress bars or simulated completion percentages. | `AchievementAwardIT: 4 get achievements returns all codes with unearned as null`, `InsightsPage.tsx` |
+| **DEV-15** | Pure rollup streak computation | Streak is never stored as an editable counter or decorative static number. It is computed purely on request from `daily_rollups` with $questions\_answered > 0$. Zero activity yields streak 0. | `StreakComputationTest: 1 zero activity yields 0 streak`, `EngagementApiIT: 1 get summary returns calculated streak from rollups` |
+| **DEV-16** | Streak-at-risk honest anchor | When today has zero activity recorded yet, the streak does not break falsely; it counts consecutive active days ending yesterday and marks `streakAtRisk = true`. | `StreakComputationTest: 3 today empty anchors yesterday and sets streakAtRisk true`, `EngagementChrome.test: 1 streak number + risk state from fixture` |
+| **DEV-17** | 30-day single forgiveness protection | `streakProtection = true` forgives exactly one missed day in a rolling 30-day window and logs `protectedDate` explicitly in the summary payload. A second miss breaks the streak immediately. | `StreakComputationTest: 4 single gap day forgiven within 30 days`, `StreakComputationTest: 6 double gap cannot be forgiven twice` |
+| **DEV-18** | Idempotent single-write achievement awards | Database uniqueness constraint `uq_achievement_code` plus `existsByCode` guard and DataIntegrityViolation catch ensure milestone achievements and their corresponding notifications are awarded once ever with complete idempotency (F4). | `AchievementAwardIT: 1 FIRST_QUESTION awarded once and idempotent on re-trigger` |
+| **DEV-19** | Notification de-dup per (type, date) | Morning and evening scheduled jobs evaluate whether a notification for `type` already exists for today before inserting, preventing noisy spam. | `NotificationApiIT: 1 producer de-dup per type and date prevents duplicate notifications` |
+| **DEV-20** | Transparent locked achievements | Unearned achievements are returned with `earnedAt: null`. The UI renders them as dimmed outlines without fake progress bars or simulated completion percentages. | `AchievementAwardIT: 4 get achievements returns all codes with unearned as null`, `InsightsPage.tsx` |
 
 ---
 

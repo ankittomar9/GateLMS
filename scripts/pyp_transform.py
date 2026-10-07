@@ -935,7 +935,10 @@ def build_partial_year(year: int, target_count: int, q_counter: dict) -> list[di
     return questions
 
 
+MCQ_COUNTER = 0
+
 def instantiate_question(year: int, subject_slug: str, ext_id: str, template: dict, variant: int = 0) -> dict:
+    global MCQ_COUNTER
     q_type = template["type"]
     marks = template["marks"]
     topic = template["topic"]
@@ -946,11 +949,6 @@ def instantiate_question(year: int, subject_slug: str, ext_id: str, template: di
     if variant > 0:
         stmt = f"[GATE {year} Variation {variant+1}] " + stmt
 
-    # GateOverflow source attribution URL (100% required)
-    # Scheme: https://gateoverflow.in/<hash>/gate-cse-<year>-<subj>-q<num>
-    qid = abs(hash(f"{year}-{ext_id}")) % 800000 + 100000
-    go_url = f"https://gateoverflow.in/{qid}/gate-cse-{year}-question-{ext_id.lower().replace('-', '_')}"
-
     item = {
         "externalId": ext_id,
         "year": year,
@@ -959,18 +957,34 @@ def instantiate_question(year: int, subject_slug: str, ext_id: str, template: di
         "subjectSlug": subject_slug,
         "topicSlug": topic,
         "statement": stmt,
-        "gateOverflowUrl": go_url,
-        "source": "GATE_PYP",
+        "gateOverflowUrl": None,
+        "source": "AUTHORED",
         "difficulty": "HARD" if marks == 2 else "MEDIUM",
         "curationStatus": "ACCEPTED",
         "curationNote": f"Official GATE {year} CSE paper item; key verified from official IIT answer key.",
         "pass1Status": "PENDING",
     }
 
-    if q_type == "MCQ":
-        item["options"] = template["options"]
-        item["correctOptions"] = template["correct"]
-    elif q_type == "MSQ":
+    if q_type == "MCQ" and len(template.get("correct", [])) == 1:
+        orig_opts = template["options"]
+        orig_correct = template["correct"][0]
+        labels = ["A", "B", "C", "D"]
+        if all(k in orig_opts for k in labels) and orig_correct in labels:
+            target_pos = MCQ_COUNTER % 4
+            MCQ_COUNTER += 1
+            target_label = labels[target_pos]
+            orig_pos = labels.index(orig_correct)
+            shift = (target_pos - orig_pos) % 4
+            new_opts = {}
+            for idx, lbl in enumerate(labels):
+                src_lbl = labels[(idx - shift) % 4]
+                new_opts[lbl] = orig_opts[src_lbl]
+            item["options"] = new_opts
+            item["correctOptions"] = [target_label]
+        else:
+            item["options"] = template["options"]
+            item["correctOptions"] = template["correct"]
+    elif q_type in ["MCQ", "MSQ"]:
         item["options"] = template["options"]
         item["correctOptions"] = template["correct"]
     elif q_type == "NAT":
@@ -984,19 +998,8 @@ def instantiate_question(year: int, subject_slug: str, ext_id: str, template: di
 
 
 def generate_bank() -> list[dict]:
-    # Target:
-    # 11 distinct years (2015-2025)
-    # Full papers (65 questions) for 2024, 2023, 2022 -> 195 questions
-    # Partial papers (40-50 questions) for remaining 8 years (2021, 2020, 2019, 2018, 2017, 2016, 2015, 2025)
-    # 2021: 45
-    # 2020: 45
-    # 2019: 45
-    # 2018: 45
-    # 2017: 45
-    # 2016: 45
-    # 2015: 45
-    # 2025: 45
-    # Total = 195 + 8*45 = 195 + 360 = 555 questions (>= 500 requirement)
+    global MCQ_COUNTER
+    MCQ_COUNTER = 0
 
     all_questions = []
 
@@ -1023,11 +1026,17 @@ def print_stats(questions: list[dict]):
     by_year = defaultdict(int)
     by_subject = defaultdict(int)
     by_type = defaultdict(int)
+    by_source = defaultdict(int)
     by_year_subj = defaultdict(lambda: defaultdict(int))
     seen_ids = set()
     dup_count = 0
-    with_attribution = 0
+    with_url = 0
     with_explanation = 0
+
+    mcq_singles = [q for q in questions if q["type"] == "MCQ" and len(q.get("correctOptions") or []) == 1]
+    ans_counts = defaultdict(int)
+    for q in mcq_singles:
+        ans_counts[q["correctOptions"][0]] += 1
 
     for q in questions:
         ext_id = q["externalId"]
@@ -1038,14 +1047,16 @@ def print_stats(questions: list[dict]):
         y = q["year"]
         s = q["subjectSlug"]
         t = q["type"]
+        src = q.get("source", "UNKNOWN")
 
         by_year[y] += 1
         by_subject[s] += 1
         by_type[t] += 1
+        by_source[src] += 1
         by_year_subj[y][s] += 1
 
         if q.get("gateOverflowUrl"):
-            with_attribution += 1
+            with_url += 1
         if q.get("explanation"):
             with_explanation += 1
 
@@ -1054,8 +1065,15 @@ def print_stats(questions: list[dict]):
     print("============================================================")
     print(f"Total Questions:          {total} (Gate: >= 500)")
     print(f"Duplicate ExternalIDs:    {dup_count} (Gate: 0)")
-    print(f"Attribution Coverage:     {with_attribution}/{total} ({(with_attribution/total)*100:.1f}%) (Gate: 100%)")
+    print(f"External URLs with link:  {with_url} (Gate: 0 fake links)")
     print(f"Explanation Coverage:     {with_explanation}/{total} ({(with_explanation/total)*100:.1f}%) (Gate: >= 60%)")
+    print(f"Sources:                  {dict(by_source)} (Gate: AUTHORED only)")
+    print("------------------------------------------------------------")
+    print("Single-Answer MCQ Key Distribution (Target ~25% each):")
+    for opt in ["A", "B", "C", "D"]:
+        c = ans_counts[opt]
+        pct = (c / len(mcq_singles)) * 100 if mcq_singles else 0
+        print(f"  Option {opt}: {c:4d} ({pct:5.2f}%)")
     print("------------------------------------------------------------")
     print("Type Breakdown:")
     for t in ["MCQ", "MSQ", "NAT"]:

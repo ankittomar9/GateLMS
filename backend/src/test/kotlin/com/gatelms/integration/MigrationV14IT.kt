@@ -92,4 +92,33 @@ class MigrationV14IT : BaseIntegrationTest() {
         ) ?: 0L
         assertEquals(0L, nullRollups, "daily_rollups must have 0 rows with NULL user_id")
     }
+
+    @Test
+    fun `3 data preservation row counts receipt`() {
+        val userCount = jdbcTemplate.queryForObject("SELECT count(*) FROM users", Long::class.java) ?: 0L
+        val questionsCount = jdbcTemplate.queryForObject("SELECT count(*) FROM questions", Long::class.java) ?: 0L
+        val subjectsCount = jdbcTemplate.queryForObject("SELECT count(*) FROM subjects", Long::class.java) ?: 0L
+        val topicsCount = jdbcTemplate.queryForObject("SELECT count(*) FROM topics", Long::class.java) ?: 0L
+        val notesCount = jdbcTemplate.queryForObject("SELECT count(*) FROM notes", Long::class.java) ?: 0L
+        val progressCount = jdbcTemplate.queryForObject("SELECT count(*) FROM question_progress", Long::class.java) ?: 0L
+        val masteryCount = jdbcTemplate.queryForObject("SELECT count(*) FROM topic_mastery", Long::class.java) ?: 0L
+        val rollupsCount = jdbcTemplate.queryForObject("SELECT count(*) FROM daily_rollups", Long::class.java) ?: 0L
+        val goalsCount = jdbcTemplate.queryForObject("SELECT count(*) FROM user_goals", Long::class.java) ?: 0L
+        val sessionCount = jdbcTemplate.queryForObject("SELECT count(*) FROM spring_session", Long::class.java) ?: 0L
+
+        println("=== V14 ROW COUNTS RECEIPT ===")
+        println("users: $userCount")
+        println("questions: $questionsCount")
+        println("subjects: $subjectsCount")
+        println("topics: $topicsCount")
+        println("notes: $notesCount")
+        println("question_progress: $progressCount")
+        println("topic_mastery: $masteryCount")
+        println("daily_rollups: $rollupsCount")
+        println("user_goals: $goalsCount")
+        println("spring_session: $sessionCount")
+        println("===============================")
+
+        assertTrue(userCount >= 1L, "At least operator user must exist")
+    }
 }

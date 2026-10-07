@@ -44,4 +44,6 @@ backend/seed-data/pyp-raw/
 seed-data/pyp-src/
 backend/seed-data/pyp-src/
 docker-data/notes/
+__pycache__/
+*.pyc
 

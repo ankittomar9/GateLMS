@@ -56,6 +56,15 @@ class SecurityConfig(
     }
 
     @Bean
+    fun cookieSerializer(): org.springframework.session.web.http.DefaultCookieSerializer {
+        val serializer = org.springframework.session.web.http.DefaultCookieSerializer()
+        serializer.setCookieName("GATELMSSESSION")
+        serializer.setSameSite("Strict")
+        serializer.setUseHttpOnlyCookie(true)
+        return serializer
+    }
+
+    @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { csrf ->

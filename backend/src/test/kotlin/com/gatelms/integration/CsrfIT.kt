@@ -17,9 +17,9 @@ class CsrfIT : BaseIntegrationTest() {
         val sessionId = authInterceptor.currentSessionId
         assertNotNull(sessionId, "Session ID must be present")
 
-        // Prepare request with SESSION cookie but WITHOUT X-XSRF-TOKEN header
+        // Prepare request with GATELMSSESSION cookie but WITHOUT X-XSRF-TOKEN header
         val headers = HttpHeaders()
-        headers.add(HttpHeaders.COOKIE, "SESSION=$sessionId")
+        headers.add(HttpHeaders.COOKIE, "GATELMSSESSION=$sessionId")
         headers.contentType = MediaType.APPLICATION_JSON
 
         val noteReq = CreateTextNoteRequest(
@@ -47,7 +47,7 @@ class CsrfIT : BaseIntegrationTest() {
         assertNotNull(xsrfToken, "XSRF token must be present")
 
         val headers = HttpHeaders()
-        headers.add(HttpHeaders.COOKIE, "SESSION=$sessionId; XSRF-TOKEN=$xsrfToken")
+        headers.add(HttpHeaders.COOKIE, "GATELMSSESSION=$sessionId; XSRF-TOKEN=$xsrfToken")
         headers.add("X-XSRF-TOKEN", xsrfToken)
         headers.contentType = MediaType.APPLICATION_JSON
 
