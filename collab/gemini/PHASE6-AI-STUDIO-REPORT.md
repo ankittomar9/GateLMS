@@ -29,10 +29,10 @@ Per **R2** in `PHASE6-AI-STUDIO-SPEC.md`, `PHASE6-AI-STUDIO` allocates entries f
 
 | DEV ID | Component | Predecessor | Description |
 |---|---|---|---|
-| **DEV-40** | AI Subsystem Backend | DEV-33 | Implemented `/api/v1/ai/chat`, `/api/v1/ai/status`, `/api/v1/ai/prompts` with multi-provider fallback (Groq, Gemini, OpenAI, Ollama). |
+| **DEV-40** | AI Subsystem Backend | DEV-33 | Implemented `/api/v1/ai/chat`, `/api/v1/ai/transcribe`, and `/api/v1/ai/status` with multi-provider fallback (Groq, Gemini, OpenAI, Ollama). |
 | **DEV-41** | Whisper STT Sidecar | DEV-40 | Containerized whisper.cpp server on port 8178 with `ggml-large-v3-turbo-q5_0.bin` model and `/health` probe. |
 | **DEV-42** | STT Acoustic Gating | DEV-41 | Implemented dual-stage audio validation: 1.2s minimum duration floor, 0.003 RMS silence floor, and WAV header verification. |
-| **DEV-43** | AI Studio Drawer UI | DEV-42 | Built collapsible, draggable, and resizable side drawer with quick action chips (Hint, Explain, Formula) and Markdown KaTeX preview. |
+| **DEV-43** | AI Studio Drawer UI | DEV-42 | Built collapsible, draggable, and resizable side drawer with quick action chips (Hint, Step-by-Step, Formula/Traps) supporting modes `HINT`, `EXPLANATION`, and `GENERAL` with Markdown KaTeX preview. |
 | **DEV-44** | Context Ingestion Bridge | DEV-43 | Synchronized live page state across Question Detail, Practice Runner, and Test Runner directly into AI prompt context. |
 | **DEV-45** | Audio Recorder & WAV Encoder | DEV-44 | Developed zero-dependency 16 kHz 16-bit PCM WAV audio encoder with Web Audio API real-time microphone visualizer. |
 | **DEV-46** | BYOK & Security Integration | DEV-45 | Integrated `X-AI-Key` client header support and secured all AI routes under Phase 5 Spring Security session authentication. |
@@ -85,11 +85,11 @@ Per **R2** in `PHASE6-AI-STUDIO-SPEC.md`, `PHASE6-AI-STUDIO` allocates entries f
 ## 4. Test Receipts & Verification
 
 ### 4.1 Backend Verification
-- **Static `@Test` Count:** **233** (Floor: $\ge 212$) — Exceeded by +21 tests.
+- **Static `@Test` Count:** **235** (Floor: $\ge 212$) — Exceeded by +23 tests.
 - **Unit Tier Execution (`.\mvnw.cmd test -Dtest="!*IT"`):**
   - `GateLmsApplicationTests`: 1/1 passed.
   - `QuestionSeedRunnerTest`: 3/3 passed.
-  - `AiChatServiceTest`: 3/3 passed.
+  - `AiChatServiceTest`: 3/3 passed (prompt-formatting and mode template generation for HINT, EXPLANATION, and GENERAL).
   - `AiLogHygieneTest`: 1/1 passed (asserts 0 API keys and transcripts logged at INFO).
   - `AiProviderContractTest`: 8/8 passed (1 skipped cloud test per AM-21).
   - `AiRateLimiterTest`: 4/4 passed (chat, STT, status quotas, user isolation).
@@ -179,3 +179,8 @@ git grep -i -E "gsk_[a-zA-Z0-9]{20,}|AIza[a-zA-Z0-9_-]{35}|sk-proj-[a-zA-Z0-9_-]
 ```
 
 The system is fully resilient: if the local whisper container `:8178` or Ollama `:11434` are absent, the application boots cleanly, health status endpoints report `NOT_CONFIGURED` or `UNREACHABLE` without throwing, and cloud BYOK or manual text queries function smoothly.
+
+### 5.1 Whisper Sidecar Runtime Posture (C9)
+The containerized whisper sidecar (`whisper-sidecar/Dockerfile`) is pinned to whisper.cpp release `v1.7.4` with `/app/models` volume mount and model `ggml-large-v3-turbo-q5_0.bin` (SHA-256 `6ff38a0...`). 
+*Runtime Posture Statement:* Sidecar container image and build configuration are verified via Dockerfile build specification and model artifacts. Runtime execution against live port `:8178` was omitted from the local CI test run this cycle per offline container posture; server-side status checks and fallback handling cleanly accommodate `UNREACHABLE` or `NOT_CONFIGURED` without container runtime dependencies.
+
