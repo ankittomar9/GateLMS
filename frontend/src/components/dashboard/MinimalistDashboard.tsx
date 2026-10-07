@@ -15,6 +15,7 @@ import {
 import { useDesign } from '../../context/DesignContext';
 import { CurationProgressTile } from './CurationProgressTile';
 import { ReadinessSummaryCard } from './ReadinessSummaryCard';
+import { PypDashboardTile } from './PypDashboardTile';
 
 export const MinimalistDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -278,6 +279,9 @@ export const MinimalistDashboard: React.FC = () => {
 
             {/* Curation Queue Inline Tile */}
             <CurationProgressTile />
+
+            {/* PYP Paper Tile */}
+            <PypDashboardTile />
           </div>
         )}
       </div>
@@ -306,7 +310,7 @@ export const MinimalistDashboard: React.FC = () => {
             Essential GATE Preparation Tools
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-ds-surface border border-ds-border rounded-ds p-5 flex items-start justify-between gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -356,6 +360,7 @@ export const MinimalistDashboard: React.FC = () => {
             </div>
 
             <CurationProgressTile />
+            <PypDashboardTile />
           </div>
         </div>
       )}

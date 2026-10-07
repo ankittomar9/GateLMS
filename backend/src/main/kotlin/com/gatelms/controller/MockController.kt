@@ -22,6 +22,12 @@ class MockController(
         return ResponseEntity.status(HttpStatus.CREATED).body(created)
     }
 
+    @PostMapping("/pyp/{year}")
+    fun generatePypMock(@PathVariable year: Int): ResponseEntity<MockTemplateSummaryDto> {
+        val generated = mockTestService.generatePypMock(year)
+        return ResponseEntity.status(HttpStatus.CREATED).body(generated)
+    }
+
     @GetMapping
     fun listTemplates(): List<MockTemplateSummaryDto> {
         return mockTestService.listTemplates()

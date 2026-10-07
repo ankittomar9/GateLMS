@@ -18,6 +18,7 @@ import java.util.UUID
 @Repository
 interface MockExamRepository : JpaRepository<MockExam, UUID> {
     fun findByModeOrderByCreatedAtDesc(mode: ExamMode): List<MockExam>
+    fun findFirstByTitle(title: String): MockExam?
 }
 
 @Repository

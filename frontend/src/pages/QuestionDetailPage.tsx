@@ -212,6 +212,14 @@ export const QuestionDetailPage: React.FC = () => {
             <span className={`px-2.5 py-1 rounded-ds text-xs font-mono font-semibold border ${getTypeBadge(q.type)}`}>
               {q.type}
             </span>
+            {(q.source === 'GATE_PYP' || q.externalId?.startsWith('PYP-')) && (
+              <span
+                data-testid="pyp-badge"
+                className="font-mono text-xs text-ds-accent bg-ds-accent-soft border border-ds-accent/30 px-2.5 py-1 rounded-ds font-semibold"
+              >
+                PYP {q.year}
+              </span>
+            )}
             <span className="font-mono text-xs text-ds-accent bg-ds-accent-soft border border-ds-accent/30 px-2.5 py-1 rounded-ds">
               {q.marks} {q.marks === 1 ? 'Mark' : 'Marks'}
             </span>

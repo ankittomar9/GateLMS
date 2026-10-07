@@ -11,7 +11,8 @@ data class PracticeSessionCreateRequest(
     val questionType: QuestionType? = null,
     val marks: Int? = null,
     val curationStatus: String? = null,
-    val count: Int = 10
+    val count: Int = 10,
+    val year: Int? = null
 )
 
 data class PracticeQuestionDto(

@@ -24,25 +24,39 @@ export const PracticePage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialSubject = searchParams.get('subject') || '';
+  const initialYear = searchParams.get('year') || 'ALL';
 
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(initialSubject);
   const [selectedTopicId, setSelectedTopicId] = useState<string>('');
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [selectedMarks, setSelectedMarks] = useState<string>('ALL');
   const [selectedCuration, setSelectedCuration] = useState<string>('ALL');
+  const [selectedYear, setSelectedYear] = useState<string>(initialYear);
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (initialSubject) {
-      setSelectedSubjectId(initialSubject);
-    }
-  }, [initialSubject]);
 
   const { data: subjects = [], isLoading: loadingSubjects } = useSubjects();
   const { data: topics = [], isLoading: loadingTopics } = useTopics(selectedSubjectId || undefined);
   const { data: dueMistakes } = useMistakes({ due: true, resolved: false, size: 1 });
   const { data: masteryStats = [] } = useTopicMasteryStats();
+
+  useEffect(() => {
+    if (initialSubject && subjects.length > 0) {
+      const match = subjects.find((s) => s.id === initialSubject || s.slug === initialSubject);
+      if (match) {
+        setSelectedSubjectId(match.id);
+      } else {
+        setSelectedSubjectId(initialSubject);
+      }
+    }
+  }, [initialSubject, subjects]);
+
+  useEffect(() => {
+    const y = searchParams.get('year');
+    if (y) {
+      setSelectedYear(y);
+    }
+  }, [searchParams]);
 
   const createSessionMutation = useCreatePracticeSession();
 
@@ -64,6 +78,7 @@ export const PracticePage: React.FC = () => {
         questionType: selectedType !== 'ALL' ? (selectedType as QuestionType) : undefined,
         marks: selectedMarks !== 'ALL' ? parseInt(selectedMarks, 10) : undefined,
         curationStatus: selectedCuration !== 'ALL' ? selectedCuration : undefined,
+        year: selectedYear !== 'ALL' ? parseInt(selectedYear, 10) : undefined,
         count: clampedCount,
       });
 
@@ -243,6 +258,28 @@ export const PracticePage: React.FC = () => {
                 <option value="ALL">All Questions</option>
                 <option value="ACCEPTED">Accepted Only (Verified Quality)</option>
                 <option value="UNREVIEWED">Unreviewed Included</option>
+              </select>
+            </div>
+
+            {/* Exam Year Filter (PYP) */}
+            <div className="space-y-1.5">
+              <label htmlFor="year-select" className="block text-xs font-medium text-ds-secondary">
+                Exam Year (PYP)
+              </label>
+              <select
+                id="year-select"
+                aria-label="Exam Year"
+                data-testid="year-select"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="w-full bg-ds-bg-base border border-ds-border rounded-ds px-3 py-2 text-sm text-ds-primary focus:outline-none focus:border-ds-accent transition-colors"
+              >
+                <option value="ALL">All Years (Any Sourced Question)</option>
+                {Array.from({ length: 18 }, (_, i) => 2025 - i).map((yr) => (
+                  <option key={yr} value={yr.toString()}>
+                    GATE {yr}
+                  </option>
+                ))}
               </select>
             </div>
 

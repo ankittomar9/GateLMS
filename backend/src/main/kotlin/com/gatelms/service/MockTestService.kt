@@ -83,6 +83,98 @@ class MockTestService(
         )
     }
 
+    @Transactional
+    fun generatePypMock(year: Int): MockTemplateSummaryDto {
+        val pypQuestions = questionRepository.findPypByYear(year).ifEmpty {
+            questionRepository.findByYear(year)
+        }
+        if (pypQuestions.isEmpty()) {
+            throw ResponseStatusException(HttpStatus.NOT_FOUND, "No questions found for GATE year $year")
+        }
+
+        val shortfallWarnings = mutableListOf<String>()
+
+        val gaSubject = subjectRepository.findBySlug("general-aptitude")
+        val gaSubjectId = gaSubject?.id ?: "subj_aptitude"
+
+        val gaQuestions = pypQuestions.filter { it.subject?.id == gaSubjectId || it.subject?.slug == "general-aptitude" }
+        val coreQuestions = pypQuestions.filter { it.subject?.id != gaSubjectId && it.subject?.slug != "general-aptitude" }
+
+        if (gaQuestions.size < 10) {
+            shortfallWarnings.add("General Aptitude: requested 10 questions but only ${gaQuestions.size} available in pool")
+        }
+        if (coreQuestions.size < 55) {
+            shortfallWarnings.add("CSE Core: requested 55 questions but only ${coreQuestions.size} available in pool")
+        }
+
+        val sections = mutableListOf<BlueprintSection>()
+        val bySubject = pypQuestions.groupBy { it.subject ?: subjectRepository.findById(gaSubjectId).orElse(null) }
+            .filterKeys { it != null }
+
+        for ((subj, qList) in bySubject) {
+            val mcqCount = qList.count { it.type == QuestionType.MCQ }
+            val msqCount = qList.count { it.type == QuestionType.MSQ }
+            val natCount = qList.count { it.type == QuestionType.NAT }
+
+            sections.add(
+                BlueprintSection(
+                    subjectId = subj!!.id,
+                    mcq = mcqCount,
+                    msq = msqCount,
+                    nat = natCount,
+                    marks = null
+                )
+            )
+        }
+
+        val totalQuestions = pypQuestions.size
+        val totalMarks = pypQuestions.sumOf { it.marks }.toDouble()
+
+        val blueprint = MockBlueprint(
+            title = "GATE $year Official Paper",
+            year = year,
+            source = "GATE_PYP",
+            sections = sections,
+            shuffle = false
+        )
+        val blueprintJson = objectMapper.writeValueAsString(blueprint)
+
+        val title = "GATE $year Official Paper"
+        val existing = mockExamRepository.findFirstByTitle(title)
+        val saved = if (existing != null) {
+            existing.blueprintJson = blueprintJson
+            existing.totalMarks = totalMarks
+            existing.durationMinutes = 180
+            mockExamRepository.save(existing)
+        } else {
+            val exam = MockExam(
+                title = title,
+                durationMinutes = 180,
+                totalMarks = totalMarks,
+                blueprintJson = blueprintJson,
+                mode = ExamMode.MOCK
+            )
+            mockExamRepository.save(exam)
+        }
+
+        val bestScore = mockAttemptRepository.findMaxScoreByMockExamId(saved.id)
+        val attemptCount = mockAttemptRepository.countByMockExamIdAndStatus(saved.id, MockAttemptStatus.SUBMITTED).toInt()
+
+        return MockTemplateSummaryDto(
+            id = saved.id,
+            title = saved.title,
+            durationMinutes = saved.durationMinutes ?: 180,
+            totalMarks = saved.totalMarks ?: 100.0,
+            totalQuestions = totalQuestions,
+            mode = saved.mode.name,
+            createdAt = saved.createdAt,
+            sections = sections,
+            bestScore = bestScore,
+            attemptCount = attemptCount,
+            shortfallWarnings = shortfallWarnings
+        )
+    }
+
     @Transactional(readOnly = true)
     fun listTemplates(): List<MockTemplateSummaryDto> {
         val exams = mockExamRepository.findByModeOrderByCreatedAtDesc(ExamMode.MOCK)
