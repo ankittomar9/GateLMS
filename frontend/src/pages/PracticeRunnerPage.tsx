@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -43,6 +43,9 @@ interface OptionItem {
 export const PracticeRunnerPage: React.FC = () => {
   const { attemptId = '' } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isDrill = searchParams.get('drill') === 'true' || searchParams.has('source');
+  const drillSource = searchParams.get('source');
 
   // Load session from storage or create mock fallback
   const [session, setSession] = useState<PracticeSessionResponse | null>(null);
@@ -445,16 +448,26 @@ export const PracticeRunnerPage: React.FC = () => {
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => navigate('/practice')}
+            onClick={() => navigate(isDrill ? '/revision' : '/practice')}
             className="flex items-center gap-1.5 text-xs text-ds-muted hover:text-ds-primary transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Exit</span>
           </button>
           <div className="h-4 w-px bg-ds-border" />
-          <div className="text-xs font-medium text-ds-primary">
-            Question <span className="font-mono font-bold text-ds-accent">{currentIndex + 1}</span> of{' '}
-            <span className="font-mono text-ds-muted">{session.totalQuestions}</span>
+          <div className="text-xs font-medium text-ds-primary flex items-center gap-2">
+            {isDrill && (
+              <span
+                data-testid="drill-runner-badge"
+                className="px-2 py-0.5 rounded text-[11px] font-semibold bg-ds-accent-soft text-ds-accent border border-ds-accent/30"
+              >
+                Weakness Drill · {drillSource || 'CUSTOM'}
+              </span>
+            )}
+            <span>
+              Question <span className="font-mono font-bold text-ds-accent">{currentIndex + 1}</span> of{' '}
+              <span className="font-mono text-ds-muted">{session.totalQuestions}</span>
+            </span>
           </div>
         </div>
 

@@ -130,6 +130,59 @@ class PracticeService(
     }
 
     @Transactional
+    fun createDrillSession(
+        questions: List<Question>,
+        title: String,
+        source: String
+    ): PracticeSessionResponse {
+        val totalMarks = questions.sumOf { it.marks }.toDouble()
+        val mockExam = MockExam(
+            title = title,
+            durationMinutes = 0,
+            totalMarks = totalMarks,
+            blueprintJson = """{"source":"$source","count":${questions.size}}""",
+            mode = ExamMode.WEAKNESS_DRILL
+        )
+        val savedExam = mockExamRepository.save(mockExam)
+
+        val attempt = MockAttempt(
+            mockExam = savedExam,
+            status = MockAttemptStatus.IN_PROGRESS
+        )
+        val savedAttempt = mockAttemptRepository.save(attempt)
+
+        questions.forEach { q ->
+            val ans = AttemptAnswer(
+                attempt = savedAttempt,
+                question = q,
+                state = AttemptAnswerState.NOT_VISITED
+            )
+            attemptAnswerRepository.save(ans)
+        }
+
+        val safeQuestionDtos = questions.map { q ->
+            PracticeQuestionDto(
+                id = q.id ?: UUID.randomUUID(),
+                externalId = q.externalId,
+                type = q.type,
+                marks = q.marks,
+                statement = q.statement,
+                optionsJson = q.optionsJson,
+                topicId = q.topic?.id,
+                subjectId = q.subject?.id,
+                year = q.year
+            )
+        }
+
+        return PracticeSessionResponse(
+            sessionId = savedExam.id,
+            attemptId = savedAttempt.id,
+            questions = safeQuestionDtos,
+            totalQuestions = safeQuestionDtos.size
+        )
+    }
+
+    @Transactional
     fun submitAnswer(attemptId: UUID, submission: PracticeAnswerSubmission): PracticeVerdictResponse {
         val attempt = mockAttemptRepository.findById(attemptId).orElseThrow {
             EntityNotFoundException("Practice session attempt not found with id: $attemptId")
@@ -165,8 +218,14 @@ class PracticeService(
             mode = "practice"
         )
 
-        // Auto-update Question pass1_status
+        // Auto-update Question pass1_status & pass2_status
         question.pass1Status = if (grading.isCorrect) Pass1Status.SOLVED else Pass1Status.FAILED
+        question.lastAttemptedAt = Instant.now()
+        if (attempt.mockExam?.mode == ExamMode.WEAKNESS_DRILL) {
+            question.pass2Status = if (grading.isCorrect) Pass2Status.SOLVED else Pass2Status.FAILED
+        } else if (question.pass1Status in listOf(Pass1Status.FAILED, Pass1Status.ASSISTED)) {
+            question.pass2Status = Pass2Status.PENDING
+        }
         questionRepository.save(question)
 
         // Mastery auto-flow (§2.4)
@@ -176,6 +235,7 @@ class PracticeService(
                 topic.masteryLevel = minOf(5, topic.masteryLevel + 1)
             } else {
                 topic.masteryLevel = maxOf(0, topic.masteryLevel - 1)
+                topic.nextRevisionDue = Instant.now().plus(java.time.Duration.ofDays(3))
             }
             topic.lastRevisedAt = Instant.now()
             val savedTopic = topicRepository.save(topic)
@@ -231,8 +291,9 @@ class PracticeService(
         ans.marksAwarded = 0.0
         attemptAnswerRepository.save(ans)
 
-        // Reveal marks pass1 as ASSISTED
+        // Reveal marks pass1 as ASSISTED and enters pass2 as PENDING
         question.pass1Status = Pass1Status.ASSISTED
+        question.pass2Status = Pass2Status.PENDING
         questionRepository.save(question)
 
         return PracticeVerdictResponse(

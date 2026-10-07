@@ -114,10 +114,57 @@ export function useUpdatePass2Status() {
 export function useToggleBookmark() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => apiClient.post<QuestionDetail>(`/questions/${id}/bookmark`),
-    onSuccess: (_, id) => {
+    mutationFn: (payload: string | { id: string; bookmarked: boolean }) => {
+      const id = typeof payload === 'string' ? payload : payload.id;
+      const bookmarked = typeof payload === 'object' ? payload.bookmarked : true;
+      return apiClient.patch<QuestionDetail>(`/questions/${id}/bookmark`, { bookmarked });
+    },
+    onMutate: async (payload) => {
+      const id = typeof payload === 'string' ? payload : payload.id;
+      await queryClient.cancelQueries({ queryKey: ['question', id] });
+      await queryClient.cancelQueries({ queryKey: ['questions'] });
+
+      const prevQuestion = queryClient.getQueryData(['question', id]);
+      const prevQuestions = queryClient.getQueriesData({ queryKey: ['questions'] });
+
+      queryClient.setQueryData(['question', id], (old: any) => {
+        if (!old) return old;
+        const nextBookmarked = typeof payload === 'object' ? payload.bookmarked : !old.isBookmarked;
+        return { ...old, isBookmarked: nextBookmarked };
+      });
+
+      queryClient.setQueriesData({ queryKey: ['questions'] }, (old: any) => {
+        if (!old || !old.content) return old;
+        return {
+          ...old,
+          content: old.content.map((q: any) => {
+            if (q.id === id) {
+              const nextBookmarked = typeof payload === 'object' ? payload.bookmarked : !q.isBookmarked;
+              return { ...q, isBookmarked: nextBookmarked };
+            }
+            return q;
+          }),
+        };
+      });
+
+      return { prevQuestion, prevQuestions };
+    },
+    onError: (_err, payload, context: any) => {
+      const id = typeof payload === 'string' ? payload : payload.id;
+      if (context?.prevQuestion) {
+        queryClient.setQueryData(['question', id], context.prevQuestion);
+      }
+      if (context?.prevQuestions) {
+        context.prevQuestions.forEach(([queryKey, data]: any) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSettled: (_, __, payload) => {
+      const id = typeof payload === 'string' ? payload : payload.id;
       queryClient.invalidateQueries({ queryKey: ['question', id] });
       queryClient.invalidateQueries({ queryKey: ['questions'] });
+      queryClient.invalidateQueries({ queryKey: ['revision-overview'] });
     },
   });
 }

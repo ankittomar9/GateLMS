@@ -15,6 +15,7 @@ import { TestRunnerPage } from './pages/TestRunnerPage';
 import { ResultPage } from './pages/ResultPage';
 import { InsightsPage } from './pages/InsightsPage';
 import { NotesPage } from './pages/NotesPage';
+import { RevisionPage } from './pages/RevisionPage';
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,10 @@ export const router = createBrowserRouter([
       {
         path: 'insights',
         element: <InsightsPage />,
+      },
+      {
+        path: 'revision',
+        element: <RevisionPage />,
       },
       {
         path: 'notes',

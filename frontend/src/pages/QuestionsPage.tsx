@@ -356,6 +356,7 @@ export const QuestionsPage: React.FC = () => {
 
                 <button
                   type="button"
+                  data-testid={`question-bookmark-btn-${q.id}`}
                   title="Bookmark"
                   onClick={(e) => {
                     e.stopPropagation();

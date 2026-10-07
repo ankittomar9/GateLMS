@@ -183,6 +183,16 @@ class QuestionService(
         return saved.toDto()
     }
 
+    fun updateBookmark(id: UUID, bookmarked: Boolean): QuestionDto {
+        val question = questionRepository.findById(id).orElseThrow {
+            EntityNotFoundException("Question not found with id: $id")
+        }
+        question.isBookmarked = bookmarked
+        question.bookmarkedAt = if (bookmarked) Instant.now() else null
+        val saved = questionRepository.saveAndFlush(question)
+        return saved.toDto()
+    }
+
     fun updateCuration(id: UUID, dto: CurationUpdateRequest): QuestionDto {
         val question = questionRepository.findById(id).orElseThrow {
             EntityNotFoundException("Question not found with id: $id")
@@ -353,6 +363,8 @@ class QuestionService(
             pass1Status = pass1Status,
             pass2Status = pass2Status,
             isBookmarked = isBookmarked,
+            bookmarkedAt = bookmarkedAt,
+            lastAttemptedAt = lastAttemptedAt,
             source = source,
             curationStatus = curationStatus,
             curationNote = curationNote,
@@ -382,6 +394,8 @@ class QuestionService(
             pass1Status = pass1Status,
             pass2Status = pass2Status,
             isBookmarked = isBookmarked,
+            bookmarkedAt = bookmarkedAt,
+            lastAttemptedAt = lastAttemptedAt,
             source = source,
             curationStatus = curationStatus,
             curationNote = curationNote,

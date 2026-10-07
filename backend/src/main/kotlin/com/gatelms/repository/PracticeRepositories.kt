@@ -29,6 +29,9 @@ interface MockAttemptRepository : JpaRepository<MockAttempt, UUID> {
     fun findMaxScoreByMockExamId(@Param("mockId") mockId: UUID): Double?
     fun countByMockExamIdAndStatus(mockId: UUID, status: MockAttemptStatus): Long
     fun countByStatus(status: MockAttemptStatus): Long
+
+    @Query("SELECT COUNT(a) FROM MockAttempt a WHERE a.mockExam.mode = com.gatelms.entity.ExamMode.WEAKNESS_DRILL AND a.status = com.gatelms.entity.MockAttemptStatus.SUBMITTED")
+    fun countCompletedDrills(): Long
 }
 
 @Repository
@@ -92,4 +95,20 @@ interface MistakeLogRepository : JpaRepository<MistakeLog, UUID> {
         GROUP BY m.question.topic.id
     """)
     fun countDueReviewsByTopic(@Param("now") now: Instant): List<Array<Any>>
+
+    @Query("""
+        SELECT m FROM MistakeLog m
+        WHERE m.resolved = FALSE
+          AND m.nextReviewAt IS NOT NULL
+          AND m.nextReviewAt <= :now
+          AND (:subjectId IS NULL OR m.question.subject.id = :subjectId)
+          AND (:topicId IS NULL OR m.question.topic.id = :topicId)
+        ORDER BY m.nextReviewAt ASC, m.loggedAt DESC
+    """)
+    fun findDueMistakesForDrill(
+        @Param("now") now: Instant,
+        @Param("subjectId") subjectId: String?,
+        @Param("topicId") topicId: String?,
+        pageable: Pageable
+    ): List<MistakeLog>
 }
