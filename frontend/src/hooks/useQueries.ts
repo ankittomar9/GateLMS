@@ -35,8 +35,12 @@ import {
   MockTrendDto,
   QuestionUpsertDto,
   QuestionValidationResultDto,
+  GeneratePlanRequest,
+  UpdatePlanItemStatusRequest,
 } from '../api/types';
 import { pypApi } from '../api/pypApi';
+import { plannerApi } from '../api/plannerApi';
+import { readinessApi } from '../api/readinessApi';
 
 export function useSubjects() {
   return useQuery({
@@ -438,5 +442,71 @@ export function useGeneratePypMock() {
     },
   });
 }
+
+export function useStudyPlans() {
+  return useQuery({
+    queryKey: ['study-plans'],
+    queryFn: () => plannerApi.getPlans(),
+  });
+}
+
+export function useStudyPlan(id?: string) {
+  return useQuery({
+    queryKey: ['study-plan', id],
+    queryFn: () => plannerApi.getPlanById(id!),
+    enabled: Boolean(id),
+  });
+}
+
+export function useTodayPlan() {
+  return useQuery({
+    queryKey: ['today-plan'],
+    queryFn: () => plannerApi.getTodayPlan(),
+  });
+}
+
+export function useGeneratePlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (req: GeneratePlanRequest) => plannerApi.generatePlan(req),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['study-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['today-plan'] });
+    },
+  });
+}
+
+export function useRegeneratePlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => plannerApi.regeneratePlan(id),
+    onSuccess: (data, id) => {
+      queryClient.invalidateQueries({ queryKey: ['study-plan', id] });
+      queryClient.invalidateQueries({ queryKey: ['study-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['today-plan'] });
+    },
+  });
+}
+
+export function useUpdatePlanItemStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, req }: { itemId: string; req: UpdatePlanItemStatusRequest }) =>
+      plannerApi.updatePlanItemStatus(itemId, req),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['today-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['study-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['study-plan'] });
+    },
+  });
+}
+
+export function useReadiness() {
+  return useQuery({
+    queryKey: ['readiness'],
+    queryFn: () => readinessApi.getReadiness(),
+  });
+}
+
 
 

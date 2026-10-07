@@ -178,4 +178,7 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
         @Param("topicId") topicId: String?,
         pageable: Pageable
     ): List<Question>
+
+    @Query("SELECT q.topic.id, COUNT(q) FROM Question q WHERE q.topic.id IS NOT NULL GROUP BY q.topic.id")
+    fun countQuestionsGroupedByTopic(): List<Array<Any>>
 }

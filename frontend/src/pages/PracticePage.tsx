@@ -24,10 +24,11 @@ export const PracticePage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialSubject = searchParams.get('subject') || '';
+  const initialTopic = searchParams.get('topic') || searchParams.get('topicId') || '';
   const initialYear = searchParams.get('year') || 'ALL';
 
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(initialSubject);
-  const [selectedTopicId, setSelectedTopicId] = useState<string>('');
+  const [selectedTopicId, setSelectedTopicId] = useState<string>(initialTopic);
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [selectedMarks, setSelectedMarks] = useState<string>('ALL');
   const [selectedCuration, setSelectedCuration] = useState<string>('ALL');

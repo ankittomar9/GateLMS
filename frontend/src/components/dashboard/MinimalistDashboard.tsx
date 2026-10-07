@@ -16,6 +16,7 @@ import { useDesign } from '../../context/DesignContext';
 import { CurationProgressTile } from './CurationProgressTile';
 import { ReadinessSummaryCard } from './ReadinessSummaryCard';
 import { PypDashboardTile } from './PypDashboardTile';
+import { TodayCard } from '../planner/TodayCard';
 
 export const MinimalistDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -69,6 +70,7 @@ export const MinimalistDashboard: React.FC = () => {
         {/* Main Column */}
         <div className={isInk ? 'lg:col-span-8 space-y-6' : 'space-y-8'}>
           <ReadinessSummaryCard />
+          <TodayCard />
 
           {/* Active Study Session Hero */}
           <div className="relative overflow-hidden rounded-ds bg-ds-surface border border-ds-border p-7 shadow-sm">

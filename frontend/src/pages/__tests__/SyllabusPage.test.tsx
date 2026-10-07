@@ -11,6 +11,7 @@ vi.mock('../../hooks/useQueries', () => ({
   useSubjects: vi.fn(),
   useTopics: vi.fn(),
   useUpdateTopicMastery: vi.fn(),
+  useReadiness: vi.fn(),
 }));
 
 const mockSubjects: SubjectSummary[] = [
@@ -84,6 +85,19 @@ describe('SyllabusPage', () => {
     vi.mocked(queryHooks.useUpdateTopicMastery).mockReturnValue({
       mutateAsync: mutateMastery,
       isPending: false,
+    } as any);
+
+    vi.mocked(queryHooks.useReadiness).mockReturnValue({
+      data: {
+        readiness: 75,
+        perSubject: [
+          { subjectId: 'subj_os', name: 'Operating Systems', weight: 10.0, m: 0.8, a: 0.7, c: 0.6, readiness: 75.0 },
+          { subjectId: 'subj_algo', name: 'Algorithms', weight: 8.0, m: 0.6, a: 0.5, c: 0.4, readiness: 65.0 }
+        ],
+        computedAt: new Date().toISOString()
+      },
+      isLoading: false,
+      error: null,
     } as any);
   });
 

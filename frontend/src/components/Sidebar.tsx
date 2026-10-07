@@ -15,7 +15,8 @@ import {
   Activity,
   NotebookPen,
   RotateCcw,
-  FileClock
+  FileClock,
+  CalendarRange
 } from 'lucide-react';
 import { useDesign } from '../context/DesignContext';
 
@@ -27,6 +28,7 @@ export const Sidebar: React.FC = () => {
 
   const pathname = location.pathname;
   const isDashboard = pathname === '/';
+  const isPlanner = pathname.startsWith('/planner');
   const isPyp = pathname.startsWith('/pyp');
   const isInsights = pathname.startsWith('/insights');
   const isRevision = pathname.startsWith('/revision');
@@ -86,6 +88,15 @@ export const Sidebar: React.FC = () => {
               >
                 <LayoutDashboard className={`w-4 h-4 ${isDashboard ? 'text-ds-accent' : 'text-ds-muted'}`} />
                 <span>Dashboard</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/planner')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isPlanner)}`}
+              >
+                <CalendarRange className={`w-4 h-4 ${isPlanner ? 'text-ds-accent' : 'text-ds-muted'}`} />
+                <span>Planner</span>
               </button>
 
               <button

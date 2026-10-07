@@ -17,6 +17,7 @@ import { InsightsPage } from './pages/InsightsPage';
 import { NotesPage } from './pages/NotesPage';
 import { RevisionPage } from './pages/RevisionPage';
 import { PYPPage } from './pages/PYPPage';
+import { PlannerPage } from './pages/PlannerPage';
 
 export const router = createBrowserRouter([
   {
@@ -26,6 +27,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <DashboardPage />,
+      },
+      {
+        path: 'planner',
+        element: <PlannerPage />,
       },
       {
         path: 'pyp',
