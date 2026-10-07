@@ -29,10 +29,10 @@ Per **R2** in `PHASE6-AI-STUDIO-SPEC.md`, `PHASE6-AI-STUDIO` allocates entries f
 
 | DEV ID | Component | Predecessor | Description |
 |---|---|---|---|
-| **DEV-40** | AI Subsystem Backend | DEV-33 | Implemented `/api/v1/ai/chat`, `/api/v1/ai/status`, `/api/v1/ai/prompts` with multi-provider fallback (Groq, Gemini, OpenAI, Ollama). |
+| **DEV-40** | AI Subsystem Backend | DEV-33 | Implemented `/api/v1/ai/chat`, `/api/v1/ai/transcribe`, and `/api/v1/ai/status` with multi-provider fallback (Groq, Gemini, OpenAI, Ollama). |
 | **DEV-41** | Whisper STT Sidecar | DEV-40 | Containerized whisper.cpp server on port 8178 with `ggml-large-v3-turbo-q5_0.bin` model and `/health` probe. |
 | **DEV-42** | STT Acoustic Gating | DEV-41 | Implemented dual-stage audio validation: 1.2s minimum duration floor, 0.003 RMS silence floor, and WAV header verification. |
-| **DEV-43** | AI Studio Drawer UI | DEV-42 | Built collapsible, draggable, and resizable side drawer with quick action chips (Hint, Explain, Formula) and Markdown KaTeX preview. |
+| **DEV-43** | AI Studio Drawer UI | DEV-42 | Built collapsible, draggable, and resizable side drawer with quick action chips (Hint, Step-by-Step, Formula/Traps) supporting modes `HINT`, `EXPLANATION`, and `GENERAL` with Markdown KaTeX preview. |
 | **DEV-44** | Context Ingestion Bridge | DEV-43 | Synchronized live page state across Question Detail, Practice Runner, and Test Runner directly into AI prompt context. |
 | **DEV-45** | Audio Recorder & WAV Encoder | DEV-44 | Developed zero-dependency 16 kHz 16-bit PCM WAV audio encoder with Web Audio API real-time microphone visualizer. |
 | **DEV-46** | BYOK & Security Integration | DEV-45 | Integrated `X-AI-Key` client header support and secured all AI routes under Phase 5 Spring Security session authentication. |
@@ -66,17 +66,17 @@ Per **R2** in `PHASE6-AI-STUDIO-SPEC.md`, `PHASE6-AI-STUDIO` allocates entries f
 | **PASS** | BYOK → sessionStorage; copy updated | AM-13 | `AiStudioContext.tsx` uses `sessionStorage.getItem('gatelms_byok_keys')`; tested in `AiStudioContext.test.tsx` & `AiStudioDrawer.test.tsx`. |
 | **PASS** | 401 parity on transcribe path | AM-14 | `aiApi.ts` redirects to `/login?next=...` on 401 response; verified in `aiApi.test.ts`. |
 | **PASS** | Abort support on chat turns | AM-15 | `AbortController` cancels in-flight turn on new prompt, drawer close, chat clear, and `Esc` key; verified in `aiApi.test.ts` & `AiStudioDrawer.test.tsx`. |
-| **PASS** | A11y/responsive pass | AM-16 | `role="complementary"`, `aria-label="AI Studio"`, full-width sheet on mobile (<768px), disabled drag on mobile, `Esc` collapse; verified in `AiStudioMobileAndSettings.test.tsx`. |
+| **PARTIAL** | A11y/responsive pass | AM-16 | `role="complementary"`, `aria-label="AI Studio"`, full-width sheet on mobile (<768px), disabled drag on mobile, `Esc` collapse; verified in `AiStudioMobileAndSettings.test.tsx`. P2 items (focus trap, prefers-reduced-motion) declared for C12. |
 | **PASS** | SW network-only pin for `/api/v1/ai/**` + swRouter test | AM-17 | `swRouter.ts` and `sw.js` route `/api/v1/ai/**` to `NETWORK_ONLY`; verified in `swRouter.test.ts`. |
-| **PASS** | Status staleTime 30 s | AM-18 | `AiStatusService.kt` caches Ollama probe results with 30s TTL. |
+| **PARTIAL** | Status staleTime 30 s | AM-18 | `AiStatusService.kt` caches Ollama probe results with 30s TTL. Backend TTL verified; no frontend UI consumer currently queries `/status` (flagged for C12 cleanup). |
 | **PASS** | WireMock contract tests, all clients, labeled as contract tests | AM-19 | `AiProviderContractTest.kt` covers Groq, Gemini, Ollama, STT, 500 retry, timeout with `@DisplayName("contract test: ...")`. |
 | **PASS** | Cloud smoke opt-in via tag + env guard | AM-21 | Smoke test tagged with `@Tag("cloud")` and gated behind `@EnabledIfEnvironmentVariable(named = "GROQ_API_KEY", ...)`. |
-| **PASS** | Floors: backend ≥ 212 static / ≥ 72 unit / ≥ 143 IT; frontend ≥ 44/215 | AM-22 | Static `@Test`: **233** (floor 212); unit: **79** (floor 72); frontend files: **44** (floor 44); tests: **227** (floor 215). |
+| **PASS** | Floors: backend ≥ 212 static / ≥ 72 unit / ≥ 143 IT; frontend ≥ 44/215 | AM-22 | Static `@Test`: **235** (floor 212); unit: **78 passed / 1 skipped** of 79 run (floor 72); frontend files: **44** (floor 44); tests: **227** (floor 215). |
 | **PASS** | Retroactive first-cut report with receipts | AM-23, R1 | Detailed in §1 and §4 of this report. |
 | **PASS** | C7-Q1 landed before hardening merge | AM-24, R4 | Documented in git history and worklog. |
 | **PASS** | DEV-40..46 first-cut + DEV-47..55 hardening filed | R2 | Complete registry in §2 of this report. |
-| **PASS** | `--no-ff` hardening merge; Qwen review; Z audit | R3, R5 | Follows Rule G9 branch lifecycle on `phase6/ai-studio-fixup-1`. |
-| **PASS** | `.env.example` placeholders; whisper.cpp pinned SHA; model SHA256 receipt | AM-25, AM-26 | `.env.example` updated; `whisper-sidecar/Dockerfile` pins `v1.7.4` and `/app/models` volume; model SHA256 `6ff38a0...` quoted in Dockerfile/docs. |
+| **PARTIAL** | `--no-ff` hardening merge; Qwen review; Z audit | R3, R5 | `--no-ff` merge on `phase6/ai-studio-fixup-1` complete; Qwen review filed (`PHASE6-AI-STUDIO-HARDENING-REVIEW.md`); Z audit filed with CONDITIONAL-PASS; C11 report alignment in progress. |
+| **PASS** | `.env.example` placeholders; whisper.cpp pinned tag | AM-25, AM-26 | `.env.example` updated; `whisper-sidecar/Dockerfile` pins release tag `v1.7.4` and `/app/models` volume mount. |
 | **PASS** | PED-1 hint-gating during live attempts | §5 | `isLiveAttempt: true` disables Step-by-Step button in `AiStudioDrawer.tsx`; verified in `AiStudioDrawer.test.tsx`. |
 | **PASS** | G5 secret scan includes `X-AI-Key`/env names; run clean | §7 | `git grep -i -E "gsk_[a-zA-Z0-9]{20,}|AIza[a-zA-Z0-9_-]{35}|sk-proj-[a-zA-Z0-9_-]{20,}"` produced 0 hits. |
 
@@ -85,13 +85,13 @@ Per **R2** in `PHASE6-AI-STUDIO-SPEC.md`, `PHASE6-AI-STUDIO` allocates entries f
 ## 4. Test Receipts & Verification
 
 ### 4.1 Backend Verification
-- **Static `@Test` Count:** **233** (Floor: $\ge 212$) — Exceeded by +21 tests.
+- **Static `@Test` Count:** **235** (Floor: $\ge 212$) — Exceeded by +23 tests.
 - **Unit Tier Execution (`.\mvnw.cmd test -Dtest="!*IT"`):**
   - `GateLmsApplicationTests`: 1/1 passed.
   - `QuestionSeedRunnerTest`: 3/3 passed.
-  - `AiChatServiceTest`: 3/3 passed.
+  - `AiChatServiceTest`: 3/3 passed (prompt-formatting and mode template generation for HINT, EXPLANATION, and GENERAL).
   - `AiLogHygieneTest`: 1/1 passed (asserts 0 API keys and transcripts logged at INFO).
-  - `AiProviderContractTest`: 8/8 passed (1 skipped cloud test per AM-21).
+  - `AiProviderContractTest`: 8 run (7 passed, 1 skipped cloud test per AM-21).
   - `AiRateLimiterTest`: 4/4 passed (chat, STT, status quotas, user isolation).
   - `AiValidationAndCapsTest`: 6/6 passed (turns cap, character caps, statement/options caps, model allowlists).
   - `GradingServiceTest`: 7/7 passed.
@@ -103,18 +103,18 @@ Per **R2** in `PHASE6-AI-STUDIO-SPEC.md`, `PHASE6-AI-STUDIO` allocates entries f
   - `StreakComputationTest`: 6/6 passed.
   - `TopicServiceTest`: 4/4 passed.
   - `WhisperTranscriptionServiceTest`: 5/5 passed.
-  - **Total Unit Tier: 79 passed, 0 failures, 0 errors (BUILD SUCCESS in 1m 00s)** (Floor: $\ge 72$).
+  - **Total Unit Tier: 79 run: 78 passed, 0 failures, 0 errors, 1 skipped cloud opt-in (BUILD SUCCESS in 1m 46s)** (Floor: $\ge 72$).
 - **Integration Tier Execution (`.\mvnw.cmd test -Dtest="AiControllerIT"`):**
   - `AiControllerIT`: **9/9 passed (BUILD SUCCESS in 1m 18s)**
-    1. `401 Unauthorized` for chat turn without session cookie.
-    2. `401 Unauthorized` for audio transcription without session cookie.
-    3. `403 Forbidden` for mutating POST without CSRF token (CSRF defense).
-    4. Authenticated chat turn succeeds with mock provider.
-    5. Authenticated audio transcription succeeds with mock whisper response.
-    6. `400 Bad Request` ProblemDetail when provider model is not on allowlist.
-    7. `413 Payload Too Large` ProblemDetail when chat turns exceed 30 limit.
-    8. `429 Too Many Requests` + `Retry-After` header when user exceeds chat quota (20/hr).
-    9. Status endpoint reports configured provider availability.
+    1. `GET /api/v1/ai/status returns status list for all providers when authenticated`
+    2. `POST /api/v1/ai/transcribe with short audio returns TOO_SHORT without calling external APIs`
+    3. `unauthenticated GET status returns 401 Unauthorized (AM-20)`
+    4. `unauthenticated POST chat returns 401 Unauthorized (AM-20)`
+    5. `unauthenticated POST transcribe returns 401 Unauthorized (AM-20)`
+    6. `POST chat with invalid CSRF token returns 403 Forbidden (AM-20)`
+    7. `POST chat with unapproved model returns 400 Bad Request (AM-5, AM-20)`
+    8. `POST chat exceeding turn caps returns 413 Payload Too Large (AM-6, AM-20)`
+    9. `chat quota exhaustion returns 429 Too Many Requests with Retry-After (AM-8, AM-20)`
 
 ### 4.2 Frontend Verification
 - **Vitest Execution (`npm test -- --run` in `frontend/`):**
@@ -179,3 +179,8 @@ git grep -i -E "gsk_[a-zA-Z0-9]{20,}|AIza[a-zA-Z0-9_-]{35}|sk-proj-[a-zA-Z0-9_-]
 ```
 
 The system is fully resilient: if the local whisper container `:8178` or Ollama `:11434` are absent, the application boots cleanly, health status endpoints report `NOT_CONFIGURED` or `UNREACHABLE` without throwing, and cloud BYOK or manual text queries function smoothly.
+
+### 5.1 Whisper Sidecar Runtime Posture (C9)
+The containerized whisper sidecar (`whisper-sidecar/Dockerfile`) is pinned to whisper.cpp release `v1.7.4` with `/app/models` volume mount and model `ggml-large-v3-turbo-q5_0.bin` (SHA-256 `6ff38a0...`). 
+*Runtime Posture Statement:* Sidecar container image and build configuration are verified via Dockerfile build specification and model artifacts. Runtime execution against live port `:8178` was omitted from the local CI test run this cycle per offline container posture; server-side status checks and fallback handling cleanly accommodate `UNREACHABLE` or `NOT_CONFIGURED` without container runtime dependencies.
+
