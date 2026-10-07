@@ -15,7 +15,7 @@ class CorsConfig(
         registry.addMapping("/**")
             .allowedOrigins(*allowedOrigins.split(",").map { it.trim() }.toTypedArray())
             .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            .allowedHeaders("*")
+            .allowedHeaders("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Requested-With", "Accept", "Origin")
             .allowCredentials(true)
     }
 }

@@ -60,26 +60,6 @@ class Question(
     @Column(name = "gate_overflow_url", length = 500)
     var gateOverflowUrl: String? = null,
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "pass1_status", length = 20, nullable = false)
-    var pass1Status: Pass1Status = Pass1Status.PENDING,
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "pass2_status", length = 20, nullable = false)
-    var pass2Status: Pass2Status = Pass2Status.PENDING,
-
-    @org.hibernate.annotations.OptimisticLock(excluded = true)
-    @Column(name = "is_bookmarked", nullable = false)
-    var isBookmarked: Boolean = false,
-
-    @org.hibernate.annotations.OptimisticLock(excluded = true)
-    @Column(name = "bookmarked_at")
-    var bookmarkedAt: Instant? = null,
-
-    @org.hibernate.annotations.OptimisticLock(excluded = true)
-    @Column(name = "last_attempted_at")
-    var lastAttemptedAt: Instant? = null,
-
     @Column(name = "source", length = 30, nullable = false)
     var source: String = "SAMPLE",
 

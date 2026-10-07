@@ -1,5 +1,10 @@
 package com.gatelms.entity
 
+enum class UserRole {
+    ADMIN,
+    STUDENT
+}
+
 enum class QuestionType {
     MCQ,
     MSQ,

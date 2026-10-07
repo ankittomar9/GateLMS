@@ -2,14 +2,22 @@ export class ApiError extends Error {
   status: number;
   fieldErrors?: Record<string, string>;
   detail?: string;
+  retryAfter?: number;
 
-  constructor(status: number, message: string, fieldErrors?: Record<string, string>, detail?: string) {
+  constructor(status: number, message: string, fieldErrors?: Record<string, string>, detail?: string, retryAfter?: number) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.fieldErrors = fieldErrors;
     this.detail = detail;
+    this.retryAfter = retryAfter;
   }
+}
+
+export function getXsrfToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(^|;)\s*XSRF-TOKEN=([^;]+)/);
+  return match ? decodeURIComponent(match[2]) : null;
 }
 
 export interface RequestOptions extends RequestInit {
@@ -35,14 +43,25 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
     }
   }
 
+  const method = (customConfig.method || 'GET').toUpperCase();
+  const reqHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...(headers as Record<string, string>),
+  };
+
+  if (method !== 'GET') {
+    const xsrf = getXsrfToken();
+    if (xsrf && !reqHeaders['X-XSRF-TOKEN']) {
+      reqHeaders['X-XSRF-TOKEN'] = xsrf;
+    }
+  }
+
   const config: RequestInit = {
-    method: customConfig.method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...headers,
-    },
+    method,
+    credentials: customConfig.credentials || 'include',
     ...customConfig,
+    headers: reqHeaders,
   };
 
   let response: Response;
@@ -64,9 +83,29 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
       // Ignore json parse error on non-json body
     }
 
+    const retryAfterHeader = response.headers?.get ? response.headers.get('Retry-After') : undefined;
+    const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) : undefined;
+
+    // 401 Interceptor: redirect to /login?next=... (except /auth/login, /actuator/health, or already on /login)
+    if (response.status === 401) {
+      const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/actuator/health');
+      if (typeof window !== 'undefined' && !isAuthEndpoint) {
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login') {
+          const next = encodeURIComponent(currentPath + window.location.search);
+          window.location.href = `/login?next=${next}`;
+        }
+      }
+    }
+
+    // 403 Interceptor: trigger not permitted toast/event
+    if (response.status === 403 && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gatelms:forbidden', { detail: { message: 'Not permitted' } }));
+    }
+
     const message = errorData?.detail || errorData?.title || errorData?.message || `Request failed with status ${response.status}`;
     const fieldErrors = errorData?.fieldErrors || undefined;
-    throw new ApiError(response.status, message, fieldErrors, errorData?.detail);
+    throw new ApiError(response.status, message, fieldErrors, errorData?.detail, retryAfter);
   }
 
   if (response.headers && response.headers.get('X-From-Cache') === '1') {

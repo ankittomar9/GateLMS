@@ -1,9 +1,22 @@
 server:
   port: 8080
+  servlet:
+    session:
+      cookie:
+        name: GATELMSSESSION
+        http-only: true
+        same-site: strict
+        secure: false
 
 spring:
   application:
     name: gate-lms-backend
+
+  session:
+    store-type: jdbc
+    jdbc:
+      initialize-schema: never
+      table-name: SPRING_SESSION
 
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:gatelms_db}
@@ -46,6 +59,8 @@ management:
       endpoint: http://localhost:4318/v1/traces
 
 app:
+  admin:
+    initial-password: ${GATELMS_ADMIN_INITIAL_PASSWORD:admin123}
   cors:
     allowed-origins: http://localhost:5173
   storage:

@@ -13,9 +13,15 @@ import java.util.UUID
 @Repository
 interface StudyPlanRepository : JpaRepository<StudyPlan, UUID> {
     fun findAllByOrderByCreatedAtDesc(): List<StudyPlan>
+    fun findByUserIdOrderByCreatedAtDesc(userId: UUID): List<StudyPlan>
+    fun findByIdAndUserId(id: UUID, userId: UUID): java.util.Optional<StudyPlan>
+    fun findFirstByUserIdOrderByCreatedAtDesc(userId: UUID): StudyPlan?
 
     @Query("SELECT p FROM StudyPlan p WHERE :date BETWEEN p.startDate AND p.endDate ORDER BY p.createdAt DESC")
     fun findActivePlansForDate(@Param("date") date: LocalDate): List<StudyPlan>
+
+    @Query("SELECT p FROM StudyPlan p WHERE p.userId = :userId AND :date BETWEEN p.startDate AND p.endDate ORDER BY p.createdAt DESC")
+    fun findActivePlansForDate(@Param("date") date: LocalDate, @Param("userId") userId: UUID): List<StudyPlan>
 
     fun findFirstByOrderByCreatedAtDesc(): StudyPlan?
 }

@@ -22,8 +22,10 @@ import kotlin.test.assertNotNull
 class QuestionServiceTest {
 
     private val questionRepository = mockk<QuestionRepository>()
+    private val questionProgressRepository = mockk<com.gatelms.repository.QuestionProgressRepository>()
     private val subjectRepository = mockk<SubjectRepository>()
     private val topicRepository = mockk<TopicRepository>()
+    private val currentUserProvider = mockk<com.gatelms.security.CurrentUserProvider>()
     private val objectMapper = ObjectMapper().registerKotlinModule()
 
     private lateinit var questionService: QuestionService
@@ -34,11 +36,14 @@ class QuestionServiceTest {
     @BeforeEach
     fun setUp() {
         clearAllMocks()
+        every { currentUserProvider.getCurrentUserId() } returns UUID.fromString("00000000-0000-0000-0000-000000000001")
         every { questionRepository.findByExternalId(any()) } returns null
         questionService = QuestionService(
             questionRepository = questionRepository,
+            questionProgressRepository = questionProgressRepository,
             subjectRepository = subjectRepository,
             topicRepository = topicRepository,
+            currentUserProvider = currentUserProvider,
             objectMapper = objectMapper
         )
     }

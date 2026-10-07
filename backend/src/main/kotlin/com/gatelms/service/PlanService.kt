@@ -7,6 +7,7 @@ import com.gatelms.entity.*
 import com.gatelms.error.EntityNotFoundException
 import com.gatelms.error.ValidationException
 import com.gatelms.repository.*
+import com.gatelms.security.CurrentUserProvider
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -25,7 +26,9 @@ class PlanService(
     private val topicRepository: TopicRepository,
     private val questionRepository: QuestionRepository,
     private val attemptAnswerRepository: AttemptAnswerRepository,
+    private val topicMasteryRepository: TopicMasteryRepository,
     private val readinessService: ReadinessService,
+    private val currentUserProvider: CurrentUserProvider,
     private val objectMapper: ObjectMapper
 ) {
     private val logger = LoggerFactory.getLogger(PlanService::class.java)
@@ -60,6 +63,7 @@ class PlanService(
         val title = req.title?.trim()?.ifBlank { null } ?: "GATE Preparation Plan ($weeks Weeks)"
 
         // 1. Fetch syllabus data & question availability
+        val currentUserId = currentUserProvider.getCurrentUserId()
         val allSubjects = subjectRepository.findAll().sortedBy { it.id }
         val allTopics = topicRepository.findAll().sortedBy { it.id }
         val questionCountsByTopic = questionRepository.countQuestionsGroupedByTopic()
@@ -72,8 +76,9 @@ class PlanService(
             null
         }
 
-        val verdictsCount = attemptAnswerRepository.count()
-        val revisedTopicsCount = allTopics.count { it.lastRevisedAt != null }
+        val masteries = topicMasteryRepository.findByUserId(currentUserId).associateBy { it.id.topicId }
+        val verdictsCount = attemptAnswerRepository.countDistinctQuestionId(currentUserId)
+        val revisedTopicsCount = masteries.values.count { it.lastRevisedAt != null }
         val hasActivity = verdictsCount > 0 || revisedTopicsCount > 0
 
         // 3. Subject Shares Computation
@@ -109,9 +114,12 @@ class PlanService(
                         )
                     )
                 } else {
-                    val masteryRatio = (t.masteryLevel.toDouble() / 5.0).coerceIn(0.0, 1.0)
+                    val tm = masteries[t.id]
+                    val masteryLevel = tm?.masteryLevel ?: 0
+                    val nextRevisionDue = tm?.nextRevisionDue
+                    val masteryRatio = (masteryLevel.toDouble() / 5.0).coerceIn(0.0, 1.0)
                     var weakness = 1.0 - masteryRatio
-                    if (t.nextRevisionDue != null && t.nextRevisionDue!!.isBefore(now)) {
+                    if (nextRevisionDue != null && nextRevisionDue.isBefore(now)) {
                         weakness += 0.5
                     }
                     val tShare = 1.0 + weakness
@@ -154,6 +162,7 @@ class PlanService(
 
         // 6. Build StudyPlan entity
         val plan = StudyPlan(
+            userId = currentUserId,
             title = title,
             startDate = startDate,
             endDate = endDate,
@@ -340,13 +349,15 @@ class PlanService(
 
     @Transactional(readOnly = true)
     fun getPlans(): List<StudyPlanSummaryDto> {
-        val plans = studyPlanRepository.findAllByOrderByCreatedAtDesc()
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val plans = studyPlanRepository.findByUserIdOrderByCreatedAtDesc(currentUserId)
         return plans.map { toSummaryDto(it) }
     }
 
     @Transactional(readOnly = true)
     fun getPlanById(id: UUID): StudyPlanDetailDto {
-        val plan = studyPlanRepository.findById(id).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val plan = studyPlanRepository.findByIdAndUserId(id, currentUserId).orElseThrow {
             EntityNotFoundException("Study plan not found with id: $id")
         }
         val items = planItemRepository.findByPlanIdOrderByPlanDateAsc(id)
@@ -363,7 +374,8 @@ class PlanService(
     @Transactional(readOnly = true)
     fun getTodayPlan(): TodayPlanResponse {
         val today = LocalDate.now()
-        val activePlans = studyPlanRepository.findActivePlansForDate(today)
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val activePlans = studyPlanRepository.findActivePlansForDate(today, currentUserId)
 
         if (activePlans.isEmpty()) {
             return TodayPlanResponse(
@@ -395,8 +407,12 @@ class PlanService(
 
     @Transactional
     fun updateItemStatus(id: UUID, req: UpdatePlanItemStatusRequest): PlanItemDto {
+        val currentUserId = currentUserProvider.getCurrentUserId()
         val item = planItemRepository.findById(id).orElseThrow {
             EntityNotFoundException("Plan item not found with id: $id")
+        }
+        if (item.plan.userId != currentUserId) {
+            throw EntityNotFoundException("Plan item not found with id: $id")
         }
         item.status = req.status
         if (req.status == PlanItemStatus.DONE) {
@@ -409,7 +425,8 @@ class PlanService(
 
     @Transactional
     fun regeneratePlan(id: UUID): StudyPlanDetailDto {
-        val plan = studyPlanRepository.findById(id).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val plan = studyPlanRepository.findByIdAndUserId(id, currentUserId).orElseThrow {
             EntityNotFoundException("Study plan not found with id: $id")
         }
 
@@ -436,8 +453,9 @@ class PlanService(
             null
         }
 
-        val verdictsCount = attemptAnswerRepository.count()
-        val revisedTopicsCount = allTopics.count { it.lastRevisedAt != null }
+        val masteries = topicMasteryRepository.findByUserId(currentUserId).associateBy { it.id.topicId }
+        val verdictsCount = attemptAnswerRepository.countDistinctQuestionId(currentUserId)
+        val revisedTopicsCount = masteries.values.count { it.lastRevisedAt != null }
         val hasActivity = verdictsCount > 0 || revisedTopicsCount > 0
 
         val subjectReadinessMap = readinessResp?.perSubject?.associate {
@@ -459,9 +477,12 @@ class PlanService(
             for (t in sTopics) {
                 val qCount = questionCountsByTopic[t.id] ?: 0L
                 if (qCount > 0L) {
-                    val masteryRatio = (t.masteryLevel.toDouble() / 5.0).coerceIn(0.0, 1.0)
+                    val tm = masteries[t.id]
+                    val masteryLevel = tm?.masteryLevel ?: 0
+                    val nextRevisionDue = tm?.nextRevisionDue
+                    val masteryRatio = (masteryLevel.toDouble() / 5.0).coerceIn(0.0, 1.0)
                     var weakness = 1.0 - masteryRatio
-                    if (t.nextRevisionDue != null && t.nextRevisionDue!!.isBefore(now)) {
+                    if (nextRevisionDue != null && nextRevisionDue.isBefore(now)) {
                         weakness += 0.5
                     }
                     validList.add(TopicShareComputation(t, weakness, 1.0 + weakness))

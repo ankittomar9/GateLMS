@@ -27,38 +27,45 @@ class NotificationService(
     private val notificationRepository: NotificationRepository,
     private val userGoalRepository: UserGoalRepository,
     private val dailyRollupRepository: DailyRollupRepository,
+    private val currentUserProvider: com.gatelms.security.CurrentUserProvider,
     @Autowired(required = false)
     private val mistakeLogRepository: com.gatelms.repository.MistakeLogRepository? = null,
     @Autowired(required = false)
-    private val topicRepository: com.gatelms.repository.TopicRepository? = null,
+    private val topicMasteryRepository: com.gatelms.repository.TopicMasteryRepository? = null,
     @Autowired(required = false)
-    private val planItemRepository: PlanItemRepository? = null
+    private val planItemRepository: PlanItemRepository? = null,
+    @Autowired(required = false)
+    private val userRepository: com.gatelms.repository.UserRepository? = null
 ) {
     private val logger = LoggerFactory.getLogger(NotificationService::class.java)
 
     @Transactional(readOnly = true)
     fun getNotifications(unreadOnly: Boolean, pageable: Pageable): Page<NotificationDto> {
+        val currentUserId = currentUserProvider.getCurrentUserId()
         val page = if (unreadOnly) {
-            notificationRepository.findByReadAtIsNullOrderByCreatedAtDesc(pageable)
+            notificationRepository.findByUserIdAndReadAtIsNullOrderByCreatedAtDesc(currentUserId, pageable)
         } else {
-            notificationRepository.findAllByOrderByCreatedAtDesc(pageable)
+            notificationRepository.findAllByUserIdOrderByCreatedAtDesc(currentUserId, pageable)
         }
         return page.map { it.toDto() }
     }
 
     @Transactional(readOnly = true)
     fun getUnreadCount(): Long {
-        return notificationRepository.countByReadAtIsNull()
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        return notificationRepository.countByUserIdAndReadAtIsNull(currentUserId)
     }
 
     @Transactional(readOnly = true)
     fun getTop10(): List<NotificationDto> {
-        return notificationRepository.findTop10ByOrderByCreatedAtDesc().map { it.toDto() }
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        return notificationRepository.findTop10ByUserIdOrderByCreatedAtDesc(currentUserId).map { it.toDto() }
     }
 
     @Transactional
     fun markAsRead(id: UUID): NotificationDto {
-        val notification = notificationRepository.findById(id).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val notification = notificationRepository.findByIdAndUserId(id, currentUserId).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND, "Notification not found")
         }
         if (notification.readAt == null) {
@@ -70,7 +77,8 @@ class NotificationService(
 
     @Transactional
     fun markAllAsRead(): Int {
-        return notificationRepository.markAllAsRead(Instant.now())
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        return notificationRepository.markAllAsRead(currentUserId, Instant.now())
     }
 
     @Transactional
@@ -79,22 +87,25 @@ class NotificationService(
         title: String,
         body: String?,
         link: String? = null,
-        forceDuplicate: Boolean = false
+        forceDuplicate: Boolean = false,
+        userId: UUID? = null
     ): Notification? {
+        val targetUserId = userId ?: currentUserProvider.getCurrentUserId()
         val now = Instant.now()
         val startOfDay = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
         val endOfDay = startOfDay.plus(1, ChronoUnit.DAYS)
 
         // De-dup rule: at most one notification per (type, date) for system events
         if (!forceDuplicate && type != NotificationType.ACHIEVEMENT_EARNED) {
-            val exists = notificationRepository.existsByTypeAndCreatedAtBetween(type, startOfDay, endOfDay)
+            val exists = notificationRepository.existsByUserIdAndTypeAndCreatedAtBetween(targetUserId, type, startOfDay, endOfDay)
             if (exists) {
-                logger.info("Notification of type {} already produced today. Skipping de-dup.", type)
+                logger.info("Notification of type {} already produced today for user {}. Skipping de-dup.", type, targetUserId)
                 return null
             }
         }
 
         val notification = Notification(
+            userId = targetUserId,
             type = type,
             title = title,
             body = body,
@@ -102,7 +113,7 @@ class NotificationService(
             createdAt = now
         )
         val saved = notificationRepository.save(notification)
-        logger.info("Produced notification [{}] id={}", type, saved.id)
+        logger.info("Produced notification [{}] id={} for user {}", type, saved.id, targetUserId)
         return saved
     }
 
@@ -111,38 +122,44 @@ class NotificationService(
     fun runMorningNotificationJob() {
         logger.info("Executing morning notification job...")
 
-        // 1. REVISION_DUE check
-        try {
-            val now = Instant.now()
-            val dueMistakes = mistakeLogRepository?.countDueReviews(now) ?: 0L
-            val dueTopics = topicRepository?.countDueTopics(now) ?: 0L
-            if (dueMistakes + dueTopics > 0) {
-                createNotification(
-                    type = NotificationType.REVISION_DUE,
-                    title = "Revisions Due Today",
-                    body = "$dueMistakes mistake reviews and $dueTopics topics due for revision.",
-                    link = "/revision"
-                )
-            }
-        } catch (e: Exception) {
-            logger.warn("Failed to check revision due in morning job: {}", e.message)
-        }
+        val users = userRepository?.findAll() ?: emptyList()
+        val now = Instant.now()
+        val today = LocalDate.now()
 
-        // 2. PLAN_DUE check
-        try {
-            val today = LocalDate.now()
-            val openItems = planItemRepository?.findOpenItemsForDate(today) ?: emptyList()
-            if (openItems.isNotEmpty()) {
-                val count = openItems.size
-                createNotification(
-                    type = NotificationType.PLAN_DUE,
-                    title = "Daily Study Plan Due",
-                    body = "$count study plan items scheduled for today.",
-                    link = "/planner"
-                )
+        for (u in users) {
+            // 1. REVISION_DUE check
+            try {
+                val dueMistakes = mistakeLogRepository?.countDueReviews(u.id, now) ?: 0L
+                val dueTopics = topicMasteryRepository?.countDueForRevision(u.id, now) ?: 0L
+                if (dueMistakes + dueTopics > 0) {
+                    createNotification(
+                        type = NotificationType.REVISION_DUE,
+                        title = "Revisions Due Today",
+                        body = "$dueMistakes mistake reviews and $dueTopics topics due for revision.",
+                        link = "/revision",
+                        userId = u.id
+                    )
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to check revision due in morning job for user {}: {}", u.id, e.message)
             }
-        } catch (e: Exception) {
-            logger.warn("Failed to check plan due in morning job: {}", e.message)
+
+            // 2. PLAN_DUE check
+            try {
+                val openItems = planItemRepository?.findOpenItemsForDate(today)?.filter { it.plan.userId == u.id } ?: emptyList()
+                if (openItems.isNotEmpty()) {
+                    val count = openItems.size
+                    createNotification(
+                        type = NotificationType.PLAN_DUE,
+                        title = "Daily Study Plan Due",
+                        body = "$count study plan items scheduled for today.",
+                        link = "/planner",
+                        userId = u.id
+                    )
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to check plan due in morning job for user {}: {}", u.id, e.message)
+            }
         }
     }
 
@@ -151,32 +168,37 @@ class NotificationService(
     fun runEveningNotificationJob() {
         logger.info("Executing evening notification job...")
 
-        // STREAK_AT_RISK check: fires only when streak > 0 and today's rollup is empty
-        try {
-            val rollups = dailyRollupRepository.findAllByOrderByActivityDateDesc()
-            val activityMap = rollups.associate { it.activityDate to it.questionsAnswered }
-            val today = LocalDate.now()
-            val todayAnswered = activityMap[today] ?: 0
+        val users = userRepository?.findAll() ?: emptyList()
+        val today = LocalDate.now()
 
-            val goal = userGoalRepository.findFirstByOrderByUpdatedAtDesc()
-            val streakProtection = goal?.streakProtection ?: true
+        for (u in users) {
+            // STREAK_AT_RISK check: fires only when streak > 0 and today's rollup is empty
+            try {
+                val rollups = dailyRollupRepository.findAllByUserIdOrderByActivityDateDesc(u.id)
+                val activityMap = rollups.associate { it.activityDate to it.questionsAnswered }
+                val todayAnswered = activityMap[today] ?: 0
 
-            val streakRes = StreakCalculator.computeStreak(
-                activityMap = activityMap,
-                today = today,
-                streakProtection = streakProtection
-            )
+                val goal = userGoalRepository.findFirstByUserIdOrderByUpdatedAtDesc(u.id)
+                val streakProtection = goal?.streakProtection ?: true
 
-            if (streakRes.streak > 0 && todayAnswered == 0) {
-                createNotification(
-                    type = NotificationType.STREAK_AT_RISK,
-                    title = "Streak At Risk!",
-                    body = "You have an active streak of ${streakRes.streak} days. Complete a study session today to keep it alive!",
-                    link = "/practice"
+                val streakRes = StreakCalculator.computeStreak(
+                    activityMap = activityMap,
+                    today = today,
+                    streakProtection = streakProtection
                 )
+
+                if (streakRes.streak > 0 && todayAnswered == 0) {
+                    createNotification(
+                        type = NotificationType.STREAK_AT_RISK,
+                        title = "Streak At Risk!",
+                        body = "You have an active streak of ${streakRes.streak} days. Complete a study session today to keep it alive!",
+                        link = "/practice",
+                        userId = u.id
+                    )
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to check streak at risk in evening job for user {}: {}", u.id, e.message)
             }
-        } catch (e: Exception) {
-            logger.warn("Failed to check streak at risk in evening job: {}", e.message)
         }
     }
 

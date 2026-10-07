@@ -25,6 +25,7 @@ class MockTestService(
     private val mockAssemblyService: MockAssemblyService,
     private val gradingService: GradingService,
     private val objectMapper: ObjectMapper,
+    private val currentUserProvider: com.gatelms.security.CurrentUserProvider,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -162,8 +163,9 @@ class MockTestService(
             mockExamRepository.save(exam)
         }
 
-        val bestScore = mockAttemptRepository.findMaxScoreByMockExamId(saved.id)
-        val attemptCount = mockAttemptRepository.countByMockExamIdAndStatus(saved.id, MockAttemptStatus.SUBMITTED).toInt()
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val bestScore = mockAttemptRepository.findMaxScoreByMockExamId(saved.id, currentUserId)
+        val attemptCount = mockAttemptRepository.countByMockExamIdAndUserIdAndStatus(saved.id, currentUserId, MockAttemptStatus.SUBMITTED).toInt()
 
         return MockTemplateSummaryDto(
             id = saved.id,
@@ -182,12 +184,13 @@ class MockTestService(
 
     @Transactional(readOnly = true)
     fun listTemplates(): List<MockTemplateSummaryDto> {
+        val currentUserId = currentUserProvider.getCurrentUserId()
         val exams = mockExamRepository.findByModeOrderByCreatedAtDesc(ExamMode.MOCK)
         return exams.map { exam ->
             val blueprint = mockAssemblyService.parseBlueprint(exam.blueprintJson)
             val totalQuestions = blueprint.sections.sumOf { it.mcq + it.msq + it.nat }
-            val bestScore = mockAttemptRepository.findMaxScoreByMockExamId(exam.id)
-            val attemptCount = mockAttemptRepository.countByMockExamIdAndStatus(exam.id, MockAttemptStatus.SUBMITTED).toInt()
+            val bestScore = mockAttemptRepository.findMaxScoreByMockExamId(exam.id, currentUserId)
+            val attemptCount = mockAttemptRepository.countByMockExamIdAndUserIdAndStatus(exam.id, currentUserId, MockAttemptStatus.SUBMITTED).toInt()
 
             MockTemplateSummaryDto(
                 id = exam.id,
@@ -206,13 +209,14 @@ class MockTestService(
 
     @Transactional(readOnly = true)
     fun getTemplate(id: UUID): MockTemplateSummaryDto {
+        val currentUserId = currentUserProvider.getCurrentUserId()
         val exam = mockExamRepository.findById(id).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND, "Mock template not found")
         }
         val blueprint = mockAssemblyService.parseBlueprint(exam.blueprintJson)
         val totalQuestions = blueprint.sections.sumOf { it.mcq + it.msq + it.nat }
-        val bestScore = mockAttemptRepository.findMaxScoreByMockExamId(exam.id)
-        val attemptCount = mockAttemptRepository.countByMockExamIdAndStatus(exam.id, MockAttemptStatus.SUBMITTED).toInt()
+        val bestScore = mockAttemptRepository.findMaxScoreByMockExamId(exam.id, currentUserId)
+        val attemptCount = mockAttemptRepository.countByMockExamIdAndUserIdAndStatus(exam.id, currentUserId, MockAttemptStatus.SUBMITTED).toInt()
 
         return MockTemplateSummaryDto(
             id = exam.id,
@@ -241,7 +245,9 @@ class MockTestService(
         val questionIds = assembled.questions.map { it.id.toString() }
         val questionIdsJson = objectMapper.writeValueAsString(questionIds)
 
+        val currentUserId = currentUserProvider.getCurrentUserId()
         val attempt = MockAttempt(
+            userId = currentUserId,
             mockExam = exam,
             startedAt = Instant.now(),
             durationSeconds = durationSeconds,
@@ -294,7 +300,8 @@ class MockTestService(
 
     @Transactional
     fun upsertAnswer(attemptId: UUID, questionId: UUID, req: UpsertAnswerRequest): UpsertAnswerResponse {
-        val attempt = mockAttemptRepository.findById(attemptId).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val attempt = mockAttemptRepository.findByIdAndUserId(attemptId, currentUserId).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND, "Attempt not found")
         }
 
@@ -360,7 +367,8 @@ class MockTestService(
 
     @Transactional
     fun submitAttempt(attemptId: UUID, req: SubmitMockAttemptRequest?): SubmitMockAttemptResponse {
-        val attempt = mockAttemptRepository.findById(attemptId).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val attempt = mockAttemptRepository.findByIdAndUserId(attemptId, currentUserId).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND, "Attempt not found")
         }
 
@@ -506,7 +514,8 @@ class MockTestService(
 
     @Transactional(readOnly = true)
     fun getResult(attemptId: UUID): MockResultResponse {
-        val attempt = mockAttemptRepository.findById(attemptId).orElseThrow {
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val attempt = mockAttemptRepository.findByIdAndUserId(attemptId, currentUserId).orElseThrow {
             ResponseStatusException(HttpStatus.NOT_FOUND, "Attempt not found")
         }
 
@@ -615,7 +624,8 @@ class MockTestService(
 
     @Transactional(readOnly = true)
     fun getAttemptHistory(mockId: UUID): List<MockAttemptHistoryDto> {
-        return mockAttemptRepository.findByMockExamIdOrderByStartedAtDesc(mockId).map { a ->
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        return mockAttemptRepository.findByMockExamIdAndUserIdOrderByStartedAtDesc(mockId, currentUserId).map { a ->
             MockAttemptHistoryDto(
                 attemptId = a.id,
                 startedAt = a.startedAt,
@@ -632,7 +642,8 @@ class MockTestService(
 
     @Transactional(readOnly = true)
     fun getMockTrend(): List<MockTrendDto> {
-        val attempts = mockAttemptRepository.findByStatusOrderBySubmittedAtAsc(MockAttemptStatus.SUBMITTED)
+        val currentUserId = currentUserProvider.getCurrentUserId()
+        val attempts = mockAttemptRepository.findByUserIdAndStatusOrderBySubmittedAtAsc(currentUserId, MockAttemptStatus.SUBMITTED)
         return attempts.mapNotNull { a ->
             val exam = a.mockExam ?: return@mapNotNull null
             val subAt = a.submittedAt ?: a.startedAt

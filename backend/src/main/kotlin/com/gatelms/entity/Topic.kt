@@ -27,15 +27,6 @@ class Topic(
     @Column(name = "book_chapter_ref", length = 255)
     var bookChapterRef: String? = null,
 
-    @Column(name = "mastery_level", nullable = false)
-    var masteryLevel: Int = 0,
-
-    @Column(name = "last_revised_at")
-    var lastRevisedAt: Instant? = null,
-
-    @Column(name = "next_revision_due")
-    var nextRevisionDue: Instant? = null,
-
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now(),
 

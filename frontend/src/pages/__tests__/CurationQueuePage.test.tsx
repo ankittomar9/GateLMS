@@ -183,7 +183,7 @@ describe('CurationQueuePage Component', () => {
     await user.click(addNoteBtns[0]);
 
     const textarea = screen.getByPlaceholderText(/Enter reason or editorial comments/i);
-    await user.type(textarea, 'Stem ambiguous, options misaligned with GATE standard');
+    fireEvent.change(textarea, { target: { value: 'Stem ambiguous, options misaligned with GATE standard' } });
 
     const rejectBtn = screen.getByTestId('reject-btn-q-so-1');
     await user.click(rejectBtn);
@@ -204,8 +204,10 @@ describe('CurationQueuePage Component', () => {
     const acceptBtn = screen.getByTestId('accept-btn-q-so-1');
     await user.click(acceptBtn);
 
-    expect(screen.getByTestId('curation-error-banner')).toBeDefined();
-    expect(screen.getByText(/Network error during curation mutation/i)).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByTestId('curation-error-banner')).toBeDefined();
+      expect(screen.getByText(/Network error during curation mutation/i)).toBeDefined();
+    });
   });
 
   it('keyboard shortcuts: A to accept, R to reject, N to toggle note for first visible question', async () => {

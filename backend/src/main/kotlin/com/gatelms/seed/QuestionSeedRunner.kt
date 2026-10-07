@@ -161,13 +161,10 @@ class QuestionSeedRunner(
                             numericMax = raw.numericMax,
                             explanation = raw.explanation,
                             gateOverflowUrl = raw.gateOverflowUrl,
-                            isBookmarked = false,
                             source = raw.source ?: "SAMPLE",
                             curationStatus = raw.curationStatus ?: "UNREVIEWED",
                             curationNote = raw.curationNote,
-                            difficulty = raw.difficulty,
-                            pass1Status = p1Status,
-                            pass2Status = Pass2Status.PENDING
+                            difficulty = raw.difficulty
                         )
                         questionRepository.save(newQ)
                         inserted++

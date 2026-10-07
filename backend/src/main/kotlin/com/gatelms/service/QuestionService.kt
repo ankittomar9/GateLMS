@@ -17,14 +17,22 @@ import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import com.gatelms.entity.Pass1Status
+import com.gatelms.entity.Pass2Status
+import com.gatelms.entity.QuestionProgress
+import com.gatelms.entity.QuestionProgressId
+import com.gatelms.repository.QuestionProgressRepository
+import com.gatelms.security.CurrentUserProvider
 import java.util.UUID
 
 @Service
 @Transactional
 class QuestionService(
     private val questionRepository: QuestionRepository,
+    private val questionProgressRepository: QuestionProgressRepository,
     private val subjectRepository: SubjectRepository,
     private val topicRepository: TopicRepository,
+    private val currentUserProvider: CurrentUserProvider,
     private val objectMapper: ObjectMapper,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null,
@@ -56,7 +64,9 @@ class QuestionService(
             else -> "created_at"
         }
         val unpagedSortPageable = PageRequest.of(pageable.pageNumber, pageable.pageSize)
+        val userId = currentUserProvider.getCurrentUserId()
         val page = questionRepository.findWithFilters(
+            userId = userId,
             subjectId = subjectId?.ifBlank { null },
             topicId = topicId?.ifBlank { null },
             type = type?.ifBlank { null },
@@ -71,7 +81,16 @@ class QuestionService(
             sortColumn = sortColumn,
             pageable = unpagedSortPageable
         )
-        return page.map { it.toSummaryDto() }
+
+        val questionIds = page.content.mapNotNull { it.id }
+        val progressMap = if (questionIds.isNotEmpty()) {
+            questionProgressRepository.findAllByUserIdAndQuestionIdIn(userId, questionIds)
+                .associateBy { it.id.questionId }
+        } else {
+            emptyMap()
+        }
+
+        return page.map { it.toSummaryDto(progressMap[it.id]) }
     }
 
     @Transactional(readOnly = true)
@@ -79,7 +98,9 @@ class QuestionService(
         val question = questionRepository.findById(id).orElseThrow {
             EntityNotFoundException("Question not found with id: $id")
         }
-        return question.toDto()
+        val userId = currentUserProvider.getCurrentUserId()
+        val progress = questionProgressRepository.findByIdUserIdAndIdQuestionId(userId, id).orElse(null)
+        return question.toDto(progress)
     }
 
     fun createQuestion(dto: QuestionUpsertDto): QuestionDto {
@@ -122,7 +143,7 @@ class QuestionService(
         )
 
         val saved = questionRepository.save(question)
-        return saved.toDto()
+        return saved.toDto(null)
     }
 
     fun updateQuestion(id: UUID, dto: QuestionUpsertDto): QuestionDto {
@@ -168,7 +189,9 @@ class QuestionService(
         question.updatedAt = Instant.now()
 
         val saved = questionRepository.saveAndFlush(question)
-        return saved.toDto()
+        val userId = currentUserProvider.getCurrentUserId()
+        val progress = questionProgressRepository.findByIdUserIdAndIdQuestionId(userId, id).orElse(null)
+        return saved.toDto(progress)
     }
 
     fun updateStatus(id: UUID, dto: QuestionStatusUpdateDto): QuestionDto {
@@ -176,26 +199,43 @@ class QuestionService(
             EntityNotFoundException("Question not found with id: $id")
         }
 
-        dto.pass1Status?.let { question.pass1Status = it }
-        dto.pass2Status?.let { question.pass2Status = it }
-        dto.isBookmarked?.let { question.isBookmarked = it }
-        question.updatedAt = Instant.now()
+        val userId = currentUserProvider.getCurrentUserId()
+        val progress = questionProgressRepository.findByIdUserIdAndIdQuestionId(userId, id).orElseGet {
+            QuestionProgress(id = QuestionProgressId(userId = userId, questionId = id))
+        }
 
-        val saved = questionRepository.saveAndFlush(question)
-        return saved.toDto()
+        dto.pass1Status?.let { progress.pass1Status = it }
+        dto.pass2Status?.let { progress.pass2Status = it }
+        dto.isBookmarked?.let { progress.isBookmarked = it }
+        progress.lastAttemptedAt = Instant.now()
+
+        val savedProgress = questionProgressRepository.saveAndFlush(progress)
+        return question.toDto(savedProgress)
     }
 
     fun updateBookmark(id: UUID, bookmarked: Boolean): QuestionDto {
         val question = questionRepository.findById(id).orElseThrow {
             EntityNotFoundException("Question not found with id: $id")
         }
-        question.isBookmarked = bookmarked
-        question.bookmarkedAt = if (bookmarked) Instant.now() else null
-        val saved = questionRepository.saveAndFlush(question)
-        return saved.toDto()
+
+        val userId = currentUserProvider.getCurrentUserId()
+        val progress = questionProgressRepository.findByIdUserIdAndIdQuestionId(userId, id).orElseGet {
+            QuestionProgress(id = QuestionProgressId(userId = userId, questionId = id))
+        }
+
+        progress.isBookmarked = bookmarked
+        progress.bookmarkedAt = if (bookmarked) Instant.now() else null
+
+        val savedProgress = questionProgressRepository.saveAndFlush(progress)
+        return question.toDto(savedProgress)
     }
 
     fun updateCuration(id: UUID, dto: CurationUpdateRequest): QuestionDto {
+        val currentUser = currentUserProvider.getCurrentUser()
+        if (currentUser.role != com.gatelms.entity.UserRole.ADMIN) {
+            throw com.gatelms.error.ForbiddenException("Only ADMIN users can curate questions")
+        }
+
         val question = questionRepository.findById(id).orElseThrow {
             EntityNotFoundException("Question not found with id: $id")
         }
@@ -223,7 +263,8 @@ class QuestionService(
         }
 
         val saved = questionRepository.saveAndFlush(question)
-        return saved.toDto()
+        val progress = questionProgressRepository.findByIdUserIdAndIdQuestionId(currentUser.id!!, id).orElse(null)
+        return saved.toDto(progress)
     }
 
     @Transactional(readOnly = true)
@@ -355,7 +396,7 @@ class QuestionService(
         }
     }
 
-    private fun Question.toSummaryDto(): QuestionSummaryDto {
+    private fun Question.toSummaryDto(progress: QuestionProgress? = null): QuestionSummaryDto {
         return QuestionSummaryDto(
             id = id!!,
             externalId = externalId,
@@ -367,11 +408,11 @@ class QuestionService(
             type = type,
             marks = marks,
             statement = statement,
-            pass1Status = pass1Status,
-            pass2Status = pass2Status,
-            isBookmarked = isBookmarked,
-            bookmarkedAt = bookmarkedAt,
-            lastAttemptedAt = lastAttemptedAt,
+            pass1Status = progress?.pass1Status ?: Pass1Status.PENDING,
+            pass2Status = progress?.pass2Status ?: Pass2Status.PENDING,
+            isBookmarked = progress?.isBookmarked ?: false,
+            bookmarkedAt = progress?.bookmarkedAt,
+            lastAttemptedAt = progress?.lastAttemptedAt,
             source = source,
             curationStatus = curationStatus,
             curationNote = curationNote,
@@ -380,7 +421,7 @@ class QuestionService(
         )
     }
 
-    private fun Question.toDto(): QuestionDto {
+    private fun Question.toDto(progress: QuestionProgress? = null): QuestionDto {
         return QuestionDto(
             id = id!!,
             externalId = externalId,
@@ -398,11 +439,11 @@ class QuestionService(
             numericMax = numericMax,
             explanation = explanation,
             gateOverflowUrl = gateOverflowUrl,
-            pass1Status = pass1Status,
-            pass2Status = pass2Status,
-            isBookmarked = isBookmarked,
-            bookmarkedAt = bookmarkedAt,
-            lastAttemptedAt = lastAttemptedAt,
+            pass1Status = progress?.pass1Status ?: Pass1Status.PENDING,
+            pass2Status = progress?.pass2Status ?: Pass2Status.PENDING,
+            isBookmarked = progress?.isBookmarked ?: false,
+            bookmarkedAt = progress?.bookmarkedAt,
+            lastAttemptedAt = progress?.lastAttemptedAt,
             source = source,
             curationStatus = curationStatus,
             curationNote = curationNote,

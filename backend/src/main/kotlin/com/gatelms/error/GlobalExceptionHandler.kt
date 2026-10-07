@@ -50,6 +50,34 @@ class GlobalExceptionHandler {
         return problem
     }
 
+    @ExceptionHandler(InvalidCredentialsException::class)
+    fun handleInvalidCredentials(ex: InvalidCredentialsException): ProblemDetail {
+        val problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.message ?: "Invalid credentials")
+        problem.type = URI.create("about:blank")
+        problem.title = "Unauthorized"
+        return problem
+    }
+
+    @ExceptionHandler(RateLimitException::class)
+    fun handleRateLimit(ex: RateLimitException): org.springframework.http.ResponseEntity<ProblemDetail> {
+        val problem = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.message ?: "Too many failed attempts. Try again later.")
+        problem.type = URI.create("about:blank")
+        problem.title = "Too Many Requests"
+        problem.setProperty("retryAfterSeconds", ex.retryAfterSeconds)
+        return org.springframework.http.ResponseEntity
+            .status(HttpStatus.TOO_MANY_REQUESTS)
+            .header("Retry-After", ex.retryAfterSeconds.toString())
+            .body(problem)
+    }
+
+    @ExceptionHandler(ForbiddenException::class, org.springframework.security.access.AccessDeniedException::class)
+    fun handleForbidden(ex: Exception): ProblemDetail {
+        val problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.message ?: "Access denied")
+        problem.type = URI.create("about:blank")
+        problem.title = "Forbidden"
+        return problem
+    }
+
     @ExceptionHandler(org.springframework.web.server.ResponseStatusException::class)
     fun handleResponseStatusException(ex: org.springframework.web.server.ResponseStatusException): ProblemDetail {
         return ProblemDetail.forStatusAndDetail(ex.statusCode, ex.reason ?: "Request error")

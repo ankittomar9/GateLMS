@@ -151,8 +151,7 @@ class PlanProgressIT : BaseIntegrationTest() {
             Topic(
                 id = "isolated-topic-${UUID.randomUUID()}",
                 subject = testSubject,
-                name = "Isolated Topic No Plan",
-                masteryLevel = 2
+                name = "Isolated Topic No Plan"
             )
         )
 

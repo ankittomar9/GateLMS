@@ -26,6 +26,8 @@ class MistakeService(
     private val questionRepository: QuestionRepository,
     private val attemptAnswerRepository: AttemptAnswerRepository,
     private val topicRepository: TopicRepository,
+    private val topicMasteryRepository: com.gatelms.repository.TopicMasteryRepository,
+    private val currentUserProvider: com.gatelms.security.CurrentUserProvider,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private val planProgressService: PlanProgressService? = null,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -63,8 +65,10 @@ class MistakeService(
 
         val now = Instant.now()
         val nextReview = now.plus(1, ChronoUnit.DAYS)
+        val userId = currentUserProvider.getCurrentUserId()
 
         val mistake = MistakeLog(
+            userId = userId,
             question = question,
             attemptAnswer = attemptAnswer,
             errorCategory = category,
@@ -83,7 +87,9 @@ class MistakeService(
     @Transactional(readOnly = true)
     fun getMistakes(resolved: Boolean?, dueOnly: Boolean, pageable: Pageable): Page<MistakeDto> {
         val now = Instant.now()
+        val userId = currentUserProvider.getCurrentUserId()
         val page = mistakeLogRepository.findFiltered(
+            userId = userId,
             resolved = resolved,
             dueOnly = dueOnly,
             now = now,
@@ -143,19 +149,22 @@ class MistakeService(
     fun getMasteryStats(): List<TopicMasteryStatsDto> {
         val topics = topicRepository.findAll()
         val now = Instant.now()
-        val dueCountsRaw = mistakeLogRepository.countDueReviewsByTopic(now)
+        val userId = currentUserProvider.getCurrentUserId()
+        val dueCountsRaw = mistakeLogRepository.countDueReviewsByTopic(userId = userId, now = now)
         val dueCountMap = dueCountsRaw.mapNotNull { row ->
             val topicId = row[0] as? String
             val cnt = (row[1] as? Number)?.toLong() ?: 0L
             if (topicId != null) topicId to cnt else null
         }.toMap()
 
+        val masteryMap = topicMasteryRepository.findAllByIdUserId(userId).associateBy { it.id.topicId }
+
         return topics.map { t ->
             TopicMasteryStatsDto(
                 topicId = t.id,
                 topicName = t.name,
                 subjectId = t.subject?.id ?: "",
-                masteryLevel = t.masteryLevel,
+                masteryLevel = masteryMap[t.id]?.masteryLevel ?: 0,
                 dueReviewsCount = dueCountMap[t.id] ?: 0L
             )
         }
