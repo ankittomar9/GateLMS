@@ -22,4 +22,6 @@ interface TopicRepository : JpaRepository<Topic, String> {
 
     @Query("SELECT t FROM Topic t WHERE t.nextRevisionDue IS NOT NULL AND t.nextRevisionDue <= :now ORDER BY t.nextRevisionDue ASC")
     fun findDueTopics(@org.springframework.data.repository.query.Param("now") now: java.time.Instant): List<Topic>
+
+    fun countByMasteryLevelGreaterThanEqual(level: Int): Long
 }

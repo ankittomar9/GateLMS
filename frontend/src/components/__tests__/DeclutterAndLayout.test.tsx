@@ -3,23 +3,37 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LayoutProvider, STORAGE_KEY } from '../../context/LayoutContext';
 import { Header } from '../Header';
 import { Sidebar } from '../Sidebar';
 import { RightSidebar } from '../RightSidebar';
 
 describe('UI Declutter and Navigation Verification', () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     localStorage.clear();
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
   });
+
+  const renderHeader = () => {
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <LayoutProvider>
+            <Header />
+          </LayoutProvider>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+  };
 
   describe('Header Declutter & Layout Switcher', () => {
     it('verifies points badge and countdown pill are purged from Header', () => {
-      render(
-        <LayoutProvider>
-          <Header />
-        </LayoutProvider>
-      );
+      renderHeader();
 
       // Spec §2.1 removals
       expect(screen.queryByText(/pts/i)).toBeNull();
@@ -28,19 +42,14 @@ describe('UI Declutter and Navigation Verification', () => {
       expect(screen.queryByText(/485 Days/i)).toBeNull();
 
       // Verified retained items
-      expect(screen.getByText('14')).toBeDefined();
-      expect(screen.getByText(/days streak/i)).toBeDefined();
+      expect(screen.getByTestId('streak-chip')).toBeDefined();
       expect(screen.getByPlaceholderText(/Search topics/i)).toBeDefined();
     });
 
     it('renders the layout switcher with 3 options and updates layout on click', async () => {
       const user = userEvent.setup();
 
-      render(
-        <LayoutProvider>
-          <Header />
-        </LayoutProvider>
-      );
+      renderHeader();
 
       const minimalistBtn = screen.getByTestId('layout-toggle-minimalist');
       const editorialBtn = screen.getByTestId('layout-toggle-editorial');

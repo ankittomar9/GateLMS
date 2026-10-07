@@ -537,4 +537,62 @@ export interface UpdatePlanItemStatusRequest {
   status: PlanItemStatus;
 }
 
+// Phase 4 SPEC 2: Engagement, Goals, Achievements & Notifications
+export type NotificationType = 'REVISION_DUE' | 'STREAK_AT_RISK' | 'PLAN_DUE' | 'ACHIEVEMENT_EARNED';
+
+export interface DailyGoalProgressDto {
+  target: number;
+  done: number;
+  met: boolean;
+}
+
+export interface DueTodayDto {
+  mistakes: number;
+  topics: number;
+}
+
+export interface EngagementSummaryResponse {
+  streak: number;
+  protectedDate?: string | null;
+  streakAtRisk: boolean;
+  goal: DailyGoalProgressDto;
+  dueToday: DueTodayDto;
+}
+
+export interface AchievementDto {
+  code: string;
+  title: string;
+  description: string;
+  earnedAt?: string | null;
+}
+
+export interface NotificationDto {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface UnreadCountResponse {
+  count: number;
+}
+
+export interface UserGoalDto {
+  dailyTargetQuestions: number;
+  streakProtection: boolean;
+  updatedAt: string;
+}
+
+export interface UpdateUserGoalRequest {
+  dailyTargetQuestions?: number;
+  streakProtection?: boolean;
+}
+
+export interface MarkAllReadResponse {
+  count: number;
+}
+
 

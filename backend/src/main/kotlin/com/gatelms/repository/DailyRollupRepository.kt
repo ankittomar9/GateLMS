@@ -17,6 +17,8 @@ interface DailyRollupRepository : JpaRepository<DailyRollup, LocalDate> {
         @Param("endDate") endDate: LocalDate
     ): List<DailyRollup>
 
+    fun findAllByOrderByActivityDateDesc(): List<DailyRollup>
+
     @Modifying
     @Query(
         value = """

@@ -1,8 +1,10 @@
 import React from 'react';
-import { Search, Flame, Plus, Bell, ChevronDown } from 'lucide-react';
+import { Search, Plus, ChevronDown } from 'lucide-react';
 import { DesignSwitcher } from './DesignSwitcher';
 import { LayoutSwitcher } from './LayoutSwitcher';
 import { useDesign } from '../context/DesignContext';
+import { StreakChip } from './engagement/StreakChip';
+import { NotificationBell } from './engagement/NotificationBell';
 
 export const Header: React.FC = () => {
   const { currentDesign } = useDesign();
@@ -22,7 +24,7 @@ export const Header: React.FC = () => {
         </kbd>
       </div>
 
-      {/* Header Actions: Design Switcher, Layout Switcher, Conditional Badges & Profile */}
+      {/* Header Actions: Design Switcher, Layout Switcher, Universal Badges & Profile */}
       <div className="flex items-center gap-2.5 sm:gap-3.5">
         {/* Design Preset Switcher (Immediately left of LayoutSwitcher) */}
         <DesignSwitcher />
@@ -30,26 +32,11 @@ export const Header: React.FC = () => {
         {/* Client-Side Layout Switcher Engine */}
         <LayoutSwitcher />
 
-        {/* Notification Bell (Aurora & Sky presets) */}
-        {(currentDesign === 'aurora' || currentDesign === 'sky') && (
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="p-1.5 rounded-ds bg-ds-surface hover:bg-ds-surface-hover text-ds-secondary hover:text-ds-primary border border-ds-border transition-colors relative"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="w-1.5 h-1.5 rounded-full bg-ds-accent absolute top-1 right-1" />
-          </button>
-        )}
+        {/* Universal Real Streak Chip */}
+        <StreakChip />
 
-        {/* Streak Counter (TUF Classic only) */}
-        {currentDesign === 'tuf' && (
-          <div className="flex items-center gap-1.5 bg-ds-surface border border-ds-border px-3 py-1.5 rounded-ds text-xs font-semibold text-ds-primary">
-            <Flame className="w-4 h-4 text-ds-accent animate-pulse" />
-            <span>14</span>
-            <span className="text-[10px] text-ds-muted font-normal hidden sm:inline">days streak</span>
-          </div>
-        )}
+        {/* Universal Notification Bell Center */}
+        <NotificationBell />
 
         {/* Quick Action (TUF Classic only) */}
         {currentDesign === 'tuf' && (

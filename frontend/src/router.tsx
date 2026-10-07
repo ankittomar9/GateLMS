@@ -18,6 +18,7 @@ import { NotesPage } from './pages/NotesPage';
 import { RevisionPage } from './pages/RevisionPage';
 import { PYPPage } from './pages/PYPPage';
 import { PlannerPage } from './pages/PlannerPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +40,10 @@ export const router = createBrowserRouter([
       {
         path: 'insights',
         element: <InsightsPage />,
+      },
+      {
+        path: 'notifications',
+        element: <NotificationsPage />,
       },
       {
         path: 'revision',
