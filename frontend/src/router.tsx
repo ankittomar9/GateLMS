@@ -13,6 +13,7 @@ import { MistakeNotebookPage } from './pages/MistakeNotebookPage';
 import { MockTestsPage } from './pages/MockTestsPage';
 import { TestRunnerPage } from './pages/TestRunnerPage';
 import { ResultPage } from './pages/ResultPage';
+import { InsightsPage } from './pages/InsightsPage';
 
 export const router = createBrowserRouter([
   {
@@ -22,6 +23,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <DashboardPage />,
+      },
+      {
+        path: 'insights',
+        element: <InsightsPage />,
       },
       {
         path: 'syllabus',

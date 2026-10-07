@@ -35,6 +35,29 @@ interface MockAttemptRepository : JpaRepository<MockAttempt, UUID> {
 interface AttemptAnswerRepository : JpaRepository<AttemptAnswer, UUID> {
     fun findByAttemptIdAndQuestionId(attemptId: UUID, questionId: UUID): AttemptAnswer?
     fun findByAttemptId(attemptId: UUID): List<AttemptAnswer>
+
+    @Query(
+        value = """
+            SELECT DISTINCT ON (aa.question_id)
+                cast(aa.question_id as text) as questionId,
+                cast(q.subject_id as text) as subjectId,
+                cast(q.topic_id as text) as topicId,
+                aa.is_correct as isCorrect
+            FROM attempt_answers aa
+            JOIN questions q ON q.id = aa.question_id
+            WHERE aa.is_correct IS NOT NULL
+            ORDER BY aa.question_id, aa.created_at DESC
+        """,
+        nativeQuery = true
+    )
+    fun findLatestDistinctVerdicts(): List<LatestAnswerProjection>
+}
+
+interface LatestAnswerProjection {
+    fun getQuestionId(): String
+    fun getSubjectId(): String
+    fun getTopicId(): String
+    fun getIsCorrect(): Boolean
 }
 
 @Repository

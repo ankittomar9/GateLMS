@@ -26,7 +26,9 @@ class MockTestService(
     private val gradingService: GradingService,
     private val objectMapper: ObjectMapper,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null
+    private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val rollupService: RollupService? = null
 ) {
 
     @Transactional
@@ -340,6 +342,15 @@ class MockTestService(
         mockAttemptRepository.save(attempt)
 
         gateLmsMetrics?.recordAttemptSubmitted("mock")
+
+        val durationSec = ((attempt.submittedAt ?: Instant.now()).epochSecond - attempt.startedAt.epochSecond).toInt()
+        val minutesMocked = maxOf(1, (durationSec + 59) / 60)
+        rollupService?.recordMockSubmit(
+            activityDate = java.time.LocalDate.now(),
+            questionsAnswered = correctCount + wrongCount,
+            correctAnswers = correctCount,
+            minutesMocked = minutesMocked
+        )
 
         return SubmitMockAttemptResponse(
             attemptId = attempt.id,

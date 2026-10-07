@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useDesign } from '../../context/DesignContext';
 import { CurationProgressTile } from './CurationProgressTile';
+import { ReadinessSummaryCard } from './ReadinessSummaryCard';
 
 export const BentoDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -75,6 +76,9 @@ export const BentoDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Readiness & Countdown Hero */}
+      <ReadinessSummaryCard />
 
       {/* Bento Grid Container */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
