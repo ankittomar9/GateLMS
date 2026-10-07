@@ -9,10 +9,13 @@ export interface SubjectSummary {
   id: string;
   name: string;
   slug: string;
-  code: string;
-  weightageAvg: number;
-  priorityTier: string;
-  primaryBookRef: string;
+  code?: string;
+  cluster?: string;
+  weightageAvg?: number;
+  avgWeightage?: number;
+  priorityTier: number | string;
+  primaryBookRef?: string | null;
+  standardBookRef?: string | null;
   topicCount: number;
 }
 

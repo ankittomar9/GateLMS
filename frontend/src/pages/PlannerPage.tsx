@@ -89,7 +89,7 @@ export const PlannerPage: React.FC = () => {
     if (!subjects || subjects.length === 0) return [];
     const rMap = new Map(readinessData?.perSubject?.map((s) => [s.subjectId, s.readiness / 100.0]) || []);
     return subjects.map((s) => {
-      const w = s.weightageAvg;
+      const w = s.avgWeightage ?? s.weightageAvg ?? 10.0;
       const r = rMap.get(s.id) ?? 0.0;
       let share = w;
       if (formStrategy === 'WEIGHTED') {
@@ -99,7 +99,7 @@ export const PlannerPage: React.FC = () => {
       }
       return {
         id: s.id,
-        code: s.code || s.id,
+        code: s.code || s.slug?.split('-').map(p => p[0]).join('').toUpperCase() || s.id,
         name: s.name,
         share: Math.round(share * 10) / 10,
         readinessPct: Math.round(r * 100),

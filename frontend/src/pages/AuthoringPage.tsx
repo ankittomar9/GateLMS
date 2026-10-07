@@ -144,7 +144,11 @@ export const AuthoringPage: React.FC = () => {
   // Auto-suggest externalId
   const handleAutoSuggestExternalId = () => {
     const selectedSubj = subjects.find((s) => s.id === subjectId);
-    const code = selectedSubj ? selectedSubj.code.toUpperCase() : 'GEN';
+    const code = selectedSubj?.code
+      ? selectedSubj.code.toUpperCase()
+      : selectedSubj?.slug
+        ? selectedSubj.slug.split('-').map((p) => p[0]).join('').toUpperCase()
+        : 'GEN';
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const seq = Math.floor(1000 + Math.random() * 9000);
     setExternalId(`AUTH-${code}-${dateStr}-${seq}`);

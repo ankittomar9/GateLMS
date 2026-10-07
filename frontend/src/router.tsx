@@ -21,11 +21,13 @@ import { PlannerPage } from './pages/PlannerPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { LoginPage } from './pages/LoginPage';
 import { RequireAuth } from './components/auth/RequireAuth';
+import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 
 export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+    errorElement: <RouteErrorBoundary />,
   },
   {
     path: '/',
@@ -34,6 +36,7 @@ export const router = createBrowserRouter([
         <Layout />
       </RequireAuth>
     ),
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         index: true,

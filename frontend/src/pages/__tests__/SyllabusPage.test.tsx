@@ -158,4 +158,29 @@ describe('SyllabusPage', () => {
       await screen.findByText(/Conflict on "Virtual Memory & Paging"/i)
     ).toBeInTheDocument();
   });
+
+  it('honest-judge PASS - renders subjects with numeric priorityTier, avgWeightage, and standardBookRef without throwing', () => {
+    vi.mocked(queryHooks.useSubjects).mockReturnValue({
+      data: [
+        {
+          id: 'subj_aptitude',
+          name: 'General Aptitude',
+          slug: 'general-aptitude',
+          avgWeightage: 15.0,
+          priorityTier: 1,
+          standardBookRef: 'RS Aggarwal / Wren & Martin',
+          topicCount: 2,
+        },
+      ] as any,
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderComponent();
+    expect(screen.getAllByText('General Aptitude')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('GA')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('TIER 1')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('15')[0]).toBeInTheDocument();
+    expect(screen.getByText('RS Aggarwal / Wren & Martin')).toBeInTheDocument();
+  });
 });

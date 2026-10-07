@@ -51,19 +51,60 @@ export const SyllabusPage: React.FC = () => {
     }
   };
 
-  const getTierColor = (tier?: string | null) => {
-    switch (tier?.toUpperCase()) {
-      case 'TIER_1':
-      case 'TIER 1':
-        return 'text-ds-accent border-ds-accent/30 bg-ds-accent-soft';
-      case 'TIER_2':
-      case 'TIER 2':
-        return 'text-ds-info border-ds-info/30 bg-ds-info/10';
-      case 'TIER_3':
-      case 'TIER 3':
-      default:
-        return 'text-ds-success border-ds-success/30 bg-ds-success/10';
+  const SUBJECT_CODE_MAP: Record<string, string> = {
+    subj_aptitude: 'GA',
+    'general-aptitude': 'GA',
+    subj_discrete_math: 'DM',
+    'discrete-mathematics': 'DM',
+    subj_prog_ds: 'PDS',
+    'programming-and-ds': 'PDS',
+    subj_algo: 'ALGO',
+    algorithms: 'ALGO',
+    subj_toc: 'TOC',
+    'theory-of-computation': 'TOC',
+    subj_os: 'OS',
+    'operating-systems': 'OS',
+    subj_dbms: 'DBMS',
+    databases: 'DBMS',
+    subj_cn: 'CN',
+    'computer-networks': 'CN',
+    subj_coa: 'COA',
+    'computer-organization': 'COA',
+    subj_dld_cd: 'DLD/CD',
+    'digital-and-compilers': 'DLD/CD',
+  };
+
+  const getSubjectCode = (subject?: SubjectSummary | null): string => {
+    if (!subject) return 'GATE';
+    if (subject.code) return subject.code;
+    if (SUBJECT_CODE_MAP[subject.id] || (subject.slug && SUBJECT_CODE_MAP[subject.slug])) {
+      return SUBJECT_CODE_MAP[subject.id] || SUBJECT_CODE_MAP[subject.slug];
     }
+    const parts = subject.slug?.split('-').filter(Boolean) || [];
+    if (parts.length > 1) {
+      return parts.map((p) => p[0]).join('').toUpperCase();
+    }
+    return (subject.slug || subject.id).replace(/^subj[-_]?/i, '').slice(0, 4).toUpperCase() || 'GATE';
+  };
+
+  const getTierColor = (tier?: string | number | null) => {
+    const raw = String(tier ?? '').trim().toUpperCase();
+    if (raw === '1' || raw.includes('TIER_1') || raw.includes('TIER 1')) {
+      return 'text-ds-accent border-ds-accent/30 bg-ds-accent-soft';
+    }
+    if (raw === '2' || raw.includes('TIER_2') || raw.includes('TIER 2')) {
+      return 'text-ds-info border-ds-info/30 bg-ds-info/10';
+    }
+    return 'text-ds-success border-ds-success/30 bg-ds-success/10';
+  };
+
+  const formatTierLabel = (tier?: string | number | null) => {
+    if (tier === 1 || tier === '1') return 'TIER 1';
+    if (tier === 2 || tier === '2') return 'TIER 2';
+    if (tier === 3 || tier === '3') return 'TIER 3';
+    const str = String(tier ?? '').trim();
+    if (str.toUpperCase().includes('TIER')) return str.toUpperCase().replace('_', ' ');
+    return str ? `TIER ${str.toUpperCase()}` : 'TIER 3';
   };
 
   return (
@@ -145,21 +186,23 @@ export const SyllabusPage: React.FC = () => {
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div>
                       <span className="text-[10px] font-mono font-semibold text-ds-accent uppercase tracking-wider block">
-                        {subject.code}
+                        {getSubjectCode(subject)}
                       </span>
                       <h3 className="text-sm font-semibold text-ds-primary tracking-tight leading-snug">
                         {subject.name}
                       </h3>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${getTierColor(subject.priorityTier)}`}>
-                      {subject.priorityTier || 'TIER 3'}
+                      {formatTierLabel(subject.priorityTier)}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-ds-secondary pt-2 border-t border-ds-border">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1.5 font-mono text-ds-primary">
-                        <span className="text-ds-accent font-bold">{subject.weightageAvg}</span>
+                        <span className="text-ds-accent font-bold">
+                          {subject.avgWeightage ?? subject.weightageAvg ?? 0}
+                        </span>
                         <span className="text-ds-muted">Marks</span>
                       </div>
                       {readinessBySubject.has(subject.id) && (
@@ -190,7 +233,7 @@ export const SyllabusPage: React.FC = () => {
               <div className="border-b border-ds-border pb-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-mono font-semibold text-ds-accent bg-ds-accent-soft px-2 py-0.5 rounded border border-ds-accent/30">
-                    {activeSubject.code}
+                    {getSubjectCode(activeSubject)}
                   </span>
                   <div className="flex items-center gap-2">
                     <button
@@ -208,10 +251,10 @@ export const SyllabusPage: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-ds-secondary">
                   <div className="flex items-center gap-1">
                     <BookOpen className="w-3.5 h-3.5 text-ds-muted" />
-                    <span>Primary Reference: <strong className="text-ds-primary">{activeSubject.primaryBookRef}</strong></span>
+                    <span>Primary Reference: <strong className="text-ds-primary">{activeSubject.standardBookRef || activeSubject.primaryBookRef || 'Standard Textbook'}</strong></span>
                   </div>
                   <div>
-                    Weightage: <strong className="text-ds-accent font-mono">{activeSubject.weightageAvg}</strong> Marks
+                    Weightage: <strong className="text-ds-accent font-mono">{activeSubject.avgWeightage ?? activeSubject.weightageAvg ?? 0}</strong> Marks
                   </div>
                   {readinessBySubject.has(activeSubject.id) && (
                     <div>
