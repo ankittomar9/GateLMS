@@ -50,5 +50,7 @@ app:
     allowed-origins: http://localhost:5173
   storage:
     notes-dir: uploads/notes
+  notes:
+    storage-dir: ${APP_NOTES_STORAGE_DIR:./docker-data/notes}
   seed:
     path: seed-data/questions.jsonl

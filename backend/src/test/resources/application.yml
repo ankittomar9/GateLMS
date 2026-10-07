@@ -20,5 +20,7 @@ management:
 app:
   storage:
     notes-dir: target/test-uploads
+  notes:
+    storage-dir: ${APP_NOTES_STORAGE_DIR:target/test-notes}
   seed:
     path: seed-data/questions.jsonl
