@@ -2,6 +2,7 @@ package com.gatelms.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.gatelms.ai.config.AiProperties
+import com.gatelms.ai.exception.AiPayloadTooLargeException
 import com.gatelms.ai.service.WhisperTranscriptionService
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -88,5 +89,13 @@ class WhisperTranscriptionServiceTest {
         val validWav = generateWavBytes(durationSeconds = 1.5, amplitude = 4000)
         val gateCheck = service.checkAudioFragment(validWav)
         assertNull(gateCheck, "Valid WAV audio should pass the gate check")
+    }
+
+    @Test
+    fun `audio fragment gate rejects audio exceeding 120 seconds ceiling with AiPayloadTooLargeException`() {
+        val oversizedWav = generateWavBytes(durationSeconds = 125.0, amplitude = 4000)
+        assertThrows(AiPayloadTooLargeException::class.java) {
+            service.checkAudioFragment(oversizedWav)
+        }
     }
 }

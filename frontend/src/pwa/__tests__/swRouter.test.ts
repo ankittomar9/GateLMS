@@ -33,6 +33,11 @@ describe('Service Worker Router Strategy Matrix', () => {
 
     // Dynamic polling endpoints not in read-only offline whitelist
     expect(matchStrategy('/api/v1/notifications/unread-count', { method: 'GET' })).toBe('NETWORK_ONLY');
+
+    // AI endpoints (AM-17: never cached by SW, strictly network-only)
+    expect(matchStrategy('/api/v1/ai/status', { method: 'GET' })).toBe('NETWORK_ONLY');
+    expect(matchStrategy('/api/v1/ai/chat', { method: 'POST' })).toBe('NETWORK_ONLY');
+    expect(matchStrategy('/api/v1/ai/transcribe', { method: 'POST' })).toBe('NETWORK_ONLY');
   });
 
   it('4. navigation strategy for SPA routes and page transitions', () => {

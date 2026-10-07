@@ -178,6 +178,7 @@ export const TestRunnerPage: React.FC = () => {
         subjectId: currentQuestion.subjectId,
         topicId: currentQuestion.topicId,
         optionsJson: currentQuestion.optionsJson,
+        isLiveAttempt: true,
       });
     }
     return () => registerActiveQuestion(null);

@@ -141,6 +141,10 @@ export function useAudioRecorder({
       timerIntervalRef.current = window.setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
         setDurationSec(elapsed);
+        if (elapsed >= 60) {
+          stopRecording();
+          onError?.('Maximum recording duration (60s) reached.');
+        }
       }, 500);
 
       return true;

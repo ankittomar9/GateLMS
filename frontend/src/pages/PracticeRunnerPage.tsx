@@ -126,10 +126,11 @@ export const PracticeRunnerPage: React.FC = () => {
         topicId: currentQuestion.topicId,
         optionsJson: currentQuestion.optionsJson,
         selectedAnswer: selectedOptions || numericAnswer || undefined,
+        isLiveAttempt: !finishSummary,
       });
     }
     return () => registerActiveQuestion(null);
-  }, [currentQuestion, selectedOptions, numericAnswer, registerActiveQuestion]);
+  }, [currentQuestion, selectedOptions, numericAnswer, finishSummary, registerActiveQuestion]);
 
   // Helper to parse options safely
   const parseOptions = (jsonStr: string | null): OptionItem[] => {

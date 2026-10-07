@@ -35,6 +35,11 @@ export function matchStrategy(url: string, options: RouteMatchOptions = {}): Fet
     return 'NETWORK_ONLY';
   }
 
+  // 1b. AI endpoints (/api/v1/ai/*) -> strictly network-only (never cached by SW, AM-17)
+  if (pathname.startsWith('/api/v1/ai/') || pathname.startsWith('/api/ai/')) {
+    return 'NETWORK_ONLY';
+  }
+
   // 2. Navigation requests (document/page transition)
   if (isGet && (options.mode === 'navigate' || options.destination === 'document')) {
     return 'NAVIGATION';

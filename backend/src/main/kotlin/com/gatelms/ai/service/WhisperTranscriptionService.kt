@@ -3,16 +3,20 @@ package com.gatelms.ai.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.gatelms.ai.config.AiProperties
 import com.gatelms.ai.dto.TranscriptionResponse
+import com.gatelms.ai.exception.*
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
+import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.stereotype.Service
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
+import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestClient
 import org.springframework.web.multipart.MultipartFile
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URI
 import kotlin.math.sqrt
 
@@ -23,10 +27,19 @@ class WhisperTranscriptionService(
     restClientBuilder: RestClient.Builder
 ) {
     private val log = LoggerFactory.getLogger(WhisperTranscriptionService::class.java)
-    private val restClient = restClientBuilder.build()
+
+    // STT RestClient with 90s read timeout (AM-3)
+    private val requestFactory = SimpleClientHttpRequestFactory().apply {
+        setConnectTimeout(aiProperties.http.connectTimeoutMs.toInt())
+        setReadTimeout(aiProperties.http.sttReadTimeoutMs.toInt())
+    }
+    private val restClient = restClientBuilder
+        .requestFactory(requestFactory)
+        .build()
 
     companion object {
         const val MIN_AUDIO_DURATION_SEC = 1.2
+        const val MAX_AUDIO_DURATION_SEC = 120.0 // AM-7: 120s ceiling
         const val SILENCE_RMS_FLOOR = 0.003
         const val TOAST_TOO_SHORT = "Recording too short — hold or speak your question clearly."
         const val GROQ_WHISPER_ENDPOINT = "https://api.groq.com/openai/v1/audio/transcriptions"
@@ -106,8 +119,13 @@ class WhisperTranscriptionService(
                 val totalSamples = dataSize / (channels * bytesPerSample)
                 val durationSec = totalSamples.toDouble() / sampleRate.toDouble()
 
+                // Ceiling check (AM-7)
+                if (durationSec > MAX_AUDIO_DURATION_SEC) {
+                    throw AiPayloadTooLargeException("Audio duration (${String.format("%.1f", durationSec)}s) exceeds ceiling of ${MAX_AUDIO_DURATION_SEC.toInt()}s.")
+                }
+
                 if (durationSec < MIN_AUDIO_DURATION_SEC) {
-                    log.warn("STT Gate: audio too short ({}s < {}s floor)", String.format("%.2f", durationSec), MIN_AUDIO_DURATION_SEC)
+                    log.debug("STT Gate: audio too short ({}s < {}s floor)", String.format("%.2f", durationSec), MIN_AUDIO_DURATION_SEC)
                     return TranscriptionResponse(
                         text = "",
                         status = "TOO_SHORT",
@@ -130,7 +148,7 @@ class WhisperTranscriptionService(
                         }
                         val rms = sqrt(sumSq / pcmSamples)
                         if (rms < SILENCE_RMS_FLOOR) {
-                            log.warn("STT Gate: audio silent (RMS={} < floor {})", String.format("%.5f", rms), SILENCE_RMS_FLOOR)
+                            log.debug("STT Gate: audio silent (RMS={} < floor {})", String.format("%.5f", rms), SILENCE_RMS_FLOOR)
                             return TranscriptionResponse(
                                 text = "",
                                 status = "TOO_SHORT",
@@ -144,7 +162,7 @@ class WhisperTranscriptionService(
         } else {
             // Non-WAV (WebM/Opus) byte size floor
             if (audioBytes.size < 12000) {
-                log.warn("STT Gate: WebM audio bytes {} < 12000", audioBytes.size)
+                log.debug("STT Gate: WebM audio bytes {} < 12000", audioBytes.size)
                 return TranscriptionResponse(
                     text = "",
                     status = "TOO_SHORT",
@@ -175,63 +193,60 @@ class WhisperTranscriptionService(
         val effectiveLang = if (!lang.isNullOrBlank()) lang.trim() else "en"
         val effectiveProvider = resolveEffectiveProvider(providerOverride, groqKey, openAiKey)
 
-        return when (effectiveProvider) {
-            "LOCAL" -> {
-                if (isWhisperSidecarRunning()) {
-                    transcribeLocal(audioFile, promptContext, effectiveLang)
-                } else if (!groqKey.isNullOrBlank()) {
-                    log.info("Whisper sidecar unavailable, falling back to Groq Whisper LPU")
-                    transcribeGroq(audioFile, groqKey, customModel, promptContext, effectiveLang)
-                } else {
-                    TranscriptionResponse(
-                        text = "",
-                        status = "UNAVAILABLE",
-                        provider = "LOCAL",
-                        message = "Local Whisper sidecar is not running on port 8178, and no Groq API key is configured."
-                    )
-                }
-            }
-            "OPENAI" -> {
-                if (!openAiKey.isNullOrBlank()) {
-                    transcribeOpenAi(audioFile, openAiKey, promptContext, effectiveLang)
-                } else {
-                    TranscriptionResponse(
-                        text = "",
-                        status = "MISSING_KEY",
-                        provider = "OPENAI",
-                        message = "OpenAI API key is missing for Whisper transcription."
-                    )
-                }
-            }
-            else -> { // "GROQ"
-                if (!groqKey.isNullOrBlank()) {
-                    try {
+        // AM-5: Model allowlist validation
+        if (!customModel.isNullOrBlank() && !aiProperties.allowlist.isModelAllowed(effectiveProvider, customModel)) {
+            throw AiValidationException("Model '$customModel' is not allowed for provider '$effectiveProvider'")
+        }
+
+        // AM-10: Transcribe has NO retries
+        return try {
+            when (effectiveProvider) {
+                "LOCAL" -> {
+                    if (isWhisperSidecarRunning()) {
+                        transcribeLocal(audioFile, promptContext, effectiveLang)
+                    } else if (!groqKey.isNullOrBlank()) {
+                        log.debug("Whisper sidecar unavailable, falling back to Groq Whisper LPU")
                         transcribeGroq(audioFile, groqKey, customModel, promptContext, effectiveLang)
-                    } catch (e: Exception) {
-                        log.warn("Groq Whisper error: {}. Trying local fallback if running...", e.message)
-                        if (isWhisperSidecarRunning()) {
-                            transcribeLocal(audioFile, promptContext, effectiveLang)
-                        } else {
-                            TranscriptionResponse(
-                                text = "",
-                                status = "ERROR",
-                                provider = "GROQ",
-                                message = "Groq Whisper transcription failed: ${e.message}"
-                            )
-                        }
+                    } else {
+                        throw AiServiceUnavailableException("Local Whisper sidecar is not running on port 8178, and no Groq API key is configured.")
                     }
-                } else if (isWhisperSidecarRunning()) {
-                    log.info("No Groq key, routing to Local Whisper.cpp sidecar")
-                    transcribeLocal(audioFile, promptContext, effectiveLang)
-                } else {
-                    TranscriptionResponse(
-                        text = "",
-                        status = "MISSING_KEY",
-                        provider = "GROQ",
-                        message = "Please provide a Groq API key or start the local Whisper sidecar."
-                    )
+                }
+                "OPENAI" -> {
+                    if (!openAiKey.isNullOrBlank()) {
+                        transcribeOpenAi(audioFile, openAiKey, promptContext, effectiveLang)
+                    } else {
+                        throw AiValidationException("OpenAI API key is missing for Whisper transcription.")
+                    }
+                }
+                else -> { // "GROQ"
+                    if (!groqKey.isNullOrBlank()) {
+                        transcribeGroq(audioFile, groqKey, customModel, promptContext, effectiveLang)
+                    } else if (isWhisperSidecarRunning()) {
+                        log.debug("No Groq key, routing to Local Whisper.cpp sidecar")
+                        transcribeLocal(audioFile, promptContext, effectiveLang)
+                    } else {
+                        throw AiValidationException("Please provide a Groq API key or start the local Whisper sidecar.")
+                    }
                 }
             }
+        } catch (ex: Exception) {
+            if (ex is AiException) throw ex
+            var cur: Throwable? = ex
+            var isTimeout = false
+            while (cur != null) {
+                if (cur is SocketTimeoutException) {
+                    isTimeout = true
+                    break
+                }
+                cur = cur.cause
+            }
+            if (isTimeout) {
+                throw AiTimeoutException("STT transcription timed out: ${ex.message}", ex)
+            }
+            if (ex is ResourceAccessException) {
+                throw AiServiceUnavailableException("STT provider unreachable: ${ex.message}", ex)
+            }
+            throw AiProviderException("STT transcription failed: ${ex.message}", ex)
         }
     }
 
@@ -310,7 +325,8 @@ class WhisperTranscriptionService(
         val transcript = root.path("text").asText("").trim()
         val duration = System.currentTimeMillis() - startTime
 
-        log.info("🎙️ Groq Whisper transcribed in {}ms: \"{}\"", duration, transcript)
+        // AM-2: Log hygiene - transcript at DEBUG only
+        log.debug("🎙️ Groq Whisper transcribed in {}ms: \"{}\"", duration, transcript)
         return TranscriptionResponse(
             text = transcript,
             status = "SUCCESS",
@@ -353,7 +369,8 @@ class WhisperTranscriptionService(
         val transcript = root.path("text").asText("").trim()
         val duration = System.currentTimeMillis() - startTime
 
-        log.info("🔒 Local Whisper.cpp transcribed in {}ms: \"{}\"", duration, transcript)
+        // AM-2: Log hygiene - transcript at DEBUG only
+        log.debug("🔒 Local Whisper.cpp transcribed in {}ms: \"{}\"", duration, transcript)
         return TranscriptionResponse(
             text = transcript,
             status = "SUCCESS",
@@ -398,6 +415,8 @@ class WhisperTranscriptionService(
         val transcript = root.path("text").asText("").trim()
         val duration = System.currentTimeMillis() - startTime
 
+        // AM-2: Log hygiene - transcript at DEBUG only
+        log.debug("🎙️ OpenAI Whisper transcribed in {}ms: \"{}\"", duration, transcript)
         return TranscriptionResponse(
             text = transcript,
             status = "SUCCESS",
