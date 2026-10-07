@@ -51,6 +51,16 @@ export const DesignProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (typeof document !== 'undefined') {
       document.documentElement.dataset.design = currentDesign;
       document.documentElement.setAttribute('data-design', currentDesign);
+      const meta = document.querySelector('meta[name="theme-color"]');
+      const themeColors: Record<DesignPreset, string> = {
+        tuf: '#0F1115',
+        ink: '#0F1115',
+        aurora: '#0F111A',
+        sky: '#0F172A',
+      };
+      if (meta && themeColors[currentDesign]) {
+        meta.setAttribute('content', themeColors[currentDesign]);
+      }
     }
   }, [currentDesign]);
 

@@ -3,6 +3,8 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { RightSidebar } from './RightSidebar';
+import { OfflineBanner } from './pwa/OfflineBanner';
+import { UpdateToast } from './pwa/UpdateToast';
 
 export const Layout: React.FC = () => {
   return (
@@ -12,11 +14,13 @@ export const Layout: React.FC = () => {
 
       {/* 2. Main Middle Viewport */}
       <div className="flex-1 flex flex-col min-w-0">
+        <OfflineBanner />
         <Header />
 
         <main className="flex-1 p-6 md:p-8 space-y-8 overflow-y-auto max-w-7xl">
           <Outlet />
         </main>
+        <UpdateToast />
       </div>
 
       {/* 3. Right Productivity Rail */}
