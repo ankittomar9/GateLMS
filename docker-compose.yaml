@@ -48,7 +48,7 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-${GEMINI_API_KEY:-}}
       - AI_STUDIO_API_KEY=${AI_STUDIO_API_KEY:-${GEMINI_API_KEY:-}}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-2.0-flash}
+      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-3.8-flash}
       - WHISPER_ENDPOINT=${WHISPER_ENDPOINT_DOCKER:-http://gatelms-whisper-sidecar:8178/inference}
       - WHISPER_ENABLED=${WHISPER_ENABLED:-true}
       - OLLAMA_ENDPOINT=${OLLAMA_ENDPOINT:-http://host.docker.internal:11434}

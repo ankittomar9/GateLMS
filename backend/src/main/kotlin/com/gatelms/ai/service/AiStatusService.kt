@@ -44,7 +44,7 @@ class AiStatusService(
                 configured = geminiConfigured,
                 state = if (geminiConfigured) "READY" else "NOT_CONFIGURED",
                 model = System.getenv("GEMINI_DEFAULT_MODEL")?.takeIf { it.isNotBlank() }
-                    ?: aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-2.0-flash" },
+                    ?: aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-3.8-flash" },
                 reason = if (geminiConfigured) null else "Configure GEMINI_API_KEY or provide BYOK key"
             )
         )

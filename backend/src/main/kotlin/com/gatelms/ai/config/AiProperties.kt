@@ -21,7 +21,7 @@ class AiProperties {
         )
         var gemini: ProviderConfig = ProviderConfig(
             apiKey = "",
-            defaultModel = "gemini-2.0-flash",
+            defaultModel = "gemini-3.8-flash",
             endpoint = "https://generativelanguage.googleapis.com/v1beta/models"
         )
         var openai: ProviderConfig = ProviderConfig(
@@ -65,7 +65,7 @@ class AiProperties {
 
     class AllowlistConfig {
         var groq: List<String> = listOf("llama-3.3-70b-versatile", "llama3-70b-8192", "llama-3.1-8b-instant", "whisper-large-v3-turbo")
-        var gemini: List<String> = listOf("gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-flash")
+        var gemini: List<String> = listOf("gemini-3.8-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-flash")
         var openai: List<String> = listOf("gpt-4o-mini", "gpt-4o", "whisper-1")
         var ollama: List<String> = listOf("llama3.2", "llama3", "mistral", "gemma2")
         var local: List<String> = listOf("ggml-large-v3-turbo-q5_0.bin", "ggml-base.en.bin", "whisper.cpp-large-v3-turbo")

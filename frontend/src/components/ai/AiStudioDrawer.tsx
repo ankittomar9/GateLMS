@@ -27,7 +27,7 @@ import { MathText } from '../MathText';
 
 const PROVIDER_OPTIONS = [
   { id: 'GROQ', label: 'Groq (Llama 3.3 70B)', defaultModel: 'llama-3.3-70b-versatile', speed: '~180ms' },
-  { id: 'GEMINI', label: 'Google Gemini 2.0 Flash', defaultModel: 'gemini-2.0-flash', speed: '~350ms' },
+  { id: 'GEMINI', label: 'Google Gemini 3.8 Flash', defaultModel: 'gemini-3.8-flash', speed: '~350ms' },
   { id: 'OPENAI', label: 'OpenAI (GPT-4o Mini)', defaultModel: 'gpt-4o-mini', speed: '~450ms' },
   { id: 'OLLAMA', label: 'Local Ollama (Llama 3)', defaultModel: 'llama3', speed: 'Offline' },
 ];
@@ -356,6 +356,35 @@ export const AiStudioDrawer: React.FC = () => {
                 className="w-full bg-ds-surface-input border border-ds-border rounded-ds px-2.5 py-1 text-xs text-ds-primary placeholder:text-ds-muted focus:outline-none focus:border-ds-accent disabled:opacity-50"
                 aria-label={`${selectedProvider} API Key`}
               />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[10px] font-mono text-ds-muted uppercase">
+                  {selectedProvider} Model Name
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const def = PROVIDER_OPTIONS.find((p) => p.id === selectedProvider)?.defaultModel || '';
+                    setSelectedModel(def);
+                  }}
+                  className="text-[10px] text-ds-accent hover:underline"
+                >
+                  Reset default
+                </button>
+              </div>
+              <input
+                type="text"
+                placeholder={`e.g. ${PROVIDER_OPTIONS.find((p) => p.id === selectedProvider)?.defaultModel}`}
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="w-full bg-ds-surface-input border border-ds-border rounded-ds px-2.5 py-1 text-xs text-ds-primary placeholder:text-ds-muted focus:outline-none focus:border-ds-accent font-mono"
+                aria-label={`${selectedProvider} Model Name`}
+              />
+              <span className="text-[10px] text-ds-muted mt-0.5 block">
+                Adapt to any model version (e.g. gemini-3.8-flash) dynamically.
+              </span>
             </div>
 
             <div className="text-[10px] text-ds-muted leading-relaxed space-y-1">

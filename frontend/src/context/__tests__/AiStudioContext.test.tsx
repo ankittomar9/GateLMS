@@ -114,7 +114,7 @@ describe('AiStudioContext Suite', () => {
 
     fireEvent.click(screen.getByTestId('btn-set-gemini'));
     expect(screen.getByTestId('provider').textContent).toBe('GEMINI');
-    expect(screen.getByTestId('model').textContent).toBe('gemini-2.0-flash');
+    expect(screen.getByTestId('model').textContent).toBe('gemini-3.8-flash');
   });
 
   it('4 global Ctrl+J / Cmd+J keyboard shortcut toggles drawer open state', () => {

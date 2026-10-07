@@ -203,7 +203,7 @@ class AiChatService(
         if (!customModel.isNullOrBlank()) return customModel.trim()
         return when (provider) {
             "GEMINI" -> System.getenv("GEMINI_DEFAULT_MODEL")?.takeIf { it.isNotBlank() }
-                ?: aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-2.0-flash" }
+                ?: aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-3.8-flash" }
             "OPENAI" -> System.getenv("OPENAI_DEFAULT_MODEL")?.takeIf { it.isNotBlank() }
                 ?: aiProperties.providers.openai.defaultModel.ifBlank { "gpt-4o-mini" }
             "OLLAMA" -> System.getenv("OLLAMA_DEFAULT_MODEL")?.takeIf { it.isNotBlank() }

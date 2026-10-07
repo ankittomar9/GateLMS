@@ -102,7 +102,7 @@ class AiProviderContractTest {
         var capturedKeyHeader: String? = null
         var requestPath: String? = null
 
-        mockServer.createContext("/models/gemini-2.0-flash:generateContent") { exchange ->
+        mockServer.createContext("/models/gemini-3.8-flash:generateContent") { exchange ->
             capturedKeyHeader = exchange.requestHeaders.getFirst("x-goog-api-key")
             requestPath = exchange.requestURI.toString()
             val resp = """
@@ -129,7 +129,7 @@ class AiProviderContractTest {
             request = AiChatRequest(
                 messages = listOf(ChatMessageDto(role = "user", content = "Dijkstra complexity")),
                 provider = "GEMINI",
-                model = "gemini-2.0-flash"
+                model = "gemini-3.8-flash"
             ),
             authHeaderKey = "test-gemini-header-key"
         )

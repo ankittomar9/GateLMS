@@ -34,7 +34,7 @@ const MAX_WIDTH = 800;
 
 const DEFAULT_PROVIDER_MODELS: Record<string, string> = {
   GROQ: 'llama-3.3-70b-versatile',
-  GEMINI: 'gemini-2.0-flash',
+  GEMINI: 'gemini-3.8-flash',
   OPENAI: 'gpt-4o-mini',
   OLLAMA: 'llama3',
 };
@@ -73,7 +73,12 @@ export const AiStudioProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const [selectedModel, setSelectedModelState] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem(STORAGE_KEY_MODEL) || DEFAULT_PROVIDER_MODELS['GROQ'];
+      const saved = localStorage.getItem(STORAGE_KEY_MODEL);
+      if (saved && (saved === 'gemini-2.0-flash' || saved === 'gemini-2.5-flash')) {
+        localStorage.setItem(STORAGE_KEY_MODEL, 'gemini-3.8-flash');
+        return 'gemini-3.8-flash';
+      }
+      if (saved) return saved;
     }
     return DEFAULT_PROVIDER_MODELS['GROQ'];
   });
