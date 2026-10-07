@@ -29,6 +29,8 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
               AND (cast(:q as text) IS NULL OR q.search_vector @@ websearch_to_tsquery('english', cast(:q as text)))
             ORDER BY
               CASE WHEN cast(:q as text) IS NOT NULL THEN ts_rank(q.search_vector, websearch_to_tsquery('english', cast(:q as text))) END DESC NULLS LAST,
+              CASE WHEN cast(:q as text) IS NULL AND :sortColumn = 'year' THEN q.year END DESC NULLS LAST,
+              CASE WHEN cast(:q as text) IS NULL AND :sortColumn = 'marks' THEN q.marks END DESC NULLS LAST,
               q.created_at DESC,
               q.id DESC
         """,
@@ -60,6 +62,7 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
         @Param("source") source: String? = null,
         @Param("difficulty") difficulty: String? = null,
         @Param("q") q: String?,
+        @Param("sortColumn") sortColumn: String = "created_at",
         pageable: Pageable
     ): Page<Question>
 

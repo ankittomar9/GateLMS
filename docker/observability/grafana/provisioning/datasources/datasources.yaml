@@ -29,3 +29,13 @@ datasources:
         filterBySpanId: false
         customQuery: true
         query: '{app="gate-lms-backend"} |= "$${__trace.id}"'
+
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: false
+    jsonData:
+      httpMethod: POST
+

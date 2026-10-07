@@ -1,0 +1,38 @@
+groups:
+  - name: gatelms-alerts
+    rules:
+      - alert: BackendDown
+        expr: up{job="gatelms-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GateLMS Backend is down"
+          description: "Backend actuator target has been unreachable for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP 5xx error rate detected"
+          description: "More than 5% of HTTP requests returned 5xx errors over the last 5 minutes."
+
+      - alert: SlowGrading
+        expr: (gatelms_grading_seconds{quantile="0.95"} > 2) or (histogram_quantile(0.95, sum(rate(gatelms_grading_seconds_bucket[5m])) by (le)) > 2)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Question grading latency is high"
+          description: "Grading p95 latency exceeded 2 seconds over the last 5 minutes."
+
+      - alert: QuestionBankEmpty
+        expr: gatelms_questions_loaded == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GateLMS question bank is empty"
+          description: "gatelms_questions_loaded has reported 0 questions for more than 5 minutes."

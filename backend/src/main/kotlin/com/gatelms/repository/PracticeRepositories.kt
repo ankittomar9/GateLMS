@@ -28,6 +28,7 @@ interface MockAttemptRepository : JpaRepository<MockAttempt, UUID> {
     @Query("SELECT MAX(a.totalScore) FROM MockAttempt a WHERE a.mockExam.id = :mockId AND a.status = 'SUBMITTED'")
     fun findMaxScoreByMockExamId(@Param("mockId") mockId: UUID): Double?
     fun countByMockExamIdAndStatus(mockId: UUID, status: MockAttemptStatus): Long
+    fun countByStatus(status: MockAttemptStatus): Long
 }
 
 @Repository
