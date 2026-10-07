@@ -15,7 +15,8 @@ import java.time.Duration
 class GateLmsMetrics(
     private val meterRegistry: MeterRegistry,
     private val questionRepository: QuestionRepository,
-    private val mockAttemptRepository: MockAttemptRepository
+    private val mockAttemptRepository: MockAttemptRepository,
+    private val readinessServiceProvider: org.springframework.beans.factory.ObjectProvider<com.gatelms.service.ReadinessService>
 ) {
 
     private val attemptsSubmittedCounters = mutableMapOf<String, Counter>()
@@ -29,6 +30,13 @@ class GateLmsMetrics(
             repo.count().toDouble()
         }
             .description("Total number of questions loaded in GateLMS question bank")
+            .register(meterRegistry)
+
+        // 1b. gatelms_readiness_score Gauge
+        Gauge.builder("gatelms_readiness_score", readinessServiceProvider) { provider ->
+            provider.ifAvailable?.getOverallReadinessScore()?.toDouble() ?: 0.0
+        }
+            .description("Overall GateLMS readiness score (0-100)")
             .register(meterRegistry)
 
         // 2. gatelms_sessions_active Gauge

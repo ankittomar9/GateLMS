@@ -22,7 +22,9 @@ class PracticeService(
     private val gradingService: GradingService,
     private val objectMapper: ObjectMapper,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null
+    private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val rollupService: RollupService? = null
 ) {
 
     @Transactional
@@ -155,6 +157,13 @@ class PracticeService(
         ans.marksAwarded = grading.marksAwarded
         ans.isCorrect = grading.isCorrect
         attemptAnswerRepository.save(ans)
+
+        rollupService?.recordAnswer(
+            activityDate = java.time.LocalDate.now(),
+            correct = grading.isCorrect,
+            seconds = submission.timeSpentSeconds ?: 0,
+            mode = "practice"
+        )
 
         // Auto-update Question pass1_status
         question.pass1Status = if (grading.isCorrect) Pass1Status.SOLVED else Pass1Status.FAILED

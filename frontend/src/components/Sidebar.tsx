@@ -11,7 +11,8 @@ import {
   AlertCircle,
   GraduationCap,
   ClipboardCheck,
-  PenLine
+  PenLine,
+  Activity
 } from 'lucide-react';
 import { useDesign } from '../context/DesignContext';
 
@@ -23,6 +24,7 @@ export const Sidebar: React.FC = () => {
 
   const pathname = location.pathname;
   const isDashboard = pathname === '/';
+  const isInsights = pathname.startsWith('/insights');
   const isSyllabus = pathname.startsWith('/syllabus');
   const isQuestions = pathname.startsWith('/questions');
   const isCuration = pathname.startsWith('/curation');
@@ -78,6 +80,15 @@ export const Sidebar: React.FC = () => {
               >
                 <LayoutDashboard className={`w-4 h-4 ${isDashboard ? 'text-ds-accent' : 'text-ds-muted'}`} />
                 <span>Dashboard</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/insights')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isInsights)}`}
+              >
+                <Activity className={`w-4 h-4 ${isInsights ? 'text-ds-accent' : 'text-ds-muted'}`} />
+                <span>Insights</span>
               </button>
 
               <button

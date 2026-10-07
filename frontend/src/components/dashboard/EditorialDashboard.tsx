@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useDesign } from '../../context/DesignContext';
 import { CurationProgressTile } from './CurationProgressTile';
+import { ReadinessSummaryCard } from './ReadinessSummaryCard';
 
 export const EditorialDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -61,6 +62,9 @@ export const EditorialDashboard: React.FC = () => {
 
   return (
     <div className="space-y-9 max-w-6xl" data-testid="editorial-dashboard">
+      {/* Readiness & Countdown Hero */}
+      <ReadinessSummaryCard />
+
       {/* 1. Active Study Session Hero — Editorial / Aurora */}
       <div className="relative overflow-hidden rounded-ds bg-ds-surface border border-ds-border p-8 shadow-sm">
         <div className="relative z-10 space-y-6">
