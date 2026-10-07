@@ -48,6 +48,8 @@ export const AiStudioDrawer: React.FC = () => {
     messages,
     addMessage,
     clearMessages,
+    pendingPrompt,
+    clearPendingPrompt,
   } = useAiStudio();
 
   const [inputPrompt, setInputPrompt] = useState('');
@@ -182,6 +184,14 @@ export const AiStudioDrawer: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (pendingPrompt && isOpen) {
+      const { text, mode } = pendingPrompt;
+      clearPendingPrompt();
+      handleSendPrompt(text, mode);
+    }
+  }, [pendingPrompt, isOpen, clearPendingPrompt]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

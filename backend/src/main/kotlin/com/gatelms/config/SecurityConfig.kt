@@ -78,7 +78,9 @@ class SecurityConfig(
             }
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                auth.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                auth.requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**").permitAll()
+                auth.requestMatchers(HttpMethod.GET, "/actuator/prometheus").permitAll()
+                auth.requestMatchers(HttpMethod.GET, "/actuator/info").permitAll()
                 auth.requestMatchers("/actuator/**").hasRole("ADMIN")
                 auth.anyRequest().authenticated()
             }

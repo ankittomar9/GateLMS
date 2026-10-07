@@ -18,6 +18,9 @@ interface AiStudioContextValue {
   messages: ChatMessage[];
   addMessage: (message: ChatMessage) => void;
   clearMessages: () => void;
+  pendingPrompt: { text: string; mode?: 'HINT' | 'EXPLANATION' | 'GENERAL' } | null;
+  triggerPrompt: (text: string, mode?: 'HINT' | 'EXPLANATION' | 'GENERAL') => void;
+  clearPendingPrompt: () => void;
 }
 
 const STORAGE_KEY_WIDTH = 'gatelms_ai_studio_width';
@@ -164,6 +167,17 @@ export const AiStudioProvider: React.FC<{ children: ReactNode }> = ({ children }
     ]);
   }, []);
 
+  const [pendingPrompt, setPendingPrompt] = useState<{ text: string; mode?: 'HINT' | 'EXPLANATION' | 'GENERAL' } | null>(null);
+
+  const triggerPrompt = useCallback((text: string, mode: 'HINT' | 'EXPLANATION' | 'GENERAL' = 'GENERAL') => {
+    setIsOpen(true);
+    setPendingPrompt({ text, mode });
+  }, [setIsOpen]);
+
+  const clearPendingPrompt = useCallback(() => {
+    setPendingPrompt(null);
+  }, []);
+
   // Global keyboard shortcut: Ctrl+J or Cmd+J to toggle AI Studio
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -195,6 +209,9 @@ export const AiStudioProvider: React.FC<{ children: ReactNode }> = ({ children }
         messages,
         addMessage,
         clearMessages,
+        pendingPrompt,
+        triggerPrompt,
+        clearPendingPrompt,
       }}
     >
       {children}
@@ -222,6 +239,9 @@ export const useAiStudio = (): AiStudioContextValue => {
       messages: [],
       addMessage: () => {},
       clearMessages: () => {},
+      pendingPrompt: null,
+      triggerPrompt: () => {},
+      clearPendingPrompt: () => {},
     };
   }
   return context;

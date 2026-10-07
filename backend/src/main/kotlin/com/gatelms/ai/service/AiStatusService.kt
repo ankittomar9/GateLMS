@@ -34,14 +34,17 @@ class AiStatusService(
 
         // 2. GEMINI
         val geminiKey = byokKey?.takeIf { targetProvider.equals("GEMINI", ignoreCase = true) }
-            ?: aiProperties.providers.gemini.apiKey.ifBlank { System.getenv("GEMINI_API_KEY") ?: System.getenv("GEMINI_KEY") }
+            ?: aiProperties.providers.gemini.apiKey.ifBlank {
+                System.getenv("GEMINI_API_KEY") ?: System.getenv("GEMINI_KEY") ?: System.getenv("GOOGLE_API_KEY") ?: System.getenv("AI_STUDIO_API_KEY")
+            }
         val geminiConfigured = !geminiKey.isNullOrBlank()
         result.add(
             ProviderStatusDto(
                 provider = "GEMINI",
                 configured = geminiConfigured,
                 state = if (geminiConfigured) "READY" else "NOT_CONFIGURED",
-                model = aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-2.0-flash" },
+                model = System.getenv("GEMINI_DEFAULT_MODEL")?.takeIf { it.isNotBlank() }
+                    ?: aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-2.0-flash" },
                 reason = if (geminiConfigured) null else "Configure GEMINI_API_KEY or provide BYOK key"
             )
         )

@@ -41,8 +41,17 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/gatelms_db
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - MANAGEMENT_OTLP_TRACING_ENDPOINT=${MANAGEMENT_OTLP_TRACING_ENDPOINT:-}
+      - MANAGEMENT_OTLP_TRACING_ENDPOINT=${MANAGEMENT_OTLP_TRACING_ENDPOINT:-http://tempo:4318/v1/traces}
       - GATELMS_ADMIN_INITIAL_PASSWORD=${GATELMS_ADMIN_INITIAL_PASSWORD:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-${GOOGLE_API_KEY:-${AI_STUDIO_API_KEY:-}}}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-${GEMINI_API_KEY:-}}
+      - AI_STUDIO_API_KEY=${AI_STUDIO_API_KEY:-${GEMINI_API_KEY:-}}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-2.0-flash}
+      - WHISPER_ENDPOINT=${WHISPER_ENDPOINT_DOCKER:-http://gatelms-whisper-sidecar:8178/inference}
+      - WHISPER_ENABLED=${WHISPER_ENABLED:-true}
+      - OLLAMA_ENDPOINT=${OLLAMA_ENDPOINT:-http://host.docker.internal:11434}
     volumes:
       - ./logs:/app/logs
       - gatelms_uploads:/app/uploads
@@ -69,6 +78,31 @@ services:
       - gatelms-net
     mem_limit: 128m
     restart: unless-stopped
+
+  # Whisper.cpp Neural STT Sidecar Service
+  whisper-sidecar:
+    build:
+      context: ./whisper-sidecar
+      dockerfile: Dockerfile
+    image: gatelms/whisper-sidecar:latest
+    container_name: gatelms-whisper-sidecar
+    ports:
+      - "127.0.0.1:8178:8178"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8178/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      gatelms-net:
+        aliases:
+          - whisper-sidecar
+          - gatelms-whisper-sidecar
 
   # 4. Loki 3.x Log Aggregation Engine
   loki:
@@ -125,7 +159,6 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./docker/observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./docker/observability/grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
     networks:
       - gatelms-net
 

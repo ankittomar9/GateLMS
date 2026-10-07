@@ -51,14 +51,16 @@ export const SyllabusPage: React.FC = () => {
     }
   };
 
-  const getTierColor = (tier: string) => {
-    switch (tier.toUpperCase()) {
+  const getTierColor = (tier?: string | null) => {
+    switch (tier?.toUpperCase()) {
       case 'TIER_1':
       case 'TIER 1':
         return 'text-ds-accent border-ds-accent/30 bg-ds-accent-soft';
       case 'TIER_2':
       case 'TIER 2':
         return 'text-ds-info border-ds-info/30 bg-ds-info/10';
+      case 'TIER_3':
+      case 'TIER 3':
       default:
         return 'text-ds-success border-ds-success/30 bg-ds-success/10';
     }
@@ -150,7 +152,7 @@ export const SyllabusPage: React.FC = () => {
                       </h3>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${getTierColor(subject.priorityTier)}`}>
-                      {subject.priorityTier}
+                      {subject.priorityTier || 'TIER 3'}
                     </span>
                   </div>
 

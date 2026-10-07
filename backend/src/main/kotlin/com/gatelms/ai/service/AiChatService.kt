@@ -188,7 +188,9 @@ class AiChatService(
         if (fromProp.isNotBlank()) return fromProp.trim()
 
         val envKeyName = "${provider}_API_KEY"
-        val envVal = System.getenv(envKeyName) ?: if (provider == "GEMINI") System.getenv("GEMINI_KEY") else null
+        val envVal = System.getenv(envKeyName) ?: if (provider == "GEMINI") {
+            System.getenv("GEMINI_KEY") ?: System.getenv("GOOGLE_API_KEY") ?: System.getenv("AI_STUDIO_API_KEY")
+        } else null
         if (!envVal.isNullOrBlank()) return envVal.trim()
 
         if (provider != "OLLAMA") {
@@ -200,10 +202,14 @@ class AiChatService(
     private fun resolveModelName(provider: String, customModel: String?): String {
         if (!customModel.isNullOrBlank()) return customModel.trim()
         return when (provider) {
-            "GEMINI" -> aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-2.0-flash" }
-            "OPENAI" -> aiProperties.providers.openai.defaultModel.ifBlank { "gpt-4o-mini" }
-            "OLLAMA" -> aiProperties.providers.ollama.defaultModel.ifBlank { "llama3" }
-            else -> aiProperties.providers.groq.defaultModel.ifBlank { "llama-3.3-70b-versatile" }
+            "GEMINI" -> System.getenv("GEMINI_DEFAULT_MODEL")?.takeIf { it.isNotBlank() }
+                ?: aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-2.0-flash" }
+            "OPENAI" -> System.getenv("OPENAI_DEFAULT_MODEL")?.takeIf { it.isNotBlank() }
+                ?: aiProperties.providers.openai.defaultModel.ifBlank { "gpt-4o-mini" }
+            "OLLAMA" -> System.getenv("OLLAMA_DEFAULT_MODEL")?.takeIf { it.isNotBlank() }
+                ?: aiProperties.providers.ollama.defaultModel.ifBlank { "llama3" }
+            else -> System.getenv("GROQ_DEFAULT_MODEL")?.takeIf { it.isNotBlank() }
+                ?: aiProperties.providers.groq.defaultModel.ifBlank { "llama-3.3-70b-versatile" }
         }
     }
 

@@ -7,12 +7,14 @@ import {
   Eye, 
   EyeOff, 
   CheckCircle2, 
+  XCircle,
   AlertCircle, 
   Clock, 
   Check, 
   Layers,
   HelpCircle,
-  FileQuestion
+  FileQuestion,
+  Sparkles
 } from 'lucide-react';
 import { 
   useQuestion, 
@@ -35,12 +37,27 @@ export const QuestionDetailPage: React.FC = () => {
 
   const [solutionRevealed, setSolutionRevealed] = useState(false);
   const [conflictError, setConflictError] = useState<string | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Set<string>>(new Set());
+  const [hasCheckedAnswer, setHasCheckedAnswer] = useState(false);
+  const [natAnswer, setNatAnswer] = useState<string>('');
 
   const { data: q, isLoading, error, refetch } = useQuestion(id);
-  const { registerActiveQuestion } = useAiStudio();
+  const { registerActiveQuestion, triggerPrompt } = useAiStudio();
   const updatePass1 = useUpdatePass1Status();
   const updatePass2 = useUpdatePass2Status();
   const toggleBookmark = useToggleBookmark();
+
+  // Reset interactive attempt state on new question
+  useEffect(() => {
+    setSelectedOptions(new Set());
+    setHasCheckedAnswer(false);
+    setNatAnswer('');
+    setSolutionRevealed(false);
+  }, [q?.id]);
+
+  const selectedAnswerFormatted = q?.type === 'NAT'
+    ? natAnswer.trim()
+    : Array.from(selectedOptions).sort().join(',');
 
   useEffect(() => {
     if (q) {
@@ -54,10 +71,11 @@ export const QuestionDetailPage: React.FC = () => {
         subjectName: q.subjectName,
         topicName: q.topicName,
         optionsJson: q.optionsJson,
+        selectedAnswer: selectedAnswerFormatted || undefined,
       });
     }
     return () => registerActiveQuestion(null);
-  }, [q, registerActiveQuestion]);
+  }, [q, selectedAnswerFormatted, registerActiveQuestion]);
 
   const handlePass1Change = async (status: Pass1Status) => {
     if (!q) return;
@@ -133,6 +151,76 @@ export const QuestionDetailPage: React.FC = () => {
       default:
         return 'text-ds-muted border-ds-border bg-ds-surface-raised';
     }
+  };
+
+  const handleToggleOption = (label: string) => {
+    if (solutionRevealed) return; // Locked once full solution revealed
+    setHasCheckedAnswer(false);
+    setSelectedOptions((prev) => {
+      const next = new Set(prev);
+      if (q?.type === 'MSQ') {
+        if (next.has(label)) {
+          next.delete(label);
+        } else {
+          next.add(label);
+        }
+      } else {
+        // MCQ single-select
+        if (next.has(label)) {
+          next.delete(label);
+        } else {
+          next.clear();
+          next.add(label);
+        }
+      }
+      return next;
+    });
+  };
+
+  const isAnswerCompletelyCorrect = React.useMemo(() => {
+    if (q?.type === 'NAT') {
+      const val = parseFloat(natAnswer);
+      if (isNaN(val)) return false;
+      const min = q.numericMin ?? val;
+      const max = q.numericMax ?? val;
+      return val >= min && val <= max;
+    }
+    if (selectedOptions.size === 0 || correctOptionLabels.length === 0) return false;
+    if (selectedOptions.size !== correctOptionLabels.length) return false;
+    for (const opt of selectedOptions) {
+      if (!correctOptionLabels.includes(opt)) return false;
+    }
+    return true;
+  }, [q, natAnswer, selectedOptions, correctOptionLabels]);
+
+  const hasPartialSelection = React.useMemo(() => {
+    if (q?.type !== 'MSQ') return false;
+    if (selectedOptions.size === 0) return false;
+    let correctCount = 0;
+    let wrongCount = 0;
+    for (const opt of selectedOptions) {
+      if (correctOptionLabels.includes(opt)) correctCount++;
+      else wrongCount++;
+    }
+    return correctCount > 0 && (wrongCount > 0 || correctCount < correctOptionLabels.length);
+  }, [q?.type, selectedOptions, correctOptionLabels]);
+
+  const handleCheckAnswer = () => {
+    setHasCheckedAnswer(true);
+    if (isAnswerCompletelyCorrect && q?.pass1Status === 'UNSEEN') {
+      handlePass1Change('SOLVED');
+    }
+  };
+
+  const handleAskAiExplanation = () => {
+    const userSelected = selectedAnswerFormatted ? ` (My selected answer was: ${selectedAnswerFormatted})` : '';
+    const prompt = `Solve this GATE CS question step-by-step with mathematical rigor and proof${userSelected}. Provide derivations and explain why each incorrect option fails: "${q?.statement || ''}". Options: ${q?.optionsJson || 'N/A'}`;
+    triggerPrompt(prompt, 'EXPLANATION');
+  };
+
+  const handleAskAiHint = () => {
+    const prompt = `Give me a Socratic hint for this question without revealing the final answer. What core theorem, concept, or algorithmic invariant should I analyze: "${q?.statement || ''}"?`;
+    triggerPrompt(prompt, 'HINT');
   };
 
   if (isLoading) {
@@ -292,95 +380,210 @@ export const QuestionDetailPage: React.FC = () => {
         {/* Multiple Choice Options List (MCQ / MSQ) */}
         {options.length > 0 && (
           <div className="space-y-3 pt-2">
-            <div className="text-xs font-semibold uppercase tracking-wider text-ds-muted">
-              Options:
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-ds-muted">
+              <span>
+                {q.type === 'MSQ' ? 'Options (Select all that apply):' : 'Options (Select one):'}
+              </span>
+              {selectedOptions.size > 0 && (
+                <span className="font-mono text-ds-accent lowercase font-normal">
+                  {selectedOptions.size} {selectedOptions.size === 1 ? 'option' : 'options'} selected
+                </span>
+              )}
             </div>
-            {options.map((opt) => {
-              const isCorrect = correctOptionLabels.includes(opt.label);
-              const highlightCorrect = solutionRevealed && isCorrect;
 
-              return (
-                <div
-                  key={opt.label}
-                  className={`p-4 rounded-ds border transition-all flex items-start gap-3.5 ${
-                    highlightCorrect
-                      ? 'bg-ds-success/10 border-ds-success/50 text-ds-success'
-                      : 'bg-ds-surface-raised border-ds-border text-ds-secondary'
-                  }`}
-                >
-                  <span
-                    className={`w-7 h-7 rounded-ds flex items-center justify-center font-mono text-xs font-bold shrink-0 border ${
-                      highlightCorrect
-                        ? 'bg-ds-success text-ds-accent-contrast border-ds-success'
-                        : 'bg-ds-surface text-ds-muted border-ds-border'
-                    }`}
+            <div className="space-y-2.5">
+              {options.map((opt) => {
+                const isSelected = selectedOptions.has(opt.label);
+                const isCorrect = correctOptionLabels.includes(opt.label);
+                const isRevealedOrChecked = solutionRevealed || hasCheckedAnswer;
+
+                let cardStyle = 'bg-ds-surface border-ds-border hover:border-ds-accent/50 hover:bg-ds-surface-hover text-ds-secondary cursor-pointer';
+                let badgeStyle = 'bg-ds-surface-raised text-ds-muted border-ds-border';
+                let statusBadge = null;
+
+                if (isRevealedOrChecked) {
+                  if (isCorrect) {
+                    cardStyle = 'bg-ds-success/15 border-ds-success text-ds-success ring-1 ring-ds-success/40';
+                    badgeStyle = 'bg-ds-success text-white border-ds-success';
+                    statusBadge = (
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-ds-success font-mono ml-auto shrink-0">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Correct</span>
+                      </span>
+                    );
+                  } else if (isSelected) {
+                    cardStyle = 'bg-ds-danger/15 border-ds-danger text-ds-danger ring-1 ring-ds-danger/40';
+                    badgeStyle = 'bg-ds-danger text-white border-ds-danger';
+                    statusBadge = (
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-ds-danger font-mono ml-auto shrink-0">
+                        <XCircle className="w-4 h-4" />
+                        <span>Your Choice</span>
+                      </span>
+                    );
+                  } else {
+                    cardStyle = 'bg-ds-surface border-ds-border text-ds-muted opacity-60';
+                  }
+                } else if (isSelected) {
+                  cardStyle = 'bg-ds-accent-soft border-ds-accent shadow-sm ring-2 ring-ds-accent/40 text-ds-primary cursor-pointer';
+                  badgeStyle = 'bg-ds-accent text-ds-accent-contrast border-ds-accent';
+                }
+
+                return (
+                  <div
+                    key={opt.label}
+                    onClick={() => handleToggleOption(opt.label)}
+                    className={`p-4 rounded-ds border transition-all flex items-start gap-3.5 select-none ${cardStyle}`}
                   >
-                    {opt.label}
-                  </span>
-                  <div className="flex-1 pt-0.5 text-sm text-ds-primary">
-                    <MathText content={opt.text} />
+                    <span
+                      className={`w-7 h-7 rounded-ds flex items-center justify-center font-mono text-xs font-bold shrink-0 border transition-colors ${badgeStyle}`}
+                    >
+                      {opt.label}
+                    </span>
+
+                    <div className="flex-1 pt-0.5 text-sm text-ds-primary">
+                      <MathText content={opt.text} />
+                    </div>
+
+                    {statusBadge}
                   </div>
-                  {highlightCorrect && (
-                    <CheckCircle2 className="w-5 h-5 text-ds-success shrink-0 mt-0.5" />
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
 
         {/* NAT Question Input Area */}
-        {q.type === 'NAT' && !solutionRevealed && (
+        {q.type === 'NAT' && (
           <div className="bg-ds-surface-raised border border-ds-border rounded-ds p-5 space-y-3">
             <div className="text-xs font-semibold text-ds-secondary">Numerical Answer (NAT):</div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <input
                 type="number"
-                placeholder="Enter calculated value..."
+                value={natAnswer}
+                onChange={(e) => {
+                  setNatAnswer(e.target.value);
+                  setHasCheckedAnswer(false);
+                }}
+                disabled={solutionRevealed}
+                placeholder="Enter calculated numerical value..."
                 className="bg-ds-surface-input border border-ds-border rounded-ds px-3.5 py-2 text-sm text-ds-primary focus:outline-none focus:border-ds-accent/60 w-64"
               />
               <span className="text-xs text-ds-muted">
-                Self-verify before revealing solution.
+                Calculate & type your result before checking.
               </span>
             </div>
           </div>
         )}
 
-        {/* Reveal Solution / Two-Pass Toggle */}
-        <div className="border-t border-ds-border pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="text-xs text-ds-muted">
-            {solutionRevealed ? (
-              <span className="text-ds-success font-medium flex items-center gap-1.5">
-                <Check className="w-4 h-4" /> Solution Unmasked (Review carefully)
-              </span>
-            ) : (
-              <span className="text-ds-muted">
-                Honest-Attempt Mode: Attempt calculation before revealing solution key.
-              </span>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setSolutionRevealed(!solutionRevealed)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-ds text-xs font-semibold transition-all ${
-              solutionRevealed
-                ? 'bg-ds-surface-raised text-ds-secondary hover:bg-ds-surface-hover border border-ds-border'
-                : 'bg-ds-accent hover:bg-ds-accent-hover text-ds-accent-contrast shadow-md'
+        {/* Evaluation Result Feedback Banner (after clicking Check Answer) */}
+        {hasCheckedAnswer && !solutionRevealed && (
+          <div
+            className={`p-4 rounded-ds border flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in ${
+              isAnswerCompletelyCorrect
+                ? 'bg-ds-success/10 border-ds-success/40 text-ds-success'
+                : hasPartialSelection
+                ? 'bg-ds-warning/10 border-ds-warning/40 text-ds-warning'
+                : 'bg-ds-danger/10 border-ds-danger/40 text-ds-danger'
             }`}
           >
-            {solutionRevealed ? (
-              <>
-                <EyeOff className="w-4 h-4" />
-                <span>Mask Solution</span>
-              </>
-            ) : (
-              <>
-                <Eye className="w-4 h-4" />
-                <span>Reveal Solution & Key</span>
-              </>
+            <div className="flex items-start gap-2.5">
+              {isAnswerCompletelyCorrect ? (
+                <CheckCircle2 className="w-5 h-5 text-ds-success shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              )}
+              <div>
+                <div className="text-sm font-bold">
+                  {isAnswerCompletelyCorrect
+                    ? `Correct! Full ${q.marks} ${q.marks === 1 ? 'Mark' : 'Marks'} scored.`
+                    : hasPartialSelection
+                    ? 'Partially Correct (In GATE MSQ, full credit requires all correct options with no false options).'
+                    : 'Incorrect attempt. Analyze the concept derivation below.'}
+                </div>
+                <div className="text-xs opacity-90 mt-0.5">
+                  {isAnswerCompletelyCorrect
+                    ? 'Well done! Click "Reveal Solution & Key" to review textbook references.'
+                    : 'Unmask the solution or consult the AI Studio Tutor for a step-by-step derivation.'}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSolutionRevealed(true)}
+              className="px-3 py-1.5 rounded-ds text-xs font-semibold bg-ds-surface border border-ds-border hover:bg-ds-surface-hover transition-colors shrink-0 self-start sm:self-auto"
+            >
+              Reveal Explanation
+            </button>
+          </div>
+        )}
+
+        {/* Action Controls: Check Answer, Reveal Solution, AI Studio Exploration */}
+        <div className="border-t border-ds-border pt-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Check Answer Button */}
+            {!solutionRevealed && (
+              <button
+                type="button"
+                onClick={handleCheckAnswer}
+                disabled={q.type === 'NAT' ? !natAnswer.trim() : selectedOptions.size === 0}
+                className={`flex items-center gap-2 px-4 py-2 rounded-ds text-xs font-semibold transition-all ${
+                  (q.type === 'NAT' ? natAnswer.trim() : selectedOptions.size > 0)
+                    ? 'bg-ds-accent hover:bg-ds-accent-hover text-ds-accent-contrast shadow-md cursor-pointer'
+                    : 'bg-ds-surface-raised text-ds-muted border border-ds-border cursor-not-allowed opacity-60'
+                }`}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Check My Answer</span>
+              </button>
             )}
-          </button>
+
+            {/* Reveal / Mask Solution Button */}
+            <button
+              type="button"
+              onClick={() => setSolutionRevealed(!solutionRevealed)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-ds text-xs font-semibold transition-all ${
+                solutionRevealed
+                  ? 'bg-ds-surface-raised text-ds-secondary hover:bg-ds-surface-hover border border-ds-border'
+                  : 'bg-ds-surface-raised text-ds-primary hover:bg-ds-surface-hover border border-ds-border'
+              }`}
+            >
+              {solutionRevealed ? (
+                <>
+                  <EyeOff className="w-4 h-4" />
+                  <span>Mask Solution</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4" />
+                  <span>Reveal Solution & Key</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Seamless AI Tutor Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleAskAiHint}
+              className="flex items-center gap-1.5 px-3 py-2 bg-ds-surface-raised hover:bg-ds-surface-hover text-ds-secondary hover:text-ds-primary border border-ds-border rounded-ds text-xs font-semibold transition-all"
+              title="Get a guiding hint from AI Studio without spoiling the answer"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-ds-accent" />
+              <span>Ask AI Hint</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleAskAiExplanation}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-ds-accent-soft hover:bg-ds-accent/20 text-ds-accent border border-ds-accent/40 rounded-ds text-xs font-semibold transition-all shadow-sm"
+              title="Open AI Studio with complete step-by-step mathematical explanation"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Explain with AI</span>
+            </button>
+          </div>
         </div>
 
         {/* Solution Details (Revealed) */}

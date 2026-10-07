@@ -52,27 +52,34 @@ class WhisperTranscriptionService(
     private val sidecarCacheTtlMs = 15000L
 
     fun isWhisperSidecarRunning(): Boolean {
-        val endpoint = aiProperties.whisper.localEndpoint
+        val endpoint = System.getenv("WHISPER_ENDPOINT")?.takeIf { it.isNotBlank() } ?: aiProperties.whisper.localEndpoint
         if (endpoint.isBlank()) return false
         val now = System.currentTimeMillis()
         if (now - lastSidecarCheckTime < sidecarCacheTtlMs) {
             return lastSidecarStatus
         }
-        return try {
-            val healthUrl = endpoint.replace("/inference", "") + "/health"
-            val conn = URI.create(healthUrl).toURL().openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            conn.connectTimeout = 800
-            conn.readTimeout = 800
-            val isRunning = conn.responseCode == 200
-            lastSidecarStatus = isRunning
-            lastSidecarCheckTime = now
-            isRunning
-        } catch (_: Exception) {
-            lastSidecarStatus = false
-            lastSidecarCheckTime = now
-            false
+        val baseUrl = if (endpoint.contains("/inference")) {
+            endpoint.replace("/inference", "")
+        } else {
+            endpoint.removeSuffix("/")
         }
+
+        fun checkUrl(urlStr: String): Boolean {
+            return try {
+                val conn = URI.create(urlStr).toURL().openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.connectTimeout = 800
+                conn.readTimeout = 800
+                conn.responseCode in 200..399
+            } catch (_: Exception) {
+                false
+            }
+        }
+
+        val isRunning = checkUrl("$baseUrl/") || checkUrl("$baseUrl/health")
+        lastSidecarStatus = isRunning
+        lastSidecarCheckTime = now
+        return isRunning
     }
 
     fun checkAudioFragment(audioBytes: ByteArray): TranscriptionResponse? {
@@ -358,8 +365,9 @@ class WhisperTranscriptionService(
             body.add("prompt", prompt.take(400))
         }
 
+        val effectiveEndpoint = System.getenv("WHISPER_ENDPOINT")?.takeIf { it.isNotBlank() } ?: aiProperties.whisper.localEndpoint
         val rawResponse = restClient.post()
-            .uri(aiProperties.whisper.localEndpoint)
+            .uri(effectiveEndpoint)
             .contentType(MediaType.MULTIPART_FORM_DATA)
             .body(body)
             .retrieve()
