@@ -10,12 +10,14 @@ import {
   ArrowUpRight,
   GraduationCap
 } from 'lucide-react';
-import { useSubjects, useTopics, useUpdateTopicMastery } from '../hooks/useQueries';
+import { useSubjects, useTopics, useUpdateTopicMastery, useReadiness } from '../hooks/useQueries';
 import { SubjectSummary, TopicItem } from '../api/types';
 
 export const SyllabusPage: React.FC = () => {
   const navigate = useNavigate();
   const { data: subjects, isLoading: subjectsLoading, error: subjectsError } = useSubjects();
+  const { data: readinessData } = useReadiness();
+  const readinessBySubject = new Map(readinessData?.perSubject?.map((s) => [s.subjectId, s.readiness]) || []);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [conflictError, setConflictError] = useState<string | null>(null);
 
@@ -153,9 +155,19 @@ export const SyllabusPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-ds-secondary pt-2 border-t border-ds-border">
-                    <div className="flex items-center gap-1.5 font-mono text-ds-primary">
-                      <span className="text-ds-accent font-bold">{subject.weightageAvg}</span>
-                      <span className="text-ds-muted">Marks</span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 font-mono text-ds-primary">
+                        <span className="text-ds-accent font-bold">{subject.weightageAvg}</span>
+                        <span className="text-ds-muted">Marks</span>
+                      </div>
+                      {readinessBySubject.has(subject.id) && (
+                        <div className="flex items-center gap-1 font-mono text-xs text-ds-secondary">
+                          <span className="text-ds-muted">Readiness:</span>
+                          <span className="font-semibold text-ds-accent">
+                            {Math.round(readinessBySubject.get(subject.id)!)}%
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 text-ds-muted">
                       <Layers className="w-3.5 h-3.5 text-ds-muted" />
@@ -199,6 +211,11 @@ export const SyllabusPage: React.FC = () => {
                   <div>
                     Weightage: <strong className="text-ds-accent font-mono">{activeSubject.weightageAvg}</strong> Marks
                   </div>
+                  {readinessBySubject.has(activeSubject.id) && (
+                    <div>
+                      Readiness: <strong className="text-ds-accent font-mono">{Math.round(readinessBySubject.get(activeSubject.id)!)}%</strong>
+                    </div>
+                  )}
                 </div>
               </div>
 

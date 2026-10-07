@@ -24,8 +24,11 @@ class PracticeService(
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private val rollupService: RollupService? = null
+    private val rollupService: RollupService? = null,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val planProgressService: PlanProgressService? = null
 ) {
+    private val logger = org.slf4j.LoggerFactory.getLogger(PracticeService::class.java)
 
     @Transactional
     fun createSession(request: PracticeSessionCreateRequest): PracticeSessionResponse {
@@ -217,6 +220,23 @@ class PracticeService(
             seconds = submission.timeSpentSeconds ?: 0,
             mode = "practice"
         )
+
+        // Plan auto-progress hook (SPEC §2.3)
+        val topicId = question.topic?.id
+        if (topicId != null) {
+            val secondsSpent = submission.timeSpentSeconds ?: 0
+            val minutesSpent = maxOf(1, (secondsSpent + 59) / 60)
+            try {
+                planProgressService?.onQuestionsAnswered(
+                    date = java.time.LocalDate.now(),
+                    topicId = topicId,
+                    count = 1,
+                    minutes = minutesSpent
+                )
+            } catch (e: Exception) {
+                logger.warn("Plan progress hook failure ignored during practice grading: ${e.message}", e)
+            }
+        }
 
         // Auto-update Question pass1_status & pass2_status
         question.pass1Status = if (grading.isCorrect) Pass1Status.SOLVED else Pass1Status.FAILED

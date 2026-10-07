@@ -28,8 +28,11 @@ class MockTestService(
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private val rollupService: RollupService? = null
+    private val rollupService: RollupService? = null,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val planProgressService: PlanProgressService? = null
 ) {
+    private val logger = org.slf4j.LoggerFactory.getLogger(MockTestService::class.java)
 
     @Transactional
     fun createTemplate(req: CreateMockTemplateRequest): MockTemplateSummaryDto {
@@ -443,6 +446,39 @@ class MockTestService(
             correctAnswers = correctCount,
             minutesMocked = minutesMocked
         )
+
+        // Plan auto-progress hook (SPEC §2.3)
+        try {
+            val answeredByTopic = frozenIds.mapNotNull { qidStr ->
+                questionRepository.findById(UUID.fromString(qidStr)).orElse(null)
+            }.filter { q ->
+                val ans = existingAnswers[q.id]
+                ans != null && ans.state in listOf(
+                    AttemptAnswerState.ANSWERED,
+                    AttemptAnswerState.ANSWERED_AND_MARKED,
+                    AttemptAnswerState.ANSWERED_AND_MARKED_FOR_REVIEW
+                )
+            }.groupBy { it.topic?.id }
+
+            val totalQuestionsAnswered = correctCount + wrongCount
+            answeredByTopic.forEach { (topicId, qList) ->
+                if (topicId != null && qList.isNotEmpty()) {
+                    val topicMinutes = if (totalQuestionsAnswered > 0) {
+                        maxOf(1, (minutesMocked * qList.size) / totalQuestionsAnswered)
+                    } else {
+                        1
+                    }
+                    planProgressService?.onQuestionsAnswered(
+                        date = java.time.LocalDate.now(),
+                        topicId = topicId,
+                        count = qList.size,
+                        minutes = topicMinutes
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            logger.warn("Plan progress hook failure ignored during mock attempt submit: ${e.message}", e)
+        }
 
         return SubmitMockAttemptResponse(
             attemptId = attempt.id,

@@ -72,3 +72,15 @@ enum class MistakeErrorCategory {
     MSQ_TRAP,
     MISREAD
 }
+
+enum class PlanStrategy {
+    WEIGHTED,
+    WEAKNESS_FIRST,
+    LINEAR
+}
+
+enum class PlanItemStatus {
+    OPEN,
+    DONE,
+    SKIPPED
+}

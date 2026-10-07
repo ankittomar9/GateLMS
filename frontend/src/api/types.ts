@@ -456,4 +456,85 @@ export interface PypStatsResponse {
   coverage: PypCoverageDto;
 }
 
+export type PlanStrategy = 'WEIGHTED' | 'WEAKNESS_FIRST' | 'LINEAR';
+export type PlanItemStatus = 'OPEN' | 'DONE' | 'SKIPPED';
+
+export interface GeneratePlanRequest {
+  title?: string;
+  weeks?: number;
+  strategy?: PlanStrategy;
+  weeklyTargetQuestions?: number;
+  weeklyTargetMinutes?: number;
+  startDate?: string;
+}
+
+export interface PlanItemDto {
+  id: string;
+  planId: string;
+  planDate: string;
+  subjectId: string | null;
+  subjectName: string | null;
+  subjectCode: string | null;
+  topicId: string | null;
+  topicName: string | null;
+  targetQuestions: number;
+  targetMinutes: number;
+  doneQuestions: number;
+  doneMinutes: number;
+  status: PlanItemStatus;
+}
+
+export interface StudyPlanSummaryDto {
+  id: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  weeks: number;
+  weeklyTargetQuestions: number;
+  weeklyTargetMinutes: number;
+  strategy: PlanStrategy;
+  totalQuestionsTarget: number;
+  totalQuestionsDone: number;
+  totalMinutesTarget: number;
+  totalMinutesDone: number;
+  progressPercentage: number;
+  itemsCount: number;
+  openItemsCount: number;
+  doneItemsCount: number;
+  skippedItemsCount: number;
+  createdAt: string;
+}
+
+export interface StudyPlanDetailDto {
+  id: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  weeks: number;
+  weeklyTargetQuestions: number;
+  weeklyTargetMinutes: number;
+  strategy: PlanStrategy;
+  totalQuestionsTarget: number;
+  totalQuestionsDone: number;
+  totalMinutesTarget: number;
+  totalMinutesDone: number;
+  progressPercentage: number;
+  generatedReasoning: Record<string, any> | null;
+  createdAt: string;
+  items: PlanItemDto[];
+  itemsByDate: Record<string, PlanItemDto[]>;
+}
+
+export interface TodayPlanResponse {
+  items: PlanItemDto[];
+  doneQuestions: number;
+  targetQuestions: number;
+  minutesDone: number;
+  minutesTarget: number;
+}
+
+export interface UpdatePlanItemStatusRequest {
+  status: PlanItemStatus;
+}
+
 

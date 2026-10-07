@@ -25,8 +25,11 @@ class MistakeService(
     private val mistakeLogRepository: MistakeLogRepository,
     private val questionRepository: QuestionRepository,
     private val attemptAnswerRepository: AttemptAnswerRepository,
-    private val topicRepository: TopicRepository
+    private val topicRepository: TopicRepository,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val planProgressService: PlanProgressService? = null
 ) {
+    private val logger = org.slf4j.LoggerFactory.getLogger(MistakeService::class.java)
 
     private val reviewIntervals = listOf(1L, 3L, 7L, 14L, 30L, 60L)
 
@@ -108,6 +111,22 @@ class MistakeService(
 
         mistake.nextReviewAt = Instant.now().plus(intervalDays, ChronoUnit.DAYS)
         val saved = mistakeLogRepository.save(mistake)
+
+        // Plan auto-progress hook (SPEC §2.3: Mistake reviews add 1 to the matching topic item)
+        val topicId = mistake.question?.topic?.id
+        if (topicId != null) {
+            try {
+                planProgressService?.onQuestionsAnswered(
+                    date = java.time.LocalDate.now(),
+                    topicId = topicId,
+                    count = 1,
+                    minutes = 5
+                )
+            } catch (e: Exception) {
+                logger.warn("Plan progress hook failure ignored during mistake review: ${e.message}", e)
+            }
+        }
+
         return saved.toDto()
     }
 

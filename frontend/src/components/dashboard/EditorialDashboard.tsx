@@ -11,6 +11,7 @@ import { useDesign } from '../../context/DesignContext';
 import { CurationProgressTile } from './CurationProgressTile';
 import { ReadinessSummaryCard } from './ReadinessSummaryCard';
 import { PypDashboardTile } from './PypDashboardTile';
+import { TodayCard } from '../planner/TodayCard';
 
 export const EditorialDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -65,6 +66,8 @@ export const EditorialDashboard: React.FC = () => {
     <div className="space-y-9 max-w-6xl" data-testid="editorial-dashboard">
       {/* Readiness & Countdown Hero */}
       <ReadinessSummaryCard />
+
+      <TodayCard />
 
       {/* 1. Active Study Session Hero — Editorial / Aurora */}
       <div className="relative overflow-hidden rounded-ds bg-ds-surface border border-ds-border p-8 shadow-sm">
