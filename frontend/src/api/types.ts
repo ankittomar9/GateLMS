@@ -245,3 +245,169 @@ export interface TopicMasteryStatsDto {
   dueReviewsCount: number;
 }
 
+export interface BlueprintSection {
+  subjectId: string;
+  mcq: number;
+  msq: number;
+  nat: number;
+  marks?: number;
+}
+
+export interface BlueprintQuestionPool {
+  curationStatus?: string[];
+  difficulty?: string[];
+}
+
+export interface MockBlueprint {
+  title?: string;
+  sections: BlueprintSection[];
+  questionPool?: BlueprintQuestionPool;
+  shuffle: boolean;
+}
+
+export interface CreateMockTemplateRequest {
+  title: string;
+  durationMinutes: number;
+  totalMarks?: number;
+  sections: BlueprintSection[];
+  questionPool?: BlueprintQuestionPool;
+  shuffle: boolean;
+}
+
+export interface MockTemplateSummaryDto {
+  id: string;
+  title: string;
+  durationMinutes: number;
+  totalMarks: number;
+  totalQuestions: number;
+  mode: string;
+  createdAt: string;
+  sections: BlueprintSection[];
+  bestScore?: number | null;
+  attemptCount: number;
+}
+
+export interface MockAttemptSectionDto {
+  subjectId: string;
+  name: string;
+  questionIds: string[];
+}
+
+export interface StartMockAttemptResponse {
+  attemptId: string;
+  mockId: string;
+  mockTitle: string;
+  durationSeconds: number;
+  sections: MockAttemptSectionDto[];
+  questions: PracticeQuestionDto[];
+  startedAt: string;
+  serverTime: string;
+  shortfallWarnings: string[];
+}
+
+export interface UpsertAnswerRequest {
+  selectedOptions?: string | null;
+  numericAnswer?: number | null;
+  state?: string | null;
+  timeSpentSeconds?: number | null;
+}
+
+export interface UpsertAnswerResponse {
+  saved: boolean;
+  state: string;
+}
+
+export interface SubmitMockAttemptRequest {
+  timeSpentSeconds?: number | null;
+}
+
+export interface SubmitMockAttemptResponse {
+  attemptId: string;
+  status: string;
+  finishedReason: string;
+  positiveScore: number;
+  negativeScore: number;
+  totalScore: number;
+  maxMarks: number;
+  correctCount: number;
+  wrongCount: number;
+  unattemptedCount: number;
+  totalQuestions: number;
+}
+
+export interface MockQuestionReviewDto {
+  questionId: string;
+  externalId: string;
+  type: QuestionType;
+  marks: number;
+  statement: string;
+  optionsJson?: string | null;
+  subjectId?: string | null;
+  subjectName?: string | null;
+  topicId?: string | null;
+  yourAnswer?: string | null;
+  numericAnswer?: number | null;
+  correctAnswer?: string | null;
+  numericMin?: number | null;
+  numericMax?: number | null;
+  isCorrect?: boolean | null;
+  marksAwarded: number;
+  state: string;
+  timeSpentSeconds: number;
+  explanation?: string | null;
+}
+
+export interface MockSectionScoreDto {
+  subjectId: string;
+  subjectName: string;
+  totalQuestions: number;
+  attemptedCount: number;
+  correctCount: number;
+  wrongCount: number;
+  unattemptedCount: number;
+  marksAwarded: number;
+  maxMarks: number;
+  accuracy: number;
+  timeSpentSeconds: number;
+}
+
+export interface MockResultResponse {
+  attemptId: string;
+  mockId: string;
+  mockTitle: string;
+  startedAt: string;
+  submittedAt?: string | null;
+  durationSeconds: number;
+  finishedReason: string;
+  totalScore: number;
+  positiveScore: number;
+  negativeScore: number;
+  maxMarks: number;
+  timeSpentSeconds: number;
+  questions: MockQuestionReviewDto[];
+  sectionScores: MockSectionScoreDto[];
+}
+
+export interface MockAttemptHistoryDto {
+  attemptId: string;
+  startedAt: string;
+  submittedAt?: string | null;
+  durationSeconds?: number | null;
+  totalScore?: number | null;
+  positiveScore?: number | null;
+  negativeScore?: number | null;
+  status: string;
+  finishedReason?: string | null;
+}
+
+export interface MockTrendDto {
+  attemptId: string;
+  mockId: string;
+  mockTitle: string;
+  date: string;
+  totalScore: number;
+  maxScore: number;
+  percentage: number;
+  percentileLike?: number | null;
+}
+

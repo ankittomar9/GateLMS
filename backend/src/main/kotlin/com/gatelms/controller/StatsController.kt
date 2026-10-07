@@ -10,7 +10,8 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/stats")
 class StatsController(
     private val statsService: StatsService,
-    private val mistakeService: com.gatelms.service.MistakeService
+    private val mistakeService: com.gatelms.service.MistakeService,
+    private val mockTestService: com.gatelms.service.MockTestService
 ) {
 
     @GetMapping("/summary")
@@ -31,5 +32,10 @@ class StatsController(
     @GetMapping("/mastery")
     fun getMasteryStats(): List<com.gatelms.dto.TopicMasteryStatsDto> {
         return mistakeService.getMasteryStats()
+    }
+
+    @GetMapping("/mock-trend")
+    fun getMockTrend(): List<com.gatelms.dto.MockTrendDto> {
+        return mockTestService.getMockTrend()
     }
 }

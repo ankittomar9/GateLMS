@@ -56,7 +56,14 @@ enum class AttemptAnswerState {
     NOT_ANSWERED,
     ANSWERED,
     MARKED_FOR_REVIEW,
+    ANSWERED_AND_MARKED_FOR_REVIEW,
     ANSWERED_AND_MARKED
+}
+
+enum class FinishedReason {
+    SUBMITTED,
+    AUTO_SUBMITTED,
+    ABANDONED
 }
 
 enum class MistakeErrorCategory {
