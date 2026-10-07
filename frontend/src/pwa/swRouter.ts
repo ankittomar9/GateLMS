@@ -25,8 +25,13 @@ export function matchStrategy(url: string, options: RouteMatchOptions = {}): Fet
   const pathname = parsedUrl.pathname;
   const isGet = method === 'GET';
 
-  // 1. Auth routes (/login) -> strictly network-only (never cached by SW)
-  if (pathname === '/login' || pathname.startsWith('/login/')) {
+  // 1. Auth routes (/login, /api/v1/auth/*) -> strictly network-only (never cached by SW)
+  if (
+    pathname === '/login' ||
+    pathname.startsWith('/login/') ||
+    pathname.startsWith('/api/v1/auth/') ||
+    pathname.startsWith('/auth/')
+  ) {
     return 'NETWORK_ONLY';
   }
 

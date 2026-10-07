@@ -19,7 +19,7 @@ class MigrationIntegrityIT : BaseIntegrationTest() {
             Int::class.java
         )
         assertNotNull(count)
-        assertTrue(count!! >= 5, "Expected at least 5 successful migrations in schema history, found $count")
+        assertTrue(count!! >= 14, "Expected at least 14 successful migrations in schema history, found $count")
     }
 
     @Test

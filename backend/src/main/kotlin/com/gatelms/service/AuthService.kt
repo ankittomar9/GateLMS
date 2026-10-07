@@ -20,7 +20,7 @@ class AuthService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
     private val loginRateLimiter: LoginRateLimiter,
-    @Value("\${app.admin.initial-password:admin123}")
+    @Value("\${app.admin.initial-password:}")
     private val initialAdminPassword: String
 ) {
     private val logger = LoggerFactory.getLogger(AuthService::class.java)
@@ -43,6 +43,10 @@ class AuthService(
 
         // Bootstrap flow: if operator password is placeholder '!boot'
         if (user.passwordHash == "!boot") {
+            if (initialAdminPassword.isBlank()) {
+                logger.error("Operator initial bootstrap password is not configured! GATELMS_ADMIN_INITIAL_PASSWORD must be provided.")
+                throw IllegalStateException("Administrator initial password is not configured on this environment. Set GATELMS_ADMIN_INITIAL_PASSWORD.")
+            }
             if (request.password == initialAdminPassword) {
                 user.passwordHash = passwordEncoder.encode(request.password)
                 userRepository.save(user)

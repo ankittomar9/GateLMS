@@ -33,6 +33,10 @@ class CurrentUserProvider(
                 }
             }
         }
+        val isWebRequest = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() != null
+        if (isWebRequest) {
+            throw org.springframework.security.authentication.AuthenticationCredentialsNotFoundException("User is unauthenticated")
+        }
         return defaultOperatorId
     }
 

@@ -23,6 +23,8 @@ management:
   tracing:
     enabled: false
 app:
+  admin:
+    initial-password: ${GATELMS_ADMIN_INITIAL_PASSWORD:admin123}
   storage:
     notes-dir: target/test-uploads
   notes:

@@ -1,6 +1,7 @@
 // GateLMS Hand-Rolled Service Worker
 // Cache Versioning
-var CACHE_NAME = 'gatelms-v1';
+var CACHE_VERSION = '2026.10.07-v2';
+var CACHE_NAME = 'gatelms-' + CACHE_VERSION;
 
 var PRECACHE_ASSETS = [
   '/',
@@ -59,6 +60,17 @@ self.addEventListener('fetch', function (event) {
   var url = new URL(request.url);
   var pathname = url.pathname;
   var method = request.method.toUpperCase();
+
+  // Auth routes (/login, /api/v1/auth/*) -> strictly network-only (never cached or intercepted by SW)
+  if (
+    pathname === '/login' ||
+    pathname.indexOf('/login/') === 0 ||
+    pathname.indexOf('/api/v1/auth/') === 0 ||
+    pathname.indexOf('/auth/') === 0
+  ) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   // Navigation requests: document / page load
   if (method === 'GET' && (request.mode === 'navigate' || request.destination === 'document')) {

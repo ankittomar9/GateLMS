@@ -134,15 +134,15 @@ if (!isProd) {
 
 ## 6. Honest-Judge Register (DEV-N)
 
-The continuous monotonic honest-judge register advances from **DEV-13** through **DEV-17**:
+The continuous monotonic honest-judge register advances from **DEV-21** through **DEV-25**:
 
 | ID | Specification Rule | Production Implementation & Safeguard | Test Receipt |
 |---|---|---|---|
-| **DEV-13** | Zero New Dependencies Rule | Hand-rolled plain ES5-safe service worker without `vite-plugin-pwa` or external PWA frameworks. `package.json` diff is exactly zero. Added standard ambient typings in `frontend/src/vite-env.d.ts`. | Verified via `git diff origin/master...phase4/pwa-mobile -- package.json`, `npm run build` |
-| **DEV-14** | Honest Read-Only Offline Execution | Offline capabilities are limited strictly to reading cached question banks, syllabus details, and revision notes. Offline submissions (POST / PATCH) are rejected with standard error handling—no fake client grading or desynced local queues. | `swRouter.test.ts: 3 routes non-GET mutations to NETWORK_ONLY`, `OfflineBanner.tsx` |
-| **DEV-15** | DEV Environment Registration Guard | Service worker registration is strictly prevented in `DEV` (`import.meta.env.PROD === false`) to eliminate HMR cache poisoning during development. | `swRegistration.test.ts: 2 never registers service worker in DEV environment` |
-| **DEV-16** | Dynamic Theme-Color Sync | `meta[name="theme-color"]` is dynamically updated by `DesignContext` when switching between design presets (`tuf`, `sky`, `aurora`, `ink`), ensuring the OS status bar and PWA frame synchronize with active palette tokens. | `DesignContext.test.tsx`, `index.html` boot script |
-| **DEV-17** | `X-From-Cache` Header Stamp | SW stamps cache-fallback API responses with `X-From-Cache: 1`, allowing `apiClient.ts` to dispatch `gatelms:cached-response` event and notify the UI of stale cached content. | `swRouter.test.ts: 2`, `apiClient.ts`, `OfflineBanner.test.tsx: 3` |
+| **DEV-21** | Zero New Dependencies Rule | Hand-rolled plain ES5-safe service worker without `vite-plugin-pwa` or external PWA frameworks. `package.json` diff is exactly zero. Added standard ambient typings in `frontend/src/vite-env.d.ts`. | Verified via `git diff origin/master...phase4/pwa-mobile -- package.json`, `npm run build` |
+| **DEV-22** | Honest Read-Only Offline Execution | Offline capabilities are limited strictly to reading cached question banks, syllabus details, and revision notes via `swRouter.ts` rules. Offline submissions (POST / PATCH / PUT / DELETE) are routed to NETWORK_ONLY with standard network error handling—no fake client grading or desynced local queues. | `swRouter.test.ts: 3 routes non-GET mutations to NETWORK_ONLY`, `OfflineBanner.tsx` |
+| **DEV-23** | DEV Environment Registration Guard | Service worker registration is strictly prevented in `DEV` (`import.meta.env.PROD === false`) to eliminate HMR cache poisoning during development. | `swRegistration.test.ts: 2 never registers service worker in DEV environment` |
+| **DEV-24** | Dynamic Theme-Color Sync | `meta[name="theme-color"]` is dynamically updated by `DesignContext` when switching between design presets (`tuf`, `sky`, `aurora`, `ink`), ensuring the OS status bar and PWA frame synchronize with active palette tokens. | `DesignContext.test.tsx`, `index.html` boot script |
+| **DEV-25** | `X-From-Cache` Header Stamp | SW stamps cache-fallback API responses with `X-From-Cache: 1`, allowing `apiClient.ts` to dispatch `gatelms:cached-response` event and notify the UI of stale cached content. | `swRouter.test.ts: 2`, `apiClient.ts`, `OfflineBanner.test.tsx: 3` |
 
 ---
 

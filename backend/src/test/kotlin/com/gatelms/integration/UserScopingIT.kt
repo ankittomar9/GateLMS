@@ -36,6 +36,27 @@ class UserScopingIT : BaseIntegrationTest() {
     @Autowired
     lateinit var passwordEncoder: PasswordEncoder
 
+    @Autowired
+    lateinit var dailyRollupRepository: DailyRollupRepository
+
+    @Autowired
+    lateinit var topicMasteryRepository: com.gatelms.repository.TopicMasteryRepository
+
+    @Autowired
+    lateinit var notificationRepository: NotificationRepository
+
+    @Autowired
+    lateinit var studyPlanRepository: StudyPlanRepository
+
+    @Autowired
+    lateinit var planItemRepository: PlanItemRepository
+
+    @Autowired
+    lateinit var userGoalRepository: UserGoalRepository
+
+    @Autowired
+    lateinit var questionProgressRepository: QuestionProgressRepository
+
     private lateinit var subject: Subject
     private lateinit var topic: Topic
     private lateinit var question: Question
@@ -44,6 +65,12 @@ class UserScopingIT : BaseIntegrationTest() {
     fun setupData() {
         noteRepository.deleteAll()
         mistakeLogRepository.deleteAll()
+        notificationRepository.deleteAll()
+        planItemRepository.deleteAll()
+        studyPlanRepository.deleteAll()
+        dailyRollupRepository.deleteAll()
+        userGoalRepository.deleteAll()
+        questionProgressRepository.deleteAll()
 
         // Create Alice and Bob if they do not exist
         if (userRepository.findByUsername("alice").isEmpty) {
@@ -257,5 +284,135 @@ class UserScopingIT : BaseIntegrationTest() {
         )
         assertEquals(HttpStatus.OK, allowedResp.statusCode, "ADMIN must be permitted curation with 200")
         assertEquals("ACCEPTED", allowedResp.body!!.curationStatus)
+    }
+
+    @Test
+    fun `7 stats and heatmap isolation between alice and bob`() {
+        val alice = userRepository.findByUsername("alice").get()
+        val bob = userRepository.findByUsername("bob").get()
+
+        // Alice has solved question
+        questionProgressRepository.save(
+            QuestionProgress(
+                id = QuestionProgressId(userId = alice.id, questionId = question.id!!),
+                pass1Status = Pass1Status.SOLVED
+            )
+        )
+
+        loginAs("alice", "alicePass")
+        val aliceStats = restTemplate.getForEntity("/api/v1/stats/summary", StatsSummaryDto::class.java).body
+        assertNotNull(aliceStats)
+        assertEquals(1L, aliceStats!!.pass1.solved)
+
+        loginAs("bob", "bobPass")
+        val bobStats = restTemplate.getForEntity("/api/v1/stats/summary", StatsSummaryDto::class.java).body
+        assertNotNull(bobStats)
+        assertEquals(0L, bobStats!!.pass1.solved, "Bob must have 0 solved questions")
+    }
+
+    @Test
+    fun `8 readiness score isolation between alice and bob`() {
+        val alice = userRepository.findByUsername("alice").get()
+        val bob = userRepository.findByUsername("bob").get()
+
+        // Alice has topic mastery recorded
+        topicMasteryRepository.save(
+            TopicMastery(
+                id = TopicMasteryId(userId = alice.id, topicId = topic.id),
+                masteryLevel = 5,
+                lastRevisedAt = Instant.now()
+            )
+        )
+
+        loginAs("alice", "alicePass")
+        val aliceReadiness = restTemplate.getForEntity("/api/v1/stats/readiness", ReadinessResponse::class.java).body
+        assertNotNull(aliceReadiness)
+        assertTrue(aliceReadiness!!.readiness > 0, "Alice overall readiness should reflect mastery")
+
+        loginAs("bob", "bobPass")
+        val bobReadiness = restTemplate.getForEntity("/api/v1/stats/readiness", ReadinessResponse::class.java).body
+        assertNotNull(bobReadiness)
+        assertEquals(0, bobReadiness!!.readiness, "Bob overall readiness must be 0 without mastery")
+    }
+
+    @Test
+    fun `9 engagement summary and goal isolation between alice and bob`() {
+        // Alice sets custom daily target to 40
+        loginAs("alice", "alicePass")
+        val updateReq = UpdateUserGoalRequest(dailyTargetQuestions = 40)
+        val aliceUpdateResp = restTemplate.exchange(
+            "/api/v1/engagement/goal",
+            HttpMethod.PATCH,
+            HttpEntity(updateReq),
+            UserGoalDto::class.java
+        )
+        assertEquals(HttpStatus.OK, aliceUpdateResp.statusCode)
+
+        val aliceSummary = restTemplate.getForEntity("/api/v1/engagement/summary", EngagementSummaryResponse::class.java).body
+        assertEquals(40, aliceSummary!!.goal.target)
+
+        // Bob logs in: Bob must still have the default target of 20
+        loginAs("bob", "bobPass")
+        val bobSummary = restTemplate.getForEntity("/api/v1/engagement/summary", EngagementSummaryResponse::class.java).body
+        assertEquals(20, bobSummary!!.goal.target, "Bob must see his default target (20), not Alice's (40)")
+    }
+
+    @Test
+    fun `10 notifications isolation between alice and bob`() {
+        val alice = userRepository.findByUsername("alice").get()
+        val bob = userRepository.findByUsername("bob").get()
+
+        // Produce a notification for Alice directly
+        notificationRepository.save(
+            Notification(
+                userId = alice.id,
+                type = NotificationType.ACHIEVEMENT_EARNED,
+                title = "Alice Milestone",
+                body = "Only for Alice"
+            )
+        )
+
+        loginAs("alice", "alicePass")
+        val aliceNotifs = restTemplate.getForEntity("/api/v1/notifications", Map::class.java).body
+        val aliceContent = aliceNotifs?.get("content") as List<Map<String, Any>>
+        assertEquals(1, aliceContent.size)
+        assertEquals("Alice Milestone", aliceContent[0]["title"])
+
+        loginAs("bob", "bobPass")
+        val bobNotifs = restTemplate.getForEntity("/api/v1/notifications", Map::class.java).body
+        val bobContent = bobNotifs?.get("content") as List<Map<String, Any>>
+        assertEquals(0, bobContent.size, "Bob must receive 0 notifications")
+    }
+
+    @Test
+    fun `11 study plan isolation between alice and bob`() {
+        val alice = userRepository.findByUsername("alice").get()
+
+        // Create study plan for Alice
+        studyPlanRepository.save(
+            StudyPlan(
+                userId = alice.id,
+                title = "Alice 30-Day GATE Plan",
+                startDate = java.time.LocalDate.now(),
+                endDate = java.time.LocalDate.now().plusDays(30)
+            )
+        )
+
+        loginAs("alice", "alicePass")
+        val alicePlans = restTemplate.getForEntity(
+            "/api/v1/plans",
+            Array<StudyPlanSummaryDto>::class.java
+        ).body
+        assertNotNull(alicePlans)
+        assertEquals(1, alicePlans!!.size)
+        assertEquals("Alice 30-Day GATE Plan", alicePlans[0].title)
+
+        loginAs("bob", "bobPass")
+        val bobPlans = restTemplate.getForEntity(
+            "/api/v1/plans",
+            Array<StudyPlanSummaryDto>::class.java
+        ).body
+        assertNotNull(bobPlans)
+        assertEquals(0, bobPlans!!.size, "Bob must see 0 plans")
     }
 }

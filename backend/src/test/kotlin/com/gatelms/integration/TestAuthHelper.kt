@@ -13,7 +13,7 @@ class TestAuthSessionInterceptor : ClientHttpRequestInterceptor {
     var autoLoginEnabled: Boolean = true
 
     val currentSessionId: String?
-        get() = cookies["SESSION"] ?: cookies["JSESSIONID"]
+        get() = cookies["GATELMSSESSION"] ?: cookies["SESSION"] ?: cookies["JSESSIONID"]
 
     val currentXsrfToken: String?
         get() = cookies["XSRF-TOKEN"]

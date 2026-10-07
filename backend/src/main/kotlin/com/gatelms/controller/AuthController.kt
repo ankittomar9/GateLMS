@@ -40,6 +40,7 @@ class AuthController(
         SecurityContextHolder.setContext(context)
 
         val session = httpRequest.getSession(true)
+        httpRequest.changeSessionId()
         session.setAttribute(
             HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
             context
