@@ -1,0 +1,19 @@
+services:
+  whisper-sidecar:
+    build:
+      context: ./whisper-sidecar
+      dockerfile: Dockerfile
+    image: gatelms/whisper-sidecar:latest
+    container_name: gatelms-whisper-sidecar
+    ports:
+      - "8178:8178"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8178/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3

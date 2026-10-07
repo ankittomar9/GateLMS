@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, ChevronDown, LogOut, Shield } from 'lucide-react';
+import { Search, Plus, ChevronDown, LogOut, Shield, Sparkles } from 'lucide-react';
 import { DesignSwitcher } from './DesignSwitcher';
 import { LayoutSwitcher } from './LayoutSwitcher';
 import { useDesign } from '../context/DesignContext';
@@ -7,11 +7,13 @@ import { StreakChip } from './engagement/StreakChip';
 import { NotificationBell } from './engagement/NotificationBell';
 import { InstallPrompt } from './pwa/InstallPrompt';
 import { useAuth } from '../context/AuthContext';
+import { useAiStudio } from '../context/AiStudioContext';
 import { useNavigate } from 'react-router-dom';
 
 export const Header: React.FC = () => {
   const { currentDesign } = useDesign();
   const { user, logout } = useAuth();
+  const { isOpen, toggleOpen } = useAiStudio();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -59,6 +61,25 @@ export const Header: React.FC = () => {
 
         {/* PWA Install Prompt Button */}
         <InstallPrompt />
+
+        {/* AI Studio Sidecar Toggle Button */}
+        <button
+          type="button"
+          onClick={toggleOpen}
+          data-testid="header-ai-studio-button"
+          title="Toggle AI Studio Sidecar (⌘J)"
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-ds text-xs font-bold transition-all border ${
+            isOpen
+              ? 'bg-ds-accent text-ds-accent-contrast border-ds-accent shadow-sm'
+              : 'bg-ds-surface border-ds-border text-ds-primary hover:border-ds-accent/60 hover:bg-ds-surface-raised'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">AI Studio</span>
+          <kbd className="hidden lg:inline text-[9px] font-mono px-1 py-0.2 rounded bg-ds-surface-raised border border-ds-border text-ds-muted">
+            ⌘J
+          </kbd>
+        </button>
 
         {/* Quick Action (TUF Classic only) */}
         {currentDesign === 'tuf' && (

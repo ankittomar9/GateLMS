@@ -72,3 +72,25 @@ app:
   notifications:
     morning-cron: ${APP_NOTIFICATIONS_MORNING_CRON:0 0 8 * * *}
     evening-cron: ${APP_NOTIFICATIONS_EVENING_CRON:0 0 20 * * *}
+  ai:
+    providers:
+      groq:
+        api-key: ${GROQ_API_KEY:}
+        default-model: ${GROQ_DEFAULT_MODEL:llama-3.3-70b-versatile}
+        stt-model: ${GROQ_STT_MODEL:whisper-large-v3-turbo}
+        endpoint: https://api.groq.com/openai/v1
+      gemini:
+        api-key: ${GEMINI_API_KEY:}
+        default-model: ${GEMINI_DEFAULT_MODEL:gemini-2.0-flash}
+        endpoint: https://generativelanguage.googleapis.com/v1beta/models
+      openai:
+        api-key: ${OPENAI_API_KEY:}
+        default-model: ${OPENAI_DEFAULT_MODEL:gpt-4o-mini}
+        endpoint: https://api.openai.com/v1
+      ollama:
+        endpoint: ${OLLAMA_ENDPOINT:http://localhost:11434}
+        default-model: ${OLLAMA_DEFAULT_MODEL:llama3}
+    whisper:
+      local-endpoint: ${WHISPER_ENDPOINT:http://localhost:8178/inference}
+      stt-provider: ${STT_PROVIDER:auto}
+

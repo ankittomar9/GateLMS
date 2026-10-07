@@ -5,6 +5,7 @@ import { Header } from './Header';
 import { RightSidebar } from './RightSidebar';
 import { OfflineBanner } from './pwa/OfflineBanner';
 import { UpdateToast } from './pwa/UpdateToast';
+import { AiStudioDrawer } from './ai/AiStudioDrawer';
 
 export const Layout: React.FC = () => {
   return (
@@ -25,6 +26,9 @@ export const Layout: React.FC = () => {
 
       {/* 3. Right Productivity Rail */}
       <RightSidebar />
+
+      {/* 4. In-Portal AI Studio Sidecar (Collapsible, Stretchable, Resizable) */}
+      <AiStudioDrawer />
     </div>
   );
 };

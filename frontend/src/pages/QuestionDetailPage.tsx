@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -22,6 +22,7 @@ import {
 } from '../hooks/useQueries';
 import { MathText } from '../components/MathText';
 import { Pass1Status, Pass2Status, QuestionType } from '../api/types';
+import { useAiStudio } from '../context/AiStudioContext';
 
 interface OptionItem {
   label: string;
@@ -36,9 +37,27 @@ export const QuestionDetailPage: React.FC = () => {
   const [conflictError, setConflictError] = useState<string | null>(null);
 
   const { data: q, isLoading, error, refetch } = useQuestion(id);
+  const { registerActiveQuestion } = useAiStudio();
   const updatePass1 = useUpdatePass1Status();
   const updatePass2 = useUpdatePass2Status();
   const toggleBookmark = useToggleBookmark();
+
+  useEffect(() => {
+    if (q) {
+      registerActiveQuestion({
+        id: q.id,
+        externalId: q.externalId,
+        statement: q.statement,
+        type: q.type,
+        year: q.year,
+        marks: q.marks,
+        subjectName: q.subjectName,
+        topicName: q.topicName,
+        optionsJson: q.optionsJson,
+      });
+    }
+    return () => registerActiveQuestion(null);
+  }, [q, registerActiveQuestion]);
 
   const handlePass1Change = async (status: Pass1Status) => {
     if (!q) return;

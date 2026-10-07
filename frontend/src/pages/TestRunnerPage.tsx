@@ -18,6 +18,7 @@ import {
   useSubmitMockAttempt 
 } from '../hooks/useQueries';
 import { PracticeQuestionDto, StartMockAttemptResponse } from '../api/types';
+import { useAiStudio } from '../context/AiStudioContext';
 
 export const TestRunnerPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -161,8 +162,26 @@ export const TestRunnerPage: React.FC = () => {
     }
   };
 
+  const { registerActiveQuestion } = useAiStudio();
   const questions = attemptData?.questions || [];
   const currentQuestion: PracticeQuestionDto | undefined = questions[currentIndex];
+
+  useEffect(() => {
+    if (currentQuestion) {
+      registerActiveQuestion({
+        id: currentQuestion.id,
+        externalId: currentQuestion.externalId,
+        statement: currentQuestion.statement,
+        type: currentQuestion.type,
+        year: currentQuestion.year,
+        marks: currentQuestion.marks,
+        subjectId: currentQuestion.subjectId,
+        topicId: currentQuestion.topicId,
+        optionsJson: currentQuestion.optionsJson,
+      });
+    }
+    return () => registerActiveQuestion(null);
+  }, [currentQuestion, registerActiveQuestion]);
 
   // Parse options safely
   const options = useMemo(() => {

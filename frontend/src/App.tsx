@@ -6,6 +6,7 @@ import { DesignProvider } from './context/DesignContext';
 import { LayoutProvider } from './context/LayoutContext';
 
 import { AuthProvider } from './context/AuthContext';
+import { AiStudioProvider } from './context/AiStudioContext';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,7 +24,9 @@ export const App: React.FC = () => {
       <AuthProvider>
         <DesignProvider>
           <LayoutProvider>
-            <RouterProvider router={router} />
+            <AiStudioProvider>
+              <RouterProvider router={router} />
+            </AiStudioProvider>
           </LayoutProvider>
         </DesignProvider>
       </AuthProvider>

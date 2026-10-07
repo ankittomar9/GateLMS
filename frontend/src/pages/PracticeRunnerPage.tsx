@@ -34,6 +34,7 @@ import {
   useCreateMistake
 } from '../hooks/useQueries';
 import { MathText } from '../components/MathText';
+import { useAiStudio } from '../context/AiStudioContext';
 
 interface OptionItem {
   label: string;
@@ -109,7 +110,26 @@ export const PracticeRunnerPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [finishSummary, currentIndex]);
 
+  const { registerActiveQuestion } = useAiStudio();
   const currentQuestion: PracticeQuestionDto | undefined = session?.questions[currentIndex];
+
+  useEffect(() => {
+    if (currentQuestion) {
+      registerActiveQuestion({
+        id: currentQuestion.id,
+        externalId: currentQuestion.externalId,
+        statement: currentQuestion.statement,
+        type: currentQuestion.type,
+        year: currentQuestion.year,
+        marks: currentQuestion.marks,
+        subjectId: currentQuestion.subjectId,
+        topicId: currentQuestion.topicId,
+        optionsJson: currentQuestion.optionsJson,
+        selectedAnswer: selectedOptions || numericAnswer || undefined,
+      });
+    }
+    return () => registerActiveQuestion(null);
+  }, [currentQuestion, selectedOptions, numericAnswer, registerActiveQuestion]);
 
   // Helper to parse options safely
   const parseOptions = (jsonStr: string | null): OptionItem[] => {
