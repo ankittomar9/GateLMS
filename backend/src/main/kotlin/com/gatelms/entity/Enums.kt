@@ -18,3 +18,23 @@ enum class Pass2Status {
     SOLVED,
     FAILED
 }
+
+enum class QuestionSource {
+    SAMPLE,
+    SO_DERIVED,
+    AUTHORED,
+    GATE_PYP,
+    APT
+}
+
+enum class CurationStatus {
+    UNREVIEWED,
+    ACCEPTED,
+    REJECTED
+}
+
+enum class QuestionDifficulty {
+    EASY,
+    MEDIUM,
+    HARD
+}

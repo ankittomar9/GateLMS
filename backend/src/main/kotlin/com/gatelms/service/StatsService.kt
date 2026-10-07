@@ -1,9 +1,6 @@
 package com.gatelms.service
 
-import com.gatelms.dto.ByTypeCountDto
-import com.gatelms.dto.Pass1CountDto
-import com.gatelms.dto.StatsSummaryDto
-import com.gatelms.dto.SubjectCountDto
+import com.gatelms.dto.*
 import com.gatelms.entity.Pass1Status
 import com.gatelms.entity.QuestionType
 import com.gatelms.repository.QuestionRepository
@@ -53,6 +50,60 @@ class StatsService(
             bySubject = bySubject,
             byType = byType,
             pass1 = pass1
+        )
+    }
+
+    fun getCurationStats(): CurationStatsDto {
+        val total = questionRepository.count()
+        val curationCounts = questionRepository.countGroupedByCurationStatus().associate {
+            (it[0] as String) to (it[1] as Long)
+        }
+        val byStatus = mapOf(
+            "UNREVIEWED" to (curationCounts["UNREVIEWED"] ?: 0L),
+            "ACCEPTED" to (curationCounts["ACCEPTED"] ?: 0L),
+            "REJECTED" to (curationCounts["REJECTED"] ?: 0L)
+        )
+
+        val subjectMap = subjectRepository.findAll().sortedBy { it.name }
+        val subjectCurationRaw = questionRepository.countCurationGroupedBySubject()
+        val groupedBySubject = subjectCurationRaw.groupBy { it[0] as String }
+
+        val bySubject = subjectMap.map { s ->
+            val entries = groupedBySubject[s.id] ?: emptyList()
+            val unreviewed = entries.find { it[2] == "UNREVIEWED" }?.let { it[3] as Long } ?: 0L
+            val accepted = entries.find { it[2] == "ACCEPTED" }?.let { it[3] as Long } ?: 0L
+            val rejected = entries.find { it[2] == "REJECTED" }?.let { it[3] as Long } ?: 0L
+            SubjectCurationCountDto(
+                subjectId = s.id,
+                name = s.name,
+                unreviewed = unreviewed,
+                accepted = accepted,
+                rejected = rejected
+            )
+        }
+
+        return CurationStatsDto(
+            totalQuestions = total,
+            byStatus = byStatus,
+            bySubject = bySubject
+        )
+    }
+
+    fun getDistributionStats(): DistributionStatsDto {
+        val total = questionRepository.count()
+        val rawDistribution = questionRepository.countDistribution()
+        val items = rawDistribution.map { row ->
+            DistributionItemDto(
+                subjectSlug = row[0] as String,
+                subjectName = row[1] as String,
+                type = (row[2] as? QuestionType)?.name ?: row[2].toString(),
+                difficulty = row[3] as String,
+                count = row[4] as Long
+            )
+        }
+        return DistributionStatsDto(
+            total = total,
+            distribution = items
         )
     }
 }

@@ -8,6 +8,7 @@ import {
   Layers
 } from 'lucide-react';
 import { useDesign } from '../../context/DesignContext';
+import { CurationProgressTile } from './CurationProgressTile';
 
 export const EditorialDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -265,6 +266,9 @@ export const EditorialDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 4. Curation Queue Section */}
+      <CurationProgressTile />
     </div>
   );
 };

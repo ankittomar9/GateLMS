@@ -23,6 +23,9 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
               AND (:pass1Status IS NULL OR q.pass1_status = :pass1Status)
               AND (:pass2Status IS NULL OR q.pass2_status = :pass2Status)
               AND (:bookmarked IS NULL OR q.is_bookmarked = :bookmarked)
+              AND (:curationStatus IS NULL OR q.curation_status = :curationStatus)
+              AND (:source IS NULL OR q.source = :source)
+              AND (:difficulty IS NULL OR q.difficulty = :difficulty)
               AND (cast(:q as text) IS NULL OR q.search_vector @@ websearch_to_tsquery('english', cast(:q as text)))
             ORDER BY
               CASE WHEN cast(:q as text) IS NOT NULL THEN ts_rank(q.search_vector, websearch_to_tsquery('english', cast(:q as text))) END DESC NULLS LAST,
@@ -38,6 +41,9 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
               AND (:pass1Status IS NULL OR q.pass1_status = :pass1Status)
               AND (:pass2Status IS NULL OR q.pass2_status = :pass2Status)
               AND (:bookmarked IS NULL OR q.is_bookmarked = :bookmarked)
+              AND (:curationStatus IS NULL OR q.curation_status = :curationStatus)
+              AND (:source IS NULL OR q.source = :source)
+              AND (:difficulty IS NULL OR q.difficulty = :difficulty)
               AND (cast(:q as text) IS NULL OR q.search_vector @@ websearch_to_tsquery('english', cast(:q as text)))
         """,
         nativeQuery = true
@@ -50,6 +56,9 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
         @Param("pass1Status") pass1Status: String?,
         @Param("pass2Status") pass2Status: String?,
         @Param("bookmarked") bookmarked: Boolean?,
+        @Param("curationStatus") curationStatus: String? = null,
+        @Param("source") source: String? = null,
+        @Param("difficulty") difficulty: String? = null,
         @Param("q") q: String?,
         pageable: Pageable
     ): Page<Question>
@@ -62,4 +71,13 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
 
     @Query("SELECT q.pass1Status, count(q) FROM Question q GROUP BY q.pass1Status")
     fun countGroupedByPass1Status(): List<Array<Any>>
+
+    @Query("SELECT q.curationStatus, count(q) FROM Question q GROUP BY q.curationStatus")
+    fun countGroupedByCurationStatus(): List<Array<Any>>
+
+    @Query("SELECT q.subject.id, q.subject.name, q.curationStatus, count(q) FROM Question q WHERE q.subject IS NOT NULL GROUP BY q.subject.id, q.subject.name, q.curationStatus")
+    fun countCurationGroupedBySubject(): List<Array<Any>>
+
+    @Query("SELECT q.subject.slug, q.subject.name, q.type, coalesce(q.difficulty, 'UNSPECIFIED'), count(q) FROM Question q WHERE q.subject IS NOT NULL GROUP BY q.subject.slug, q.subject.name, q.type, q.difficulty ORDER BY q.subject.name, q.type")
+    fun countDistribution(): List<Array<Any>>
 }

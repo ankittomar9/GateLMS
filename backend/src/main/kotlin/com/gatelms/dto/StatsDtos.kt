@@ -25,3 +25,30 @@ data class Pass1CountDto(
     val failed: Long,
     val pending: Long
 )
+
+data class SubjectCurationCountDto(
+    val subjectId: String,
+    val name: String,
+    val unreviewed: Long,
+    val accepted: Long,
+    val rejected: Long
+)
+
+data class CurationStatsDto(
+    val totalQuestions: Long,
+    val byStatus: Map<String, Long>,
+    val bySubject: List<SubjectCurationCountDto>
+)
+
+data class DistributionItemDto(
+    val subjectSlug: String,
+    val subjectName: String,
+    val type: String,
+    val difficulty: String,
+    val count: Long
+)
+
+data class DistributionStatsDto(
+    val total: Long,
+    val distribution: List<DistributionItemDto>
+)

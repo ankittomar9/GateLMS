@@ -217,6 +217,27 @@ export const QuestionDetailPage: React.FC = () => {
             <span className="font-mono text-xs text-ds-muted bg-ds-surface-raised px-2.5 py-1 rounded-ds border border-ds-border">
               GATE {q.year}
             </span>
+            {q.source && (
+              <span className="font-mono text-xs text-ds-secondary bg-ds-surface-raised px-2.5 py-1 rounded-ds border border-ds-border">
+                {q.source}
+              </span>
+            )}
+            {q.difficulty && (
+              <span className="font-mono text-xs px-2.5 py-1 rounded-ds border text-ds-warning bg-ds-warning/10 border-ds-warning/30">
+                {q.difficulty}
+              </span>
+            )}
+            {q.curationStatus && (
+              <span className={`font-mono text-xs px-2.5 py-1 rounded-ds border ${
+                q.curationStatus === 'ACCEPTED'
+                  ? 'text-ds-success bg-ds-success/10 border-ds-success/30'
+                  : q.curationStatus === 'REJECTED'
+                  ? 'text-ds-danger bg-ds-danger/10 border-ds-danger/30'
+                  : 'text-ds-muted bg-ds-surface-raised border-ds-border'
+              }`}>
+                {q.curationStatus}
+              </span>
+            )}
             <span className="font-mono text-xs text-ds-muted">
               ID: {q.externalId}
             </span>
@@ -228,6 +249,12 @@ export const QuestionDetailPage: React.FC = () => {
             <span className="text-ds-muted">{q.topicName}</span>
           </div>
         </div>
+
+        {q.curationNote && (
+          <div className="p-3 bg-ds-surface-raised border border-ds-border rounded-ds text-xs text-ds-secondary">
+            <strong className="text-ds-primary font-mono">Curation Note:</strong> {q.curationNote}
+          </div>
+        )}
 
         {/* Question Statement */}
         <div className="text-base text-ds-primary leading-relaxed font-normal">

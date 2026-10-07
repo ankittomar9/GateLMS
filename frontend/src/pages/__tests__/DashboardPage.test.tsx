@@ -7,6 +7,22 @@ import { LayoutProvider, STORAGE_KEY } from '../../context/LayoutContext';
 import { DesignProvider } from '../../context/DesignContext';
 import { Header } from '../../components/Header';
 import { DashboardPage } from '../DashboardPage';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const renderWithProviders = (ui: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  );
+};
 
 describe('Dashboard Multi-Layout Engine & Variant Views', () => {
   beforeEach(() => {
@@ -14,7 +30,7 @@ describe('Dashboard Multi-Layout Engine & Variant Views', () => {
   });
 
   it('renders Variant 1: Modern Minimalist by default', () => {
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={['/']}>
         <LayoutProvider>
           <DashboardPage />
@@ -32,7 +48,7 @@ describe('Dashboard Multi-Layout Engine & Variant Views', () => {
   it('renders Variant 2: Editorial & Academic when layout is editorial', () => {
     localStorage.setItem(STORAGE_KEY, 'editorial');
 
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={['/']}>
         <LayoutProvider>
           <DashboardPage />
@@ -51,7 +67,7 @@ describe('Dashboard Multi-Layout Engine & Variant Views', () => {
     const user = userEvent.setup();
     localStorage.setItem(STORAGE_KEY, 'bento');
 
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={['/']}>
         <LayoutProvider>
           <DashboardPage />
@@ -81,7 +97,7 @@ describe('Dashboard Multi-Layout Engine & Variant Views', () => {
   it('switches live between all 3 layouts instantaneously when toggled from Header', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProviders(
       <MemoryRouter initialEntries={['/']}>
         <LayoutProvider>
           <Header />
@@ -120,7 +136,7 @@ describe('Dashboard Multi-Layout Engine & Variant Views', () => {
     presets.forEach((preset) => {
       localStorage.setItem('gatelms_design', preset);
 
-      const { unmount } = render(
+      const { unmount } = renderWithProviders(
         <MemoryRouter initialEntries={['/']}>
           <DesignProvider>
             <LayoutProvider>
@@ -145,7 +161,7 @@ describe('Dashboard Multi-Layout Engine & Variant Views', () => {
     // 1. Sky preset -> sky-welcome-banner mounted
     localStorage.setItem('gatelms_design', 'sky');
     localStorage.setItem(STORAGE_KEY, 'bento');
-    const { unmount: unmountSky } = render(
+    const { unmount: unmountSky } = renderWithProviders(
       <MemoryRouter initialEntries={['/']}>
         <DesignProvider>
           <LayoutProvider>
@@ -161,7 +177,7 @@ describe('Dashboard Multi-Layout Engine & Variant Views', () => {
     // 2. Ink preset -> ink-quote-banner and ink-inline-column mounted, sky banner not mounted
     localStorage.setItem('gatelms_design', 'ink');
     localStorage.setItem(STORAGE_KEY, 'minimalist');
-    const { unmount: unmountInk } = render(
+    const { unmount: unmountInk } = renderWithProviders(
       <MemoryRouter initialEntries={['/']}>
         <DesignProvider>
           <LayoutProvider>
@@ -178,7 +194,7 @@ describe('Dashboard Multi-Layout Engine & Variant Views', () => {
     // 3. Aurora preset -> aurora-book-card mounted, sky banner not mounted
     localStorage.setItem('gatelms_design', 'aurora');
     localStorage.setItem(STORAGE_KEY, 'editorial');
-    const { unmount: unmountAurora } = render(
+    const { unmount: unmountAurora } = renderWithProviders(
       <MemoryRouter initialEntries={['/']}>
         <DesignProvider>
           <LayoutProvider>
@@ -196,7 +212,7 @@ describe('Dashboard Multi-Layout Engine & Variant Views', () => {
     // 4. Tuf preset -> none of the special mockup cards mounted
     localStorage.setItem('gatelms_design', 'tuf');
     localStorage.setItem(STORAGE_KEY, 'minimalist');
-    const { unmount: unmountTuf } = render(
+    const { unmount: unmountTuf } = renderWithProviders(
       <MemoryRouter initialEntries={['/']}>
         <DesignProvider>
           <LayoutProvider>

@@ -29,6 +29,9 @@ class QuestionController(
         @RequestParam(required = false) pass1Status: String?,
         @RequestParam(required = false) pass2Status: String?,
         @RequestParam(required = false) bookmarked: Boolean?,
+        @RequestParam(required = false) curationStatus: String?,
+        @RequestParam(required = false) source: String?,
+        @RequestParam(required = false) difficulty: String?,
         @RequestParam(required = false) q: String?,
         @PageableDefault(size = 20) pageable: Pageable
     ): Page<QuestionSummaryDto> {
@@ -40,6 +43,9 @@ class QuestionController(
             pass1Status = pass1Status,
             pass2Status = pass2Status,
             bookmarked = bookmarked,
+            curationStatus = curationStatus,
+            source = source,
+            difficulty = difficulty,
             q = q,
             pageable = pageable
         )
@@ -70,5 +76,13 @@ class QuestionController(
         @RequestBody dto: QuestionStatusUpdateDto
     ): QuestionDto {
         return questionService.updateStatus(id, dto)
+    }
+
+    @PatchMapping("/{id}/curation")
+    fun updateCuration(
+        @PathVariable id: UUID,
+        @RequestBody dto: com.gatelms.dto.CurationUpdateRequest
+    ): QuestionDto {
+        return questionService.updateCuration(id, dto)
     }
 }
