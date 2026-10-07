@@ -22,6 +22,8 @@ data class QuestionSummaryDto(
     val pass1Status: Pass1Status,
     val pass2Status: Pass2Status,
     val isBookmarked: Boolean,
+    val bookmarkedAt: Instant? = null,
+    val lastAttemptedAt: Instant? = null,
     val source: String = "SAMPLE",
     val curationStatus: String = "UNREVIEWED",
     val curationNote: String? = null,
@@ -49,6 +51,8 @@ data class QuestionDto(
     val pass1Status: Pass1Status,
     val pass2Status: Pass2Status,
     val isBookmarked: Boolean,
+    val bookmarkedAt: Instant? = null,
+    val lastAttemptedAt: Instant? = null,
     val source: String = "SAMPLE",
     val curationStatus: String = "UNREVIEWED",
     val curationNote: String? = null,
@@ -56,6 +60,10 @@ data class QuestionDto(
     val createdAt: Instant,
     val updatedAt: Instant?,
     val version: Int
+)
+
+data class BookmarkRequest(
+    val bookmarked: Boolean
 )
 
 data class QuestionUpsertDto(

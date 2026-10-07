@@ -13,7 +13,8 @@ import {
   ClipboardCheck,
   PenLine,
   Activity,
-  NotebookPen
+  NotebookPen,
+  RotateCcw
 } from 'lucide-react';
 import { useDesign } from '../context/DesignContext';
 
@@ -26,6 +27,7 @@ export const Sidebar: React.FC = () => {
   const pathname = location.pathname;
   const isDashboard = pathname === '/';
   const isInsights = pathname.startsWith('/insights');
+  const isRevision = pathname.startsWith('/revision');
   const isNotes = pathname.startsWith('/notes');
   const isSyllabus = pathname.startsWith('/syllabus');
   const isQuestions = pathname.startsWith('/questions');
@@ -91,6 +93,15 @@ export const Sidebar: React.FC = () => {
               >
                 <Activity className={`w-4 h-4 ${isInsights ? 'text-ds-accent' : 'text-ds-muted'}`} />
                 <span>Insights</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/revision')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isRevision)}`}
+              >
+                <RotateCcw className={`w-4 h-4 ${isRevision ? 'text-ds-accent' : 'text-ds-muted'}`} />
+                <span>Revision</span>
               </button>
 
               <button

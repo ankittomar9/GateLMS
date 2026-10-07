@@ -100,4 +100,12 @@ class QuestionController(
     ): QuestionDto {
         return questionService.updateCuration(id, dto)
     }
+
+    @PatchMapping("/{id}/bookmark")
+    fun updateBookmark(
+        @PathVariable id: UUID,
+        @RequestBody request: com.gatelms.dto.BookmarkRequest
+    ): QuestionDto {
+        return questionService.updateBookmark(id, request.bookmarked)
+    }
 }

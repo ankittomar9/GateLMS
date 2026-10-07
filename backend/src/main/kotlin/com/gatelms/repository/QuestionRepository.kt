@@ -107,4 +107,57 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
         @Param("difficulties") difficulties: List<String>,
         @Param("limit") limit: Int
     ): List<Question>
+
+    @Query("""
+        SELECT COUNT(q) FROM Question q
+        WHERE q.pass1Status IN (com.gatelms.entity.Pass1Status.FAILED, com.gatelms.entity.Pass1Status.ASSISTED)
+          AND q.pass2Status = com.gatelms.entity.Pass2Status.PENDING
+    """)
+    fun countPass2Pending(): Long
+
+    @Query("""
+        SELECT q FROM Question q
+        WHERE q.pass1Status IN (com.gatelms.entity.Pass1Status.FAILED, com.gatelms.entity.Pass1Status.ASSISTED)
+          AND q.pass2Status = com.gatelms.entity.Pass2Status.PENDING
+          AND (:subjectId IS NULL OR q.subject.id = :subjectId)
+          AND (:topicId IS NULL OR q.topic.id = :topicId)
+        ORDER BY q.updatedAt DESC NULLS LAST, q.id ASC
+    """)
+    fun findPass2Candidates(
+        @Param("subjectId") subjectId: String?,
+        @Param("topicId") topicId: String?,
+        pageable: Pageable
+    ): List<Question>
+
+    @Query("SELECT COUNT(q) FROM Question q WHERE q.isBookmarked = TRUE")
+    fun countBookmarked(): Long
+
+    @Query("""
+        SELECT q FROM Question q
+        WHERE q.isBookmarked = TRUE
+          AND (:subjectId IS NULL OR q.subject.id = :subjectId)
+          AND (:topicId IS NULL OR q.topic.id = :topicId)
+        ORDER BY q.bookmarkedAt DESC NULLS LAST, q.id ASC
+    """)
+    fun findBookmarkedCandidates(
+        @Param("subjectId") subjectId: String?,
+        @Param("topicId") topicId: String?,
+        pageable: Pageable
+    ): List<Question>
+
+    @Query("""
+        SELECT q FROM Question q
+        JOIN q.topic t
+        WHERE t.nextRevisionDue IS NOT NULL
+          AND t.nextRevisionDue <= :now
+          AND (:subjectId IS NULL OR q.subject.id = :subjectId)
+          AND (:topicId IS NULL OR t.id = :topicId)
+        ORDER BY t.nextRevisionDue ASC, q.id ASC
+    """)
+    fun findDueTopicCandidates(
+        @Param("now") now: java.time.Instant,
+        @Param("subjectId") subjectId: String?,
+        @Param("topicId") topicId: String?,
+        pageable: Pageable
+    ): List<Question>
 }

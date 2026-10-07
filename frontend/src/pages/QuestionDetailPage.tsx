@@ -175,7 +175,8 @@ export const QuestionDetailPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => toggleBookmark.mutate(q.id)}
+            data-testid="detail-bookmark-btn"
+            onClick={() => toggleBookmark.mutate({ id: q.id, bookmarked: !q.isBookmarked })}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-ds border text-xs transition-colors ${
               q.isBookmarked
                 ? 'bg-ds-accent-soft border-ds-accent/30 text-ds-accent'

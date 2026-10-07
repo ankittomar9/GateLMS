@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, Calendar, AlertCircle, ArrowRight } from 'lucide-react';
-import { readinessApi, ReadinessResponse, ExamCountdown, HeatmapResponse } from '../../api/readinessApi';
+import { readinessApi, ReadinessResponse, ExamCountdown } from '../../api/readinessApi';
+import { revisionApi } from '../../api/revisionApi';
 
 export const ReadinessSummaryCard: React.FC = () => {
   const navigate = useNavigate();
@@ -14,19 +15,17 @@ export const ReadinessSummaryCard: React.FC = () => {
     let mounted = true;
     const load = async () => {
       try {
-        const [r, c, h] = await Promise.all([
+        const [r, c, rev] = await Promise.all([
           readinessApi.getReadiness(),
           readinessApi.getCountdown(),
-          readinessApi.getHeatmap(),
+          revisionApi.getOverview().catch(() => null),
         ]);
         if (mounted) {
           setReadiness(r);
           setCountdown(c);
-          const totalDue = h.subjects.reduce(
-            (acc, s) => acc + s.topics.filter(t => t.due).length,
-            0
-          );
-          setDueCount(totalDue);
+          if (rev) {
+            setDueCount((rev.dueMistakes || 0) + (rev.dueTopics || 0));
+          }
         }
       } catch {
         // Fallback to honest zero state on network failure
@@ -64,16 +63,16 @@ export const ReadinessSummaryCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Due This Week Count Chip */}
+        {/* Due for revision Count Chip */}
         <button
           type="button"
-          onClick={() => navigate('/mistakes')}
-          className="flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full border border-ds-warning/40 bg-ds-warning/10 text-ds-warning hover:bg-ds-warning/20 transition-all"
-          title="Topics due for spaced revision"
+          onClick={() => navigate('/revision')}
+          className="flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full border border-ds-warning/40 bg-ds-warning/10 text-ds-warning hover:bg-ds-warning/20 transition-all cursor-pointer"
+          title="Items due for revision (due mistakes + due topics)"
           data-testid="due-this-week-chip"
         >
           <AlertCircle className="w-3.5 h-3.5" />
-          <span>{loading ? '...' : `${dueCount} Due this week`}</span>
+          <span>{loading ? '...' : `${dueCount} Due for revision`}</span>
         </button>
       </div>
 
