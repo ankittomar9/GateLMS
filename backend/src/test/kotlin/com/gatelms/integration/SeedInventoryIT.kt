@@ -75,4 +75,33 @@ class SeedInventoryIT : BaseIntegrationTest() {
         assertEquals(0, rep2.inserted, "Idempotent re-run should insert 0 new questions")
         assertEquals(rep1.total, rep2.updated)
     }
+
+    @Test
+    fun `honest-judge PASS - multi-path seeding imports all three banks with zero rejections (C1)`() {
+        // Starter bank
+        val rep1 = questionSeedRunner.importQuestions("seed-data/questions.jsonl")
+        assertEquals(0, rep1.rejected)
+        assertEquals(26, rep1.total)
+
+        // Authored PYP bank
+        val rep2 = questionSeedRunner.importQuestions("seed-data/pyp-bank.jsonl")
+        assertEquals(0, rep2.rejected)
+        assertEquals(555, rep2.total)
+
+        // GATE-Overflow bank
+        val rep3 = questionSeedRunner.importQuestions("seed-data/so-gate-bank.jsonl")
+        assertEquals(0, rep3.rejected)
+        assertEquals(2550, rep3.total)
+
+        val total = rep1.total + rep2.total + rep3.total
+        assertEquals(3131, total)
+
+        loginAs("ankur", "admin123")
+        val adminResp = restTemplate.getForEntity("/api/v1/admin/seed/inventory", SeedInventoryResponse::class.java)
+        assertEquals(HttpStatus.OK, adminResp.statusCode)
+        val inv = adminResp.body!!
+        assertEquals(3131L, inv.totalQuestions)
+        assertEquals(3131L, inv.totalVisibleQuestions)
+        assertEquals(10, inv.subjects.size)
+    }
 }

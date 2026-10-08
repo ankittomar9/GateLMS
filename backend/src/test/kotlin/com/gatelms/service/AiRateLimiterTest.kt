@@ -65,6 +65,20 @@ class AiRateLimiterTest {
     }
 
     @Test
+    fun `primer limit permits 10 requests and rejects 11th with Retry-After (AM-8, M2-C2)`() {
+        val userId = UUID.randomUUID()
+        for (i in 1..10) {
+            rateLimiter.checkPrimerGenerateLimit(userId)
+        }
+
+        val ex = assertThrows(AiRateLimitException::class.java) {
+            rateLimiter.checkPrimerGenerateLimit(userId)
+        }
+        assertTrue(ex.retryAfterSeconds in 1..3600)
+        assertTrue(ex.message!!.contains("Topic primer generation quota exceeded"))
+    }
+
+    @Test
     fun `rate limiter isolates quotas between independent users (AM-8)`() {
         val userAlice = UUID.randomUUID()
         val userBob = UUID.randomUUID()

@@ -245,13 +245,26 @@ class JourneyApiIT : BaseIntegrationTest() {
         )
         val updatedDbms = updatedResp.body!!.first { it.subjectId == "subj_dbms" }
 
-        // Dial 1: questionsSolved advanced by +1
-        assertEquals(1L, updatedDbms.questionsSolved, "Dial 1: questionsSolved must increment by 1")
+        // Dial 1: questionsSolved advanced by +1 on subject card
+        assertEquals(1L, updatedDbms.questionsSolved, "Dial 1: Subject card questionsSolved must increment by 1")
 
-        // Dial 2: topicsTouched advanced from 0 to 1
+        // Dial 2: Topic progress bar / roadmap row questionsSolved advanced by +1 and topicsTouched flips 0 to 1
         assertEquals(1, updatedDbms.topicsTouched, "Dial 2: topicsTouched must flip from 0 to 1")
+        val topicsResp = restTemplate.exchange(
+            "/api/v1/journey/subjects/subj_dbms/topics",
+            HttpMethod.GET,
+            null,
+            object : ParameterizedTypeReference<List<JourneyTopicSummaryDto>>() {}
+        )
+        assertEquals(HttpStatus.OK, topicsResp.statusCode)
+        val topicRow = topicsResp.body!!.first { it.topicId == topicId }
+        assertEquals(1L, topicRow.questionsSolved, "Dial 2: Topic roadmap row questionsSolved must increment by 1")
+        assertEquals(2, topicRow.masteryLevel, "Dial 2: Topic roadmap row masteryLevel must reflect solved attempt")
 
-        // Dial 3: continue strip now reflects this attempted question
+        // Dial 3: Overall readiness dial advances (readinessPct delta > 0)
+        assertTrue(updatedDbms.readinessPct > initialDbms.readinessPct, "Dial 3: readinessPct must advance (> 0)")
+
+        // Additional: continue strip reflects this attempted question
         val continueResp = restTemplate.getForEntity("/api/v1/journey/continue", JourneyContinueDto::class.java)
         assertEquals(HttpStatus.OK, continueResp.statusCode)
         assertEquals(dbmsQuestion.id, continueResp.body?.questionId)
@@ -305,5 +318,32 @@ class JourneyApiIT : BaseIntegrationTest() {
         // Database row count for this topic is exactly 1
         val dbPrimer = topicPrimerRepository.findByTopicId("topic_dbms_relational_alg")
         assertTrue(dbPrimer.isPresent)
+    }
+
+    @Test
+    fun `honest-judge PASS - primer generation enforces 429 quota limit when exceeded (M2-C2)`() {
+        val username = "student_quota_${UUID.randomUUID().toString().take(8)}"
+        val user = userRepository.save(
+            User(
+                username = username,
+                displayName = "Quota Student",
+                passwordHash = passwordEncoder.encode("password123"),
+                role = UserRole.STUDENT
+            )
+        )
+        loginAs(username, "password123")
+
+        // Exhaust quota (10 requests) for this user
+        for (i in 1..10) {
+            aiRateLimiter.checkPrimerGenerateLimit(user.id)
+        }
+
+        // 11th request must return 429 Too Many Requests
+        val resp = restTemplate.postForEntity(
+            "/api/v1/journey/topics/topic_dbms_relational_alg/primer/generate",
+            null,
+            String::class.java
+        )
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, resp.statusCode)
     }
 }
