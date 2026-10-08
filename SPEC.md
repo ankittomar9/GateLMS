@@ -127,7 +127,7 @@ flowchart TD
 - **Phase 5: iPad Notes Vault & Polish** (PDF viewer + export + hard feature freeze)
 - **Phase 6: In-Portal AI Studio & Whisper Sidecar** (AI chat drawer, transcription, provider matrix) — binding SPEC: `collab/z/PHASE6-AI-STUDIO-SPEC.md`
 - **Phase 7: Learning Journey Program** — from question bank to concept-to-mastery journey:
-  - **M1 (binding now):** Question Anatomy Engine + Concept Units + Retrieval Cards — binding SPEC: `collab/z/PHASE7-M1-ANATOMY-SPEC.md` (migration V15 reserved)
-  - **M2:** Bookshelf & Grounding (textbook RAG, license dual-mode) — V16 reserved, SPEC pending
-  - **M3:** DBMS Vertical Slice (numbered workbooks, similar-questions radar, topic launchpad) — V17 reserved, SPEC pending
-  - **M4:** Rollout & Journey Map (remaining subjects, mastery-gated syllabus map) — SPEC pending
+  - **M1 (binding):** Question Anatomy Engine + Concept Units + Retrieval Cards — binding SPEC: `collab/z/PHASE7-M1-ANATOMY-SPEC.md` (migration V15 owned)
+  - **M2 (binding now):** Learning Journey Surface — full bank seeding & verification, 10 subject cards home, topic roadmaps (free navigation, zero locks), theory-first topic steppers with AI-lazy primers, Tier-1 similar-question practice, per-subject solved notebooks — binding SPEC: `collab/z/PHASE7-M2-LEARNING-JOURNEY-SPEC.md` (migration V16 owned). *Operator re-scope 2026-10-09: journey surface pulled forward from M3; Bookshelf & Grounding (textbook RAG) deferred to the follow-up register.*
+  - **M3:** DBMS Vertical Slice (numbered workbooks, AI question variants, subject-wise mocks, card+question mixed drills) — V17 reserved, SPEC pending
+  - **M4:** Rollout & Journey Map (remaining subjects, progress-shaded syllabus map — visualization only, never access gating per M2 PC-1) — SPEC pending
