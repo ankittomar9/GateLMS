@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { JourneyHomePage } from './pages/JourneyHomePage';
 import { SubjectPage } from './pages/SubjectPage';
+import { SubjectNotebookPage } from './pages/SubjectNotebookPage';
 import { TopicPage } from './pages/TopicPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SyllabusPage } from './pages/SyllabusPage';
@@ -52,6 +53,10 @@ export const router = createBrowserRouter([
       {
         path: 'subjects/:subjectId',
         element: <SubjectPage />,
+      },
+      {
+        path: 'subjects/:subjectId/notebook',
+        element: <SubjectNotebookPage />,
       },
       {
         path: 'topics/:topicId',

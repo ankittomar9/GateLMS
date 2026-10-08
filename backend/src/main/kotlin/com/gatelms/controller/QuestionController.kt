@@ -19,8 +19,17 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/questions")
 class QuestionController(
-    private val questionService: QuestionService
+    private val questionService: QuestionService,
+    private val similarQuestionsService: com.gatelms.service.SimilarQuestionsService
 ) {
+
+    @GetMapping("/{id}/similar")
+    fun getSimilarQuestions(
+        @PathVariable id: UUID,
+        @RequestParam(defaultValue = "5") limit: Int
+    ): com.gatelms.dto.SimilarQuestionsResponseDto {
+        return similarQuestionsService.getSimilarQuestions(id, limit.coerceIn(1, 20))
+    }
 
     @GetMapping
     fun searchQuestions(

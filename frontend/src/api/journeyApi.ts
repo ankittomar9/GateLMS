@@ -5,6 +5,8 @@ import {
   TopicPrimerResponse,
   JourneyContinue,
   TopicPrimer,
+  SubjectNotebookResponse,
+  SimilarQuestionsResponse,
 } from '../types/journey';
 import { PageResponse } from './anatomyApi';
 
@@ -68,4 +70,24 @@ export const journeyApi = {
       body: JSON.stringify(req),
     });
   },
+
+  getSubjectNotebook: async (
+    subjectId: string,
+    starredOnly = false,
+    topicId?: string
+  ): Promise<SubjectNotebookResponse> => {
+    const params: Record<string, string> = { starredOnly: String(starredOnly) };
+    if (topicId) params.topicId = topicId;
+    return request<SubjectNotebookResponse>(`/journey/subjects/${subjectId}/notebook`, { params });
+  },
+
+  getSimilarQuestions: async (
+    questionId: string,
+    limit = 5
+  ): Promise<SimilarQuestionsResponse> => {
+    return request<SimilarQuestionsResponse>(`/questions/${questionId}/similar`, {
+      params: { limit: String(limit) },
+    });
+  },
 };
+

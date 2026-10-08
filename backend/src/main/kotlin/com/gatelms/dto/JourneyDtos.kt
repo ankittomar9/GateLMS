@@ -65,3 +65,33 @@ data class CurationPrimerUpdateRequest(
     val workedExample: String? = null,
     val traps: String? = null
 )
+
+data class NotebookEntryDto(
+    val questionId: UUID,
+    val year: Int?,
+    val source: String?,
+    val statementSnippet: String,
+    val solvedAt: Instant?,
+    val starred: Boolean,
+    val anatomyAvailable: Boolean
+)
+
+data class TopicNotebookGroupDto(
+    val topicId: String,
+    val topicName: String,
+    val sequence: Int,
+    val entries: List<NotebookEntryDto>
+)
+
+data class SubjectNotebookDto(
+    val subjectId: String,
+    val subjectName: String,
+    val topics: List<TopicNotebookGroupDto>,
+    val totalEntries: Int
+)
+
+data class SimilarQuestionsResponseDto(
+    val questions: List<QuestionSummaryDto>,
+    val similarityBasis: String
+)
+

@@ -1,9 +1,10 @@
 package com.gatelms.service
 
+import com.gatelms.anatomy.repository.QuestionAnatomyRepository
 import com.gatelms.anatomy.repository.TopicPrimerRepository
-import com.gatelms.dto.JourneyContinueDto
-import com.gatelms.dto.JourneyOverviewSubjectDto
-import com.gatelms.dto.JourneyTopicSummaryDto
+import com.gatelms.dto.*
+import com.gatelms.entity.Question
+import com.gatelms.entity.QuestionProgress
 import com.gatelms.repository.*
 import com.gatelms.security.CurrentUserProvider
 import org.springframework.http.HttpStatus
@@ -19,6 +20,7 @@ class JourneyService(
     private val questionProgressRepository: QuestionProgressRepository,
     private val topicMasteryRepository: TopicMasteryRepository,
     private val topicPrimerRepository: TopicPrimerRepository,
+    private val questionAnatomyRepository: QuestionAnatomyRepository,
     private val readinessService: ReadinessService,
     private val currentUserProvider: CurrentUserProvider
 ) {
@@ -129,4 +131,76 @@ class JourneyService(
             questionId = question?.id
         )
     }
+
+    @Transactional(readOnly = true)
+    fun getSubjectNotebook(subjectId: String, starredOnly: Boolean = false, topicId: String? = null): SubjectNotebookDto {
+        val userId = currentUserProvider.getCurrentUserId()
+        val subject = subjectRepository.findById(subjectId)
+            .orElseGet {
+                subjectRepository.findAll().find { it.slug == subjectId }
+                    ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found: $subjectId")
+            }
+
+        // Fetch topics for this subject
+        val allTopics = topicRepository.findBySubjectIdOrSlugOrderBySequenceAscNameAsc(subject.id)
+        val filteredTopics = if (!topicId.isNullOrBlank()) {
+            allTopics.filter { it.id == topicId || it.slug == topicId }
+        } else {
+            allTopics
+        }
+
+        // Fetch solved questions for user
+        val rows = questionProgressRepository.findSolvedQuestionsForSubject(userId, subject.id, starredOnly)
+        val questionIds = rows.map { (it[1] as Question).id!! }
+        val anatomyAvailableIds = if (questionIds.isNotEmpty()) {
+            questionAnatomyRepository.findQuestionIdsWithValidAnatomy(questionIds)
+        } else {
+            emptySet()
+        }
+
+        // Group rows by topic id
+        val rowsByTopic = rows.groupBy { (it[1] as Question).topic?.id ?: "" }
+
+        val topicGroups = filteredTopics.mapNotNull { topic ->
+            val topicRows = rowsByTopic[topic.id] ?: emptyList()
+            if (topicRows.isEmpty() && topicId == null) {
+                null
+            } else {
+                val entries = topicRows.map { row ->
+                    val qp = row[0] as QuestionProgress
+                    val q = row[1] as Question
+                    val snippet = if (q.statement.length > 200) {
+                        q.statement.take(197) + "..."
+                    } else {
+                        q.statement
+                    }
+                    NotebookEntryDto(
+                        questionId = q.id!!,
+                        year = q.year,
+                        source = q.source,
+                        statementSnippet = snippet,
+                        solvedAt = qp.lastAttemptedAt,
+                        starred = qp.isBookmarked,
+                        anatomyAvailable = q.id in anatomyAvailableIds
+                    )
+                }
+                TopicNotebookGroupDto(
+                    topicId = topic.id,
+                    topicName = topic.name,
+                    sequence = topic.sequence,
+                    entries = entries
+                )
+            }
+        }
+
+        val totalEntries = topicGroups.sumOf { it.entries.size }
+
+        return SubjectNotebookDto(
+            subjectId = subject.id,
+            subjectName = subject.name,
+            topics = topicGroups,
+            totalEntries = totalEntries
+        )
+    }
 }
+

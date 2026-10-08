@@ -221,4 +221,17 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
 
     @Query("SELECT q FROM Question q WHERE (q.topic.id = :topicId OR q.topic.slug = :topicId) AND q.curationStatus <> 'REJECTED' ORDER BY q.year DESC")
     fun findSampleQuestionsByTopic(@Param("topicId") topicId: String, pageable: Pageable): List<Question>
+
+    @Query("""
+        SELECT q.id, q.year, q.createdAt
+        FROM Question q
+        WHERE (q.topic.id = :topicId OR q.topic.slug = :topicId)
+          AND q.curationStatus <> 'REJECTED'
+          AND q.id <> :sourceQuestionId
+    """)
+    fun findTopicCandidates(
+        @Param("topicId") topicId: String,
+        @Param("sourceQuestionId") sourceQuestionId: UUID
+    ): List<Array<Any>>
 }
+
