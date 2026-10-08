@@ -1,6 +1,7 @@
 package com.gatelms.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.gatelms.anatomy.service.CardSchedulingService
 import com.gatelms.dto.*
 import com.gatelms.entity.*
 import com.gatelms.error.EntityNotFoundException
@@ -34,7 +35,8 @@ class PracticeService(
     private val planProgressService: PlanProgressService? = null,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     @org.springframework.context.annotation.Lazy
-    private val achievementService: AchievementService? = null
+    private val achievementService: AchievementService? = null,
+    private val cardSchedulingService: CardSchedulingService
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(PracticeService::class.java)
 
@@ -267,6 +269,16 @@ class PracticeService(
             progress.pass2Status = Pass2Status.PENDING
         }
         questionProgressRepository.save(progress)
+
+        // PHASE7-M1 WP2 (SPEC §6.3, PC-2): wrong attempt -> dossier diagnosis -> prerequisite
+        // retrieval cards enrolled (due tomorrow). Non-fatal by contract, idempotent by row.
+        if (!grading.isCorrect) {
+            try {
+                cardSchedulingService.enrollPrerequisiteCards(currentUserId, qId)
+            } catch (e: Exception) {
+                logger.warn("Card auto-enrollment hook failure ignored for question {}: {}", qId, e.message, e)
+            }
+        }
 
         // Mastery auto-flow (§2.4) via TopicMastery
         val topic = question.topic

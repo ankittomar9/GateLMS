@@ -108,3 +108,30 @@ data class CurationAnatomyUpdateRequest(
     val invariantRule: String? = null,
     val similarPatternHint: String? = null
 )
+
+// ---- WP2: Retrieval card scheduling contract (SPEC §6.3) ----
+
+data class DueCardDto(
+    val cardId: UUID,
+    val prompt: String,
+    val answer: String,
+    val conceptSlug: String,
+    val conceptLabel: String,
+    val unitTitle: String,
+    val status: RetrievalCardStatus
+)
+
+data class DueCardsResponse(
+    val dueCount: Int,
+    val cards: List<DueCardDto>
+)
+
+data class CardReviewRequest(
+    val grade: Int
+)
+
+data class CardReviewResponse(
+    val nextDueAt: Instant,
+    val intervalDays: Float,
+    val ease: Float
+)

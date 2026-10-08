@@ -11,9 +11,11 @@ import {
   Sparkles, 
   Award,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Brain
 } from 'lucide-react';
 import { revisionApi, RevisionOverviewDto, RevisionDrillSource } from '../api/revisionApi';
+import { CardReviewDrawer } from '../components/CardReviewDrawer';
 
 export const RevisionPage: React.FC = () => {
   const navigate = useNavigate();
@@ -22,6 +24,7 @@ export const RevisionPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [cardDrawerOpen, setCardDrawerOpen] = useState<boolean>(false);
 
   const fetchOverview = async () => {
     try {
@@ -87,10 +90,17 @@ export const RevisionPage: React.FC = () => {
   const dueMistakes = overview?.dueMistakes ?? 0;
   const dueTopics = overview?.dueTopics ?? 0;
   const pass2Pending = overview?.pass2Pending ?? 0;
+  const dueCards = overview?.dueCards ?? 0;
   const bookmarked = overview?.bookmarked ?? 0;
   const drillsCompleted = overview?.drillsCompleted ?? 0;
-  const totalDue = dueMistakes + dueTopics + pass2Pending;
+  const totalDue = dueMistakes + dueTopics + pass2Pending + dueCards;
   const isAllClear = totalDue === 0 && bookmarked === 0;
+
+  const handleCardSessionComplete = (reviewedCount: number) => {
+    if (reviewedCount > 0) {
+      fetchOverview();
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 p-4 md:p-6" data-testid="revision-page">
@@ -199,8 +209,8 @@ export const RevisionPage: React.FC = () => {
         </div>
       )}
 
-      {/* Four Source Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="source-cards-grid">
+      {/* Five Source Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4" data-testid="source-cards-grid">
         {/* 1. Due Mistakes */}
         <div 
           className="bg-ds-surface border border-ds-border rounded-ds p-5 flex flex-col justify-between space-y-4 shadow-sm hover:border-ds-border-strong transition-colors"
@@ -348,7 +358,51 @@ export const RevisionPage: React.FC = () => {
             <span>{actionLoading === 'BOOKMARKED' ? 'Starting...' : 'Drill Bookmarks'}</span>
           </button>
         </div>
+
+        {/* 5. Retrieval Cards (WP2 — SM-2-lite spaced repetition) */}
+        <div
+          className="bg-ds-surface border border-ds-border rounded-ds p-5 flex flex-col justify-between space-y-4 shadow-sm hover:border-ds-border-strong transition-colors"
+          data-testid="source-card-due-cards"
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="w-9 h-9 rounded-ds bg-ds-accent-soft text-ds-accent flex items-center justify-center">
+                <Brain className="w-5 h-5" />
+              </div>
+              <span className="font-mono text-2xl font-bold text-ds-primary" data-testid="count-due-cards">
+                {dueCards}
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-ds-primary">Retrieval Cards</h3>
+              <p className="text-xs text-ds-muted mt-1 leading-relaxed">
+                Active-recall flashcards auto-enrolled from wrong attempts, resurfacing on an expanding SM-2-lite schedule.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCardDrawerOpen(true)}
+            disabled={dueCards === 0}
+            className={`w-full py-2 px-3 rounded-ds text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+              dueCards > 0
+                ? 'bg-ds-accent text-ds-accent-contrast hover:opacity-95'
+                : 'bg-ds-surface-raised text-ds-muted cursor-not-allowed border border-ds-border'
+            }`}
+            data-testid="btn-review-cards"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Review Cards</span>
+          </button>
+        </div>
       </div>
+
+      {/* WP2: Card review flashcard drawer */}
+      <CardReviewDrawer
+        open={cardDrawerOpen}
+        onClose={() => setCardDrawerOpen(false)}
+        onSessionComplete={handleCardSessionComplete}
+      />
 
       {/* Drills Completed Stat Card */}
       <div className="bg-ds-surface border border-ds-border rounded-ds p-4 flex items-center justify-between text-xs text-ds-secondary">
