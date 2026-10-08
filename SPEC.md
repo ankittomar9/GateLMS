@@ -125,3 +125,9 @@ flowchart TD
 - **Phase 3: TCS iON Exam Engine & Scoring** (Palette + 3-Hour Timer + Virtual Calc + Scoring tests)
 - **Phase 4: Mistake Notebook & Spaced Repetition Queue** (4-category error tagger + due revision tracker)
 - **Phase 5: iPad Notes Vault & Polish** (PDF viewer + export + hard feature freeze)
+- **Phase 6: In-Portal AI Studio & Whisper Sidecar** (AI chat drawer, transcription, provider matrix) — binding SPEC: `collab/z/PHASE6-AI-STUDIO-SPEC.md`
+- **Phase 7: Learning Journey Program** — from question bank to concept-to-mastery journey:
+  - **M1 (binding now):** Question Anatomy Engine + Concept Units + Retrieval Cards — binding SPEC: `collab/z/PHASE7-M1-ANATOMY-SPEC.md` (migration V15 reserved)
+  - **M2:** Bookshelf & Grounding (textbook RAG, license dual-mode) — V16 reserved, SPEC pending
+  - **M3:** DBMS Vertical Slice (numbered workbooks, similar-questions radar, topic launchpad) — V17 reserved, SPEC pending
+  - **M4:** Rollout & Journey Map (remaining subjects, mastery-gated syllabus map) — SPEC pending
