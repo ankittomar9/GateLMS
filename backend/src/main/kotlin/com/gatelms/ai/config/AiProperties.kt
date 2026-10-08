@@ -60,7 +60,9 @@ class AiProperties {
     class QuotaConfig(
         var chatPerHour: Int = 20,
         var transcribePer10min: Int = 10,
-        var statusPerHour: Int = 60
+        var statusPerHour: Int = 60,
+        var anatomyGeneratePerHour: Int = 30,
+        var conceptGeneratePerHour: Int = 10
     )
 
     class AllowlistConfig {
