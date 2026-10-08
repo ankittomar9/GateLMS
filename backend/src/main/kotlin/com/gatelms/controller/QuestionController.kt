@@ -4,6 +4,8 @@ import com.gatelms.dto.QuestionDto
 import com.gatelms.dto.QuestionStatusUpdateDto
 import com.gatelms.dto.QuestionSummaryDto
 import com.gatelms.dto.QuestionUpsertDto
+import com.gatelms.entity.Pass1Status
+import com.gatelms.entity.Pass2Status
 import com.gatelms.service.QuestionService
 import jakarta.validation.Valid
 import org.springframework.data.domain.Page
@@ -91,6 +93,35 @@ class QuestionController(
         @RequestBody dto: QuestionStatusUpdateDto
     ): QuestionDto {
         return questionService.updateStatus(id, dto)
+    }
+
+    @PatchMapping("/{id}/pass1")
+    fun updatePass1(
+        @PathVariable id: UUID,
+        @RequestParam status: String
+    ): QuestionDto {
+        val normalized = when (status.uppercase()) {
+            "UNSEEN" -> Pass1Status.PENDING
+            "REVISE", "FLAGGED" -> Pass1Status.ASSISTED
+            "SOLVED" -> Pass1Status.SOLVED
+            "FAILED" -> Pass1Status.FAILED
+            else -> try { Pass1Status.valueOf(status.uppercase()) } catch (_: Exception) { Pass1Status.PENDING }
+        }
+        return questionService.updateStatus(id, QuestionStatusUpdateDto(pass1Status = normalized))
+    }
+
+    @PatchMapping("/{id}/pass2")
+    fun updatePass2(
+        @PathVariable id: UUID,
+        @RequestParam status: String
+    ): QuestionDto {
+        val normalized = when (status.uppercase()) {
+            "NOT_ATTEMPTED", "TIMEOUT" -> Pass2Status.PENDING
+            "SOLVED" -> Pass2Status.SOLVED
+            "FAILED" -> Pass2Status.FAILED
+            else -> try { Pass2Status.valueOf(status.uppercase()) } catch (_: Exception) { Pass2Status.PENDING }
+        }
+        return questionService.updateStatus(id, QuestionStatusUpdateDto(pass2Status = normalized))
     }
 
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")

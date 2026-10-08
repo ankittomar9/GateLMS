@@ -13,10 +13,14 @@ class AiRateLimiter(
     private val chatTimestamps = ConcurrentHashMap<UUID, MutableList<Long>>()
     private val transcribeTimestamps = ConcurrentHashMap<UUID, MutableList<Long>>()
     private val statusTimestamps = ConcurrentHashMap<UUID, MutableList<Long>>()
+    private val anatomyTimestamps = ConcurrentHashMap<UUID, MutableList<Long>>()
+    private val conceptTimestamps = ConcurrentHashMap<UUID, MutableList<Long>>()
 
     private val chatWindowMs = 3600_000L // 1 hour
     private val transcribeWindowMs = 600_000L // 10 minutes
     private val statusWindowMs = 3600_000L // 1 hour
+    private val anatomyWindowMs = 3600_000L // 1 hour
+    private val conceptWindowMs = 3600_000L // 1 hour
 
     fun checkChatLimit(userId: UUID) {
         val maxAttempts = aiProperties.quota.chatPerHour
@@ -48,6 +52,28 @@ class AiRateLimiter(
             maxAttempts = maxAttempts,
             windowMs = statusWindowMs,
             actionName = "AI Status probe"
+        )
+    }
+
+    fun checkAnatomyGenerateLimit(userId: UUID) {
+        val maxAttempts = aiProperties.quota.anatomyGeneratePerHour
+        checkLimit(
+            userId = userId,
+            store = anatomyTimestamps,
+            maxAttempts = maxAttempts,
+            windowMs = anatomyWindowMs,
+            actionName = "Anatomy generation"
+        )
+    }
+
+    fun checkConceptGenerateLimit(userId: UUID) {
+        val maxAttempts = aiProperties.quota.conceptGeneratePerHour
+        checkLimit(
+            userId = userId,
+            store = conceptTimestamps,
+            maxAttempts = maxAttempts,
+            windowMs = conceptWindowMs,
+            actionName = "Concept generation"
         )
     }
 

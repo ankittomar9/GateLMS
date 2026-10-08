@@ -35,6 +35,7 @@ import {
 } from '../hooks/useQueries';
 import { MathText } from '../components/MathText';
 import { useAiStudio } from '../context/AiStudioContext';
+import { AnatomyPanel } from '../components/AnatomyPanel';
 
 interface OptionItem {
   label: string;
@@ -762,6 +763,15 @@ export const PracticeRunnerPage: React.FC = () => {
                   </button>
                 </div>
               </div>
+            )}
+
+            {/* Examiner Question Anatomy Dossier (Review Step) */}
+            {currentVerdict && (
+              <AnatomyPanel
+                questionId={currentQuestion.id}
+                hasAttempted={true}
+                mode="study"
+              />
             )}
           </div>
         </div>

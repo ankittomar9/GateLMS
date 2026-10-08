@@ -25,6 +25,11 @@ import {
 import { MathText } from '../components/MathText';
 import { Pass1Status, Pass2Status, QuestionType } from '../api/types';
 import { useAiStudio } from '../context/AiStudioContext';
+import { AnatomyPanel } from '../components/AnatomyPanel';
+import { LayeredHints } from '../components/LayeredHints';
+import { ConceptUnitDialog } from '../components/ConceptUnitDialog';
+import { anatomyApi, QuestionAnatomyDto } from '../api/anatomyApi';
+import { useAuth } from '../context/AuthContext';
 
 interface OptionItem {
   label: string;
@@ -34,12 +39,16 @@ interface OptionItem {
 export const QuestionDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   const [solutionRevealed, setSolutionRevealed] = useState(false);
   const [conflictError, setConflictError] = useState<string | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Set<string>>(new Set());
   const [hasCheckedAnswer, setHasCheckedAnswer] = useState(false);
   const [natAnswer, setNatAnswer] = useState<string>('');
+  const [anatomy, setAnatomy] = useState<QuestionAnatomyDto | null>(null);
+  const [activeConceptSlug, setActiveConceptSlug] = useState<string | null>(null);
 
   const { data: q, isLoading, error, refetch } = useQuestion(id);
   const { registerActiveQuestion, triggerPrompt } = useAiStudio();
@@ -53,7 +62,22 @@ export const QuestionDetailPage: React.FC = () => {
     setHasCheckedAnswer(false);
     setNatAnswer('');
     setSolutionRevealed(false);
+    setAnatomy(null);
+    setActiveConceptSlug(null);
   }, [q?.id]);
+
+  // Load anatomy if already attempted or admin
+  useEffect(() => {
+    if (!q?.id) return;
+    const canAccess = Boolean(q.lastAttemptedAt || q.pass1Status !== 'UNSEEN' || isAdmin || hasCheckedAnswer || solutionRevealed);
+    if (canAccess) {
+      anatomyApi.getQuestionAnatomy(q.id)
+        .then((data) => setAnatomy(data))
+        .catch(() => {
+          // Locked or not generated yet - handled cleanly
+        });
+    }
+  }, [q?.id, q?.lastAttemptedAt, q?.pass1Status, isAdmin, hasCheckedAnswer, solutionRevealed]);
 
   const selectedAnswerFormatted = q?.type === 'NAT'
     ? natAnswer.trim()
@@ -205,10 +229,17 @@ export const QuestionDetailPage: React.FC = () => {
     return correctCount > 0 && (wrongCount > 0 || correctCount < correctOptionLabels.length);
   }, [q?.type, selectedOptions, correctOptionLabels]);
 
-  const handleCheckAnswer = () => {
+  const handleCheckAnswer = async () => {
     setHasCheckedAnswer(true);
-    if (isAnswerCompletelyCorrect && q?.pass1Status === 'UNSEEN') {
-      handlePass1Change('SOLVED');
+    if (!q) return;
+    const newStatus: Pass1Status = isAnswerCompletelyCorrect ? 'SOLVED' : 'REVISE';
+    try {
+      await updatePass1.mutateAsync({ id: q.id, status: newStatus });
+      anatomyApi.getQuestionAnatomy(q.id)
+        .then((data) => setAnatomy(data))
+        .catch(() => {});
+    } catch (e) {
+      console.error('Failed to update attempt status', e);
     }
   };
 
@@ -376,6 +407,15 @@ export const QuestionDetailPage: React.FC = () => {
         <div className="text-base text-ds-primary leading-relaxed font-normal">
           <MathText content={q.statement} />
         </div>
+
+        {/* Layered Progressive Hints (Study Mode) */}
+        {anatomy && (
+          <LayeredHints
+            anatomy={anatomy}
+            mode="study"
+            onPrerequisiteClick={(slug) => setActiveConceptSlug(slug)}
+          />
+        )}
 
         {/* Multiple Choice Options List (MCQ / MSQ) */}
         {options.length > 0 && (
@@ -625,6 +665,16 @@ export const QuestionDetailPage: React.FC = () => {
                 No formal explanation authored for this question yet.
               </p>
             )}
+
+            {/* Examiner Question Anatomy Dossier */}
+            <div className="pt-4 border-t border-ds-border">
+              <AnatomyPanel
+                questionId={q.id}
+                hasAttempted={Boolean(q.lastAttemptedAt || hasCheckedAnswer || solutionRevealed)}
+                isAdmin={isAdmin}
+                mode="study"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -683,6 +733,12 @@ export const QuestionDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Concept Unit Modal */}
+      <ConceptUnitDialog
+        slug={activeConceptSlug}
+        onClose={() => setActiveConceptSlug(null)}
+      />
     </div>
   );
 };

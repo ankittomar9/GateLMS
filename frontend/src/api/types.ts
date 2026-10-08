@@ -52,6 +52,7 @@ export interface QuestionSummary {
   statementSnippet?: string;
   gateOverflowUrl: string | null;
   isBookmarked: boolean;
+  lastAttemptedAt?: string | null;
   pass1Status: Pass1Status;
   pass2Status: Pass2Status;
   source?: QuestionSource;
@@ -79,6 +80,7 @@ export interface QuestionDetail {
   explanation: string | null;
   gateOverflowUrl: string | null;
   isBookmarked: boolean;
+  lastAttemptedAt?: string | null;
   pass1Status: Pass1Status;
   pass2Status: Pass2Status;
   source?: QuestionSource;

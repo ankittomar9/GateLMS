@@ -7,13 +7,20 @@ import {
   ExternalLink, 
   MessageSquare, 
   ChevronLeft, 
-  ChevronRight,
-  Filter,
-  Layers,
-  Sparkles,
-  CheckCircle2,
-  XCircle,
-  Clock
+  ChevronRight, 
+  Filter, 
+  Layers, 
+  Sparkles, 
+  CheckCircle2, 
+  XCircle, 
+  Clock,
+  BookOpen,
+  ShieldCheck,
+  Edit3,
+  Save,
+  Loader2,
+  Key,
+  AlertOctagon
 } from 'lucide-react';
 import { 
   useQuestions, 
@@ -29,6 +36,7 @@ import {
   QuestionSummary 
 } from '../api/types';
 import { MathText } from '../components/MathText';
+import { anatomyApi, QuestionAnatomyDto, CurationAnatomyUpdateRequest } from '../api/anatomyApi';
 
 export const CurationQueuePage: React.FC = () => {
   // Filter States
@@ -64,6 +72,70 @@ export const CurationQueuePage: React.FC = () => {
 
   const { data, isLoading, refetch } = useQuestions(queryFilters);
   const updateCuration = useUpdateCurationStatus();
+
+  // Active Tab: Questions or Anatomy Dossiers
+  const [activeTab, setActiveTab] = useState<'questions' | 'anatomy'>('questions');
+
+  // Anatomy Curation State
+  const [anatomyDrafts, setAnatomyDrafts] = useState<QuestionAnatomyDto[]>([]);
+  const [anatomyLoading, setAnatomyLoading] = useState<boolean>(false);
+  const [anatomyPage, setAnatomyPage] = useState<number>(0);
+  const [anatomyTotalPages, setAnatomyTotalPages] = useState<number>(0);
+  const [anatomyTotalElements, setAnatomyTotalElements] = useState<number>(0);
+  const [editingAnatomyId, setEditingAnatomyId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<CurationAnatomyUpdateRequest>({});
+
+  const loadAnatomyDrafts = useCallback(async () => {
+    setAnatomyLoading(true);
+    try {
+      const res = await anatomyApi.getCurationDrafts(anatomyPage, 15);
+      setAnatomyDrafts(res.content);
+      setAnatomyTotalPages(res.totalPages);
+      setAnatomyTotalElements(res.totalElements);
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to load anatomy drafts');
+    } finally {
+      setAnatomyLoading(false);
+    }
+  }, [anatomyPage]);
+
+  useEffect(() => {
+    if (activeTab === 'anatomy') {
+      loadAnatomyDrafts();
+    }
+  }, [activeTab, loadAnatomyDrafts]);
+
+  const handleAnatomyStatus = async (id: string, status: 'ACCEPTED' | 'REJECTED') => {
+    setActionError(null);
+    try {
+      await anatomyApi.updateCurationAnatomy(id, { status });
+      await loadAnatomyDrafts();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to update anatomy dossier status');
+    }
+  };
+
+  const handleStartAnatomyEdit = (item: QuestionAnatomyDto) => {
+    setEditingAnatomyId(item.id);
+    setEditForm({
+      testedConcept: item.testedConcept,
+      invariantRule: item.invariantRule || '',
+      similarPatternHint: item.similarPatternHint || '',
+      status: item.status,
+    });
+  };
+
+  const handleSaveAnatomyEdit = async (id: string) => {
+    setActionError(null);
+    try {
+      await anatomyApi.updateCurationAnatomy(id, editForm);
+      setEditingAnatomyId(null);
+      setEditForm({});
+      await loadAnatomyDrafts();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to update anatomy dossier');
+    }
+  };
 
   // Error state for mutations
   const [actionError, setActionError] = useState<string | null>(null);
@@ -221,10 +293,41 @@ export const CurationQueuePage: React.FC = () => {
         </div>
       )}
 
-      {/* Filter Toolbar */}
-      <div className="bg-ds-surface border border-ds-border rounded-ds p-4 space-y-4 shadow-ds-card">
-        {/* Search Input */}
-        <div className="relative">
+      {/* Curation Queue Tabs */}
+      <div className="flex items-center gap-3 border-b border-ds-border pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab('questions')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-ds text-xs font-semibold transition-all ${
+            activeTab === 'questions'
+              ? 'bg-ds-accent text-ds-accent-contrast shadow-sm'
+              : 'bg-ds-surface border border-ds-border text-ds-muted hover:text-ds-secondary'
+          }`}
+        >
+          <ClipboardCheck className="w-4 h-4" />
+          <span>Questions Queue</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('anatomy')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-ds text-xs font-semibold transition-all ${
+            activeTab === 'anatomy'
+              ? 'bg-ds-accent text-ds-accent-contrast shadow-sm'
+              : 'bg-ds-surface border border-ds-border text-ds-muted hover:text-ds-secondary'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Anatomy Dossiers {anatomyTotalElements > 0 ? `(${anatomyTotalElements})` : ''}</span>
+        </button>
+      </div>
+
+      {activeTab === 'questions' && (
+        <>
+          {/* Filter Toolbar */}
+          <div className="bg-ds-surface border border-ds-border rounded-ds p-4 space-y-4 shadow-ds-card">
+            {/* Search Input */}
+            <div className="relative">
           <Search className="w-4 h-4 text-ds-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -518,6 +621,241 @@ export const CurationQueuePage: React.FC = () => {
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
+        </div>
+      )}
+        </>
+      )}
+
+      {/* Anatomy Dossiers Tab Content */}
+      {activeTab === 'anatomy' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-ds-primary tracking-tight flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-400" />
+              <span>Pending &amp; Draft Question Anatomy Dossiers</span>
+            </h2>
+            <button
+              onClick={() => loadAnatomyDrafts()}
+              className="text-xs px-3 py-1.5 rounded-ds border border-ds-border bg-ds-surface hover:bg-ds-surface-hover text-ds-secondary flex items-center gap-1.5 transition-colors"
+            >
+              <Clock className="w-3.5 h-3.5 text-ds-muted" />
+              <span>Refresh Queue</span>
+            </button>
+          </div>
+
+          {anatomyLoading && (
+            <div className="p-12 text-center text-xs text-ds-muted flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+              <span>Loading Anatomy Dossiers Queue...</span>
+            </div>
+          )}
+
+          {!anatomyLoading && anatomyDrafts.length === 0 && (
+            <div className="p-12 rounded-ds border border-ds-border bg-ds-surface text-center space-y-2">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+              <h3 className="text-sm font-semibold text-ds-primary">No Draft Dossiers in Queue</h3>
+              <p className="text-xs text-ds-muted max-w-md mx-auto">
+                All generated anatomy dossiers have been reviewed, or no questions have been generated yet.
+              </p>
+            </div>
+          )}
+
+          {!anatomyLoading && anatomyDrafts.length > 0 && (
+            <div className="space-y-4">
+              {anatomyDrafts.map((dossier) => {
+                const isEditing = editingAnatomyId === dossier.id;
+
+                return (
+                  <div
+                    key={dossier.id}
+                    className="p-5 rounded-ds border border-ds-border bg-ds-surface space-y-4 shadow-sm"
+                  >
+                    {/* Header: Question Reference + Status */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-ds-border">
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-mono text-xs font-semibold text-ds-accent bg-ds-accent-soft border border-ds-accent/30 px-2.5 py-1 rounded-ds">
+                          Q-ID: {dossier.questionId.slice(0, 8)}...
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${
+                          dossier.status === 'ACCEPTED'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : dossier.status === 'REJECTED'
+                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}>
+                          {dossier.status}
+                        </span>
+                        {dossier.generatorModel && (
+                          <span className="text-[10px] font-mono text-ds-muted bg-ds-surface-raised px-2 py-0.5 rounded border border-ds-border">
+                            {dossier.generatorModel}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Actions: Accept, Reject, Edit */}
+                      <div className="flex items-center gap-2">
+                        {dossier.status !== 'ACCEPTED' && (
+                          <button
+                            type="button"
+                            onClick={() => handleAnatomyStatus(dossier.id, 'ACCEPTED')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-ds bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Accept</span>
+                          </button>
+                        )}
+                        {dossier.status !== 'REJECTED' && (
+                          <button
+                            type="button"
+                            onClick={() => handleAnatomyStatus(dossier.id, 'REJECTED')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-ds bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-medium transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Reject</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => isEditing ? setEditingAnatomyId(null) : handleStartAnatomyEdit(dossier)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-ds border border-ds-border bg-ds-surface-raised hover:bg-ds-surface-hover text-xs text-ds-secondary transition-colors"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>{isEditing ? 'Cancel' : 'Edit'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {isEditing ? (
+                      /* Inline Edit Form */
+                      <div className="space-y-3 pt-2">
+                        <div>
+                          <label className="text-[11px] font-semibold text-ds-muted uppercase">Tested Concept:</label>
+                          <textarea
+                            value={editForm.testedConcept || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, testedConcept: e.target.value }))}
+                            rows={2}
+                            className="w-full mt-1 bg-ds-surface-input border border-ds-border rounded-ds p-2.5 text-xs text-ds-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-ds-muted uppercase">Invariant Rule:</label>
+                          <textarea
+                            value={editForm.invariantRule || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, invariantRule: e.target.value }))}
+                            rows={2}
+                            className="w-full mt-1 bg-ds-surface-input border border-ds-border rounded-ds p-2.5 text-xs text-ds-primary font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-ds-muted uppercase">Pattern Hint:</label>
+                          <input
+                            type="text"
+                            value={editForm.similarPatternHint || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, similarPatternHint: e.target.value }))}
+                            className="w-full mt-1 bg-ds-surface-input border border-ds-border rounded-ds p-2 text-xs text-ds-primary"
+                          />
+                        </div>
+                        <div className="flex justify-end pt-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSaveAnatomyEdit(dossier.id)}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-ds bg-ds-accent text-ds-accent-contrast text-xs font-semibold"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>Save Changes</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Read-Only Dossier Preview */
+                      <div className="space-y-3 text-xs">
+                        <div className="p-3 rounded-ds bg-ds-surface-raised border border-ds-border">
+                          <span className="font-semibold text-indigo-400 mb-1 flex items-center gap-1.5">
+                            <Sparkles className="w-3 h-3" /> 1. Tested Concept:
+                          </span>
+                          <div className="text-ds-primary">
+                            <MathText content={dossier.testedConcept} />
+                          </div>
+                        </div>
+
+                        {dossier.invariantRule && (
+                          <div className="p-3 rounded-ds bg-amber-500/5 border border-amber-500/20 text-amber-200">
+                            <span className="font-semibold text-amber-400 mb-1 flex items-center gap-1.5">
+                              <Key className="w-3 h-3" /> 2. Core Invariant:
+                            </span>
+                            <div className="font-mono">
+                              <MathText content={dossier.invariantRule} />
+                            </div>
+                          </div>
+                        )}
+
+                        {dossier.trapAnalysis && dossier.trapAnalysis.length > 0 && (
+                          <div className="p-3 rounded-ds bg-ds-surface-raised border border-ds-border">
+                            <span className="font-semibold text-rose-400 mb-1 flex items-center gap-1.5">
+                              <AlertOctagon className="w-3 h-3" /> 3. Distractor Autopsy ({dossier.trapAnalysis.length} options evaluated):
+                            </span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                              {dossier.trapAnalysis.map((trap, idx) => (
+                                <div key={idx} className="p-2 rounded bg-ds-surface border border-ds-border text-[11px]">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <strong className="text-white">Option {trap.option}</strong>
+                                    <span className={trap.verdict === 'CORRECT' ? 'text-emerald-400' : 'text-rose-400'}>
+                                      {trap.verdict}
+                                    </span>
+                                  </div>
+                                  <div className="text-ds-muted italic"><MathText content={trap.misconception} /></div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {dossier.prerequisites && dossier.prerequisites.length > 0 && (
+                          <div className="p-3 rounded-ds bg-ds-surface-raised border border-ds-border flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-emerald-400 flex items-center gap-1.5 mr-2">
+                              <BookOpen className="w-3 h-3" /> 4. Prerequisites:
+                            </span>
+                            {dossier.prerequisites.map((p, idx) => (
+                              <span key={idx} className="px-2 py-0.5 rounded text-[11px] bg-neutral-800 text-neutral-300 border border-neutral-700">
+                                {p.concept_label} ({p.concept_slug})
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Anatomy Pagination */}
+              {anatomyTotalPages > 1 && (
+                <div className="flex items-center justify-between text-xs text-ds-muted pt-4 border-t border-ds-border">
+                  <span>
+                    Page {anatomyPage + 1} of {anatomyTotalPages}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={anatomyPage === 0}
+                      onClick={() => setAnatomyPage((p) => Math.max(0, p - 1))}
+                      className="p-1.5 rounded-ds border border-ds-border hover:bg-ds-surface-hover disabled:opacity-40"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={anatomyPage >= anatomyTotalPages - 1}
+                      onClick={() => setAnatomyPage((p) => p + 1)}
+                      className="p-1.5 rounded-ds border border-ds-border hover:bg-ds-surface-hover disabled:opacity-40"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
