@@ -21,7 +21,7 @@ class AiProperties {
         )
         var gemini: ProviderConfig = ProviderConfig(
             apiKey = "",
-            defaultModel = "gemini-3.8-flash",
+            defaultModel = "gemini-3.5-flash",
             endpoint = "https://generativelanguage.googleapis.com/v1beta/models"
         )
         var openai: ProviderConfig = ProviderConfig(

@@ -69,6 +69,20 @@ class TopicPrimerValidationTest {
     }
 
     @Test
+    fun `honest-judge PASS - mathematical percentages in networking or algorithm domain are permitted`() {
+        val mathExample = "$validWorkedExample Step 5: Channel efficiency is calculated as \\eta = 1 / (1 + 2a) = 50% under standard bandwidth-delay conditions. Utilization reaches 80% with selective repeat protocol."
+        val payload = TopicPrimerPayload(
+            motivation = "Flow control governs data transmission rates to prevent receiver buffer overflow with packet loss below 5 percent.",
+            coreIdea = "Sliding window protocol efficiency reaches up to 100% when window size W >= 1 + 2a.",
+            workedExample = mathExample
+        )
+
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow {
+            validator.validatePrimerPayload(payload)
+        }
+    }
+
+    @Test
     fun `honest-judge FAIL - malformed JSON triggers parse error exception`() {
         val brokenJson = "```json\n{ motivation: 'broken', core_idea: \n```"
 

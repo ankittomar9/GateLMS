@@ -13,7 +13,11 @@ class AnatomyValidationService(
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 ) {
     private val slugRegex = Regex("^[a-z0-9]+(-[a-z0-9]+)*$")
-    private val populationStatRegex = Regex("(?i)(\\d+\\s*%|\\d+\\s*percent|\\b(majority|minority|most|many)\\s+of\\s+(students|candidates|aspirants|test-takers|examinees)\\b)")
+    private val populationStatRegex = Regex(
+        "(?i)(\\d+\\s*(%|percent)\\s+(of\\s+)?(students|candidates|aspirants|test-takers|examinees|cohort|learners)|" +
+        "\\b(majority|minority|most|many)\\s+of\\s+(students|candidates|aspirants|test-takers|examinees)\\b|" +
+        "\\b(students|candidates|aspirants|test-takers|examinees)\\s+[^.\\n]{0,60}\\b\\d+\\s*(%|percent))"
+    )
     private val bookCitationRegex = Regex("(?i)\\b(page\\s+\\d+|ch(apter)?\\s*\\d+|section\\s+\\d+\\.\\d+)\\b")
 
     fun extractJson(raw: String): String {

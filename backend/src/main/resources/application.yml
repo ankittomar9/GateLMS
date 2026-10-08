@@ -82,7 +82,7 @@ app:
         endpoint: https://api.groq.com/openai/v1
       gemini:
         api-key: ${GEMINI_API_KEY:}
-        default-model: ${GEMINI_DEFAULT_MODEL:gemini-3.8-flash}
+        default-model: ${GEMINI_DEFAULT_MODEL:gemini-3.5-flash}
         endpoint: https://generativelanguage.googleapis.com/v1beta/models
       openai:
         api-key: ${OPENAI_API_KEY:}

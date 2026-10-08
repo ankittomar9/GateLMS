@@ -337,13 +337,21 @@ class AiChatService(
 
         log.debug("Dispatching prompt to Google Gemini model: {}", model)
 
-        val rawResponse = restClient.post()
-            .uri(url)
-            .header("x-goog-api-key", apiKey)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(requestPayload)
-            .retrieve()
-            .body(String::class.java) ?: "{}"
+        val rawResponse = try {
+            restClient.post()
+                .uri(url)
+                .header("x-goog-api-key", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(requestPayload)
+                .retrieve()
+                .body(String::class.java) ?: "{}"
+        } catch (ex: HttpStatusCodeException) {
+            if ((ex.statusCode == HttpStatus.TOO_MANY_REQUESTS || ex.statusCode == HttpStatus.SERVICE_UNAVAILABLE) && model != "gemini-3.5-flash") {
+                log.warn("Gemini model '$model' returned ${ex.statusCode}, automatically falling back to 'gemini-3.5-flash'...")
+                return callGemini(apiKey, "gemini-3.5-flash", systemInstruction, messages)
+            }
+            throw ex
+        }
 
         val root = objectMapper.readTree(rawResponse)
         val candidates = root.path("candidates")
