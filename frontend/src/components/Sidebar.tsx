@@ -8,6 +8,7 @@ import {
   FileText, 
   ChevronDown, 
   ChevronRight, 
+  ChevronLeft,
   AlertCircle,
   GraduationCap,
   ClipboardCheck,
@@ -19,11 +20,13 @@ import {
   CalendarRange
 } from 'lucide-react';
 import { useDesign } from '../context/DesignContext';
+import { useDashboardLayout } from '../context/LayoutContext';
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentDesign } = useDesign();
+  const { leftSidebarCollapsed, setLeftSidebarCollapsed } = useDashboardLayout();
   const [practiceOpen, setPracticeOpen] = useState(true);
 
   const pathname = location.pathname;
@@ -52,15 +55,156 @@ export const Sidebar: React.FC = () => {
     return 'bg-ds-surface-hover text-ds-primary font-semibold shadow-sm border border-ds-border-strong';
   };
 
+  if (leftSidebarCollapsed) {
+    return (
+      <aside 
+        className="w-16 bg-ds-bg-sidebar border-r border-ds-border flex flex-col justify-between shrink-0 select-none min-h-screen transition-all duration-200 py-2"
+        data-testid="left-sidebar-collapsed"
+      >
+        <div>
+          {/* Logo & Expand Button */}
+          <div className="h-14 flex items-center justify-center border-b border-ds-border relative">
+            <button
+              type="button"
+              onClick={() => setLeftSidebarCollapsed(false)}
+              data-testid="left-sidebar-expand-btn"
+              title="Expand left sidebar"
+              aria-label="Expand left sidebar"
+              className="w-9 h-9 rounded-ds bg-ds-accent text-ds-accent-contrast flex items-center justify-center font-bold text-sm shadow-md hover:opacity-90 transition-opacity group"
+            >
+              <span className="group-hover:hidden">G</span>
+              <ChevronRight className="w-4 h-4 hidden group-hover:block" />
+            </button>
+          </div>
+
+          {/* Compact Icon Nav */}
+          <div className="py-3 px-2 space-y-2">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              title="Dashboard"
+              aria-label="Dashboard"
+              className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isDashboard)}`}
+            >
+              <LayoutDashboard className={`w-4 h-4 ${isDashboard ? 'text-ds-accent' : 'text-ds-muted'}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/planner')}
+              title="Planner"
+              aria-label="Planner"
+              className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isPlanner)}`}
+            >
+              <CalendarRange className={`w-4 h-4 ${isPlanner ? 'text-ds-accent' : 'text-ds-muted'}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/insights')}
+              title="Insights"
+              aria-label="Insights"
+              className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isInsights)}`}
+            >
+              <Activity className={`w-4 h-4 ${isInsights ? 'text-ds-accent' : 'text-ds-muted'}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/revision')}
+              title="Revision"
+              aria-label="Revision"
+              className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isRevision)}`}
+            >
+              <RotateCcw className={`w-4 h-4 ${isRevision ? 'text-ds-accent' : 'text-ds-muted'}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/syllabus')}
+              title="Syllabus Taxonomy"
+              aria-label="Syllabus Taxonomy"
+              className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isSyllabus)}`}
+            >
+              <GraduationCap className={`w-4 h-4 ${isSyllabus ? 'text-ds-accent' : 'text-ds-muted'}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/questions')}
+              title="Question Bank"
+              aria-label="Question Bank"
+              className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isQuestions)}`}
+            >
+              <Database className={`w-4 h-4 ${isQuestions ? 'text-ds-accent' : 'text-ds-muted'}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/practice')}
+              title="Practice Clusters"
+              aria-label="Practice Clusters"
+              className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isPractice)}`}
+            >
+              <Code2 className={`w-4 h-4 ${isPractice ? 'text-ds-accent' : 'text-ds-muted'}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/mistakes')}
+              title="Mistake Notebook"
+              aria-label="Mistake Notebook"
+              className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isMistakes)}`}
+            >
+              <AlertCircle className={`w-4 h-4 ${isMistakes ? 'text-ds-accent' : 'text-ds-danger'}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/mocks')}
+              title="Mock Tests"
+              aria-label="Mock Tests"
+              className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isMocks)}`}
+            >
+              <Clock className={`w-4 h-4 ${isMocks ? 'text-ds-accent' : 'text-ds-success'}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/notes')}
+              title="Notes Vault"
+              aria-label="Notes Vault"
+              className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isNotes)}`}
+            >
+              <NotebookPen className={`w-4 h-4 ${isNotes ? 'text-ds-accent' : 'text-ds-warning'}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Profile Avatar Only */}
+        <div className="p-2 border-t border-ds-border flex justify-center">
+          <div
+            title="Ankur Tomar · Target AIR < 50"
+            className="w-8 h-8 rounded-full bg-ds-surface-raised border border-ds-border-strong flex items-center justify-center font-bold text-[11px] text-ds-accent cursor-pointer"
+          >
+            AT
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
   return (
-    <aside className="w-64 bg-ds-bg-sidebar border-r border-ds-border flex flex-col justify-between shrink-0 select-none min-h-screen transition-colors">
+    <aside className="w-64 bg-ds-bg-sidebar border-r border-ds-border flex flex-col justify-between shrink-0 select-none min-h-screen transition-all duration-200">
       {/* Top Branding */}
       <div>
         <div 
-          onClick={() => navigate('/')}
-          className="h-16 flex items-center justify-between px-5 border-b border-ds-border cursor-pointer hover:bg-ds-surface transition-colors"
+          className="h-16 flex items-center justify-between px-4 border-b border-ds-border"
         >
-          <div className="flex items-center gap-2.5">
+          <div 
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2.5 cursor-pointer hover:opacity-85 transition-opacity"
+          >
             <div className="w-8 h-8 rounded-ds bg-ds-accent text-ds-accent-contrast flex items-center justify-center font-bold text-sm shadow-md">
               G
             </div>
@@ -71,6 +215,17 @@ export const Sidebar: React.FC = () => {
               <span className="text-[10px] text-ds-muted block leading-tight font-mono">GATE CSE 2028</span>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setLeftSidebarCollapsed(true)}
+            data-testid="left-sidebar-collapse-btn"
+            title="Collapse sidebar"
+            aria-label="Collapse sidebar"
+            className="p-1 rounded-ds text-ds-muted hover:text-ds-primary hover:bg-ds-surface transition-colors border border-transparent hover:border-ds-border"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Navigation Sections */}

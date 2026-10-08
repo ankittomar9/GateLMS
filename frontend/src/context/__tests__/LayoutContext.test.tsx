@@ -11,13 +11,24 @@ import {
 } from '../LayoutContext';
 
 const TestConsumer: React.FC = () => {
-  const { currentLayout, setLayout } = useDashboardLayout();
+  const { 
+    currentLayout, 
+    setLayout,
+    rightSidebarCollapsed,
+    toggleRightSidebar,
+    leftSidebarCollapsed,
+    toggleLeftSidebar,
+  } = useDashboardLayout();
   return (
     <div>
       <span data-testid="current-layout">{currentLayout}</span>
+      <span data-testid="right-collapsed">{String(rightSidebarCollapsed)}</span>
+      <span data-testid="left-collapsed">{String(leftSidebarCollapsed)}</span>
       <button onClick={() => setLayout('editorial')}>Set Editorial</button>
       <button onClick={() => setLayout('bento')}>Set Bento</button>
       <button onClick={() => setLayout('minimalist')}>Set Minimalist</button>
+      <button onClick={toggleRightSidebar}>Toggle Right Sidebar</button>
+      <button onClick={toggleLeftSidebar}>Toggle Left Sidebar</button>
     </div>
   );
 };
@@ -84,5 +95,33 @@ describe('LayoutContext', () => {
     );
 
     expect(screen.getByTestId('current-layout').textContent).toBe('minimalist');
+  });
+
+  it('toggles right and left sidebar collapsed states and persists to localStorage', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <LayoutProvider>
+        <TestConsumer />
+      </LayoutProvider>
+    );
+
+    expect(screen.getByTestId('right-collapsed').textContent).toBe('false');
+    expect(screen.getByTestId('left-collapsed').textContent).toBe('false');
+
+    // Toggle right
+    await user.click(screen.getByText('Toggle Right Sidebar'));
+    expect(screen.getByTestId('right-collapsed').textContent).toBe('true');
+    expect(localStorage.getItem('gatelms_right_sidebar_collapsed')).toBe('true');
+
+    // Toggle left
+    await user.click(screen.getByText('Toggle Left Sidebar'));
+    expect(screen.getByTestId('left-collapsed').textContent).toBe('true');
+    expect(localStorage.getItem('gatelms_left_sidebar_collapsed')).toBe('true');
+
+    // Toggle right back
+    await user.click(screen.getByText('Toggle Right Sidebar'));
+    expect(screen.getByTestId('right-collapsed').textContent).toBe('false');
+    expect(localStorage.getItem('gatelms_right_sidebar_collapsed')).toBe('false');
   });
 });

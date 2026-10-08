@@ -1,17 +1,74 @@
 import React, { useState } from 'react';
-import { Info, Clock, ArrowUpRight } from 'lucide-react';
+import { Info, Clock, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDashboardLayout } from '../context/LayoutContext';
 
 export const RightSidebar: React.FC = () => {
-  const { currentLayout } = useDashboardLayout();
+  const { currentLayout, rightSidebarCollapsed, setRightSidebarCollapsed } = useDashboardLayout();
   const [bentoAnswer, setBentoAnswer] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<boolean>(false);
+
+  if (rightSidebarCollapsed) {
+    return (
+      <aside
+        className="w-12 bg-ds-bg border-l border-ds-border py-4 px-1.5 flex flex-col items-center justify-between shrink-0 select-none hidden xl:flex min-h-screen transition-all duration-200"
+        data-testid="right-sidebar-collapsed"
+      >
+        <div className="flex flex-col items-center gap-4 w-full">
+          <button
+            type="button"
+            onClick={() => setRightSidebarCollapsed(false)}
+            title="Expand Right Panel (Syllabus & Daily Drill)"
+            aria-label="Expand Right Panel"
+            data-testid="right-sidebar-expand-btn"
+            className="w-8 h-8 rounded-ds flex items-center justify-center text-ds-muted hover:text-ds-primary hover:bg-ds-surface transition-colors border border-transparent hover:border-ds-border"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          {/* Vertical Title Indicator */}
+          <div className="py-6 flex items-center justify-center">
+            <span className="text-[10px] font-mono tracking-widest text-ds-muted uppercase [writing-mode:vertical-rl] rotate-180">
+              Productivity Rail
+            </span>
+          </div>
+        </div>
+
+        {/* Quick mini-stats badge at bottom */}
+        <div className="flex flex-col items-center gap-2 pb-2">
+          <button
+            type="button"
+            onClick={() => setRightSidebarCollapsed(false)}
+            title="Click to view full Syllabus Progress (16.5 / 100 Marks)"
+            className="w-7 h-7 rounded-full bg-ds-surface border border-ds-border flex items-center justify-center text-[10px] font-mono text-ds-accent hover:border-ds-accent transition-colors"
+          >
+            16%
+          </button>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside
       className="w-80 bg-ds-bg border-l border-ds-border p-5 space-y-6 shrink-0 select-none hidden xl:block min-h-screen transition-colors duration-200"
       data-testid="right-sidebar"
     >
+      {/* Top Header with Collapse Button */}
+      <div className="flex items-center justify-between pb-2 border-b border-ds-border/60">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-ds-muted">
+          Productivity Rail
+        </span>
+        <button
+          type="button"
+          onClick={() => setRightSidebarCollapsed(true)}
+          title="Collapse Right Panel (Minimalist Mode)"
+          aria-label="Collapse Right Panel"
+          data-testid="right-sidebar-collapse-btn"
+          className="p-1 rounded-ds text-ds-muted hover:text-ds-primary hover:bg-ds-surface transition-colors border border-transparent hover:border-ds-border"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
       {/* 1. Syllabus Completion Gauge / Ring */}
       <div className="bg-ds-surface border border-ds-border rounded-ds p-5 space-y-4">
         <div className="flex items-center justify-between">

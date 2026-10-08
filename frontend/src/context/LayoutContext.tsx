@@ -9,7 +9,20 @@ export interface LayoutContextType {
 }
 
 export const STORAGE_KEY = 'gatelms_dashboard_layout';
+export const RIGHT_SIDEBAR_STORAGE_KEY = 'gatelms_right_sidebar_collapsed';
+export const LEFT_SIDEBAR_STORAGE_KEY = 'gatelms_left_sidebar_collapsed';
 export const DEFAULT_LAYOUT: DashboardLayoutVariant = 'minimalist';
+
+export interface LayoutContextType {
+  currentLayout: DashboardLayoutVariant;
+  setLayout: (layout: DashboardLayoutVariant) => void;
+  rightSidebarCollapsed: boolean;
+  setRightSidebarCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
+  toggleRightSidebar: () => void;
+  leftSidebarCollapsed: boolean;
+  setLeftSidebarCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
+  toggleLeftSidebar: () => void;
+}
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
 
@@ -28,6 +41,28 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return DEFAULT_LAYOUT;
   });
 
+  const [rightSidebarCollapsed, setRightSidebarCollapsedState] = useState<boolean>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(RIGHT_SIDEBAR_STORAGE_KEY) === 'true';
+      }
+    } catch {
+      // Ignore
+    }
+    return false;
+  });
+
+  const [leftSidebarCollapsed, setLeftSidebarCollapsedState] = useState<boolean>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(LEFT_SIDEBAR_STORAGE_KEY) === 'true';
+      }
+    } catch {
+      // Ignore
+    }
+    return false;
+  });
+
   const setLayout = (layout: DashboardLayoutVariant) => {
     setCurrentLayout(layout);
     try {
@@ -39,6 +74,46 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const setRightSidebarCollapsed = (
+    valueOrFn: boolean | ((prev: boolean) => boolean)
+  ) => {
+    setRightSidebarCollapsedState((prev) => {
+      const next = typeof valueOrFn === 'function' ? valueOrFn(prev) : valueOrFn;
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(RIGHT_SIDEBAR_STORAGE_KEY, String(next));
+        }
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+  };
+
+  const toggleRightSidebar = () => {
+    setRightSidebarCollapsed((prev) => !prev);
+  };
+
+  const setLeftSidebarCollapsed = (
+    valueOrFn: boolean | ((prev: boolean) => boolean)
+  ) => {
+    setLeftSidebarCollapsedState((prev) => {
+      const next = typeof valueOrFn === 'function' ? valueOrFn(prev) : valueOrFn;
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(LEFT_SIDEBAR_STORAGE_KEY, String(next));
+        }
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+  };
+
+  const toggleLeftSidebar = () => {
+    setLeftSidebarCollapsed((prev) => !prev);
+  };
+
   useEffect(() => {
     registerLayoutSetter(setLayout);
     return () => {
@@ -47,7 +122,18 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   return (
-    <LayoutContext.Provider value={{ currentLayout, setLayout }}>
+    <LayoutContext.Provider
+      value={{
+        currentLayout,
+        setLayout,
+        rightSidebarCollapsed,
+        setRightSidebarCollapsed,
+        toggleRightSidebar,
+        leftSidebarCollapsed,
+        setLeftSidebarCollapsed,
+        toggleLeftSidebar,
+      }}
+    >
       {children}
     </LayoutContext.Provider>
   );
@@ -59,6 +145,12 @@ export const useDashboardLayout = (): LayoutContextType => {
     return {
       currentLayout: DEFAULT_LAYOUT,
       setLayout: () => {},
+      rightSidebarCollapsed: false,
+      setRightSidebarCollapsed: () => {},
+      toggleRightSidebar: () => {},
+      leftSidebarCollapsed: false,
+      setLeftSidebarCollapsed: () => {},
+      toggleLeftSidebar: () => {},
     };
   }
   return context;

@@ -114,5 +114,57 @@ describe('UI Declutter and Navigation Verification', () => {
       expect(screen.getByText(/Problem of the Day/i)).toBeDefined();
       expect(screen.getByText(/Due for Revision/i)).toBeDefined();
     });
+
+    it('collapses and expands RightSidebar on toggle button clicks', async () => {
+      const user = userEvent.setup();
+      render(
+        <LayoutProvider>
+          <RightSidebar />
+        </LayoutProvider>
+      );
+
+      // Expanded by default
+      expect(screen.getByTestId('right-sidebar')).toBeDefined();
+      expect(screen.getByTestId('right-sidebar-collapse-btn')).toBeDefined();
+
+      // Click collapse
+      await user.click(screen.getByTestId('right-sidebar-collapse-btn'));
+      expect(screen.getByTestId('right-sidebar-collapsed')).toBeDefined();
+      expect(screen.getByTestId('right-sidebar-expand-btn')).toBeDefined();
+      expect(localStorage.getItem('gatelms_right_sidebar_collapsed')).toBe('true');
+
+      // Click expand
+      await user.click(screen.getByTestId('right-sidebar-expand-btn'));
+      expect(screen.getByTestId('right-sidebar')).toBeDefined();
+      expect(localStorage.getItem('gatelms_right_sidebar_collapsed')).toBe('false');
+    });
+  });
+
+  describe('Sidebar Navigation Collapse & Expand', () => {
+    it('collapses and expands Left Sidebar on toggle button clicks', async () => {
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter initialEntries={['/']}>
+          <LayoutProvider>
+            <Sidebar />
+          </LayoutProvider>
+        </MemoryRouter>
+      );
+
+      // Expanded by default
+      expect(screen.getByText('Dashboard')).toBeDefined();
+      expect(screen.getByTestId('left-sidebar-collapse-btn')).toBeDefined();
+
+      // Click collapse
+      await user.click(screen.getByTestId('left-sidebar-collapse-btn'));
+      expect(screen.getByTestId('left-sidebar-collapsed')).toBeDefined();
+      expect(screen.getByTestId('left-sidebar-expand-btn')).toBeDefined();
+      expect(localStorage.getItem('gatelms_left_sidebar_collapsed')).toBe('true');
+
+      // Click expand
+      await user.click(screen.getByTestId('left-sidebar-expand-btn'));
+      expect(screen.getByText('Dashboard')).toBeDefined();
+      expect(localStorage.getItem('gatelms_left_sidebar_collapsed')).toBe('false');
+    });
   });
 });
