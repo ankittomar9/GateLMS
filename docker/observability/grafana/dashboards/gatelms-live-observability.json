@@ -20,7 +20,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "up",
-          "legendFormat": "{{application}}",
+          "legendFormat": "{{job}} ({{application}})",
           "refId": "A"
         }
       ],
@@ -35,9 +35,21 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "options": { "0": { "color": "red", "text": "DOWN" }, "1": { "color": "green", "text": "HEALTHY (UP)" } }, "type": "value" }
+            {
+              "options": {
+                "0": { "color": "red", "text": "DOWN" },
+                "1": { "color": "green", "text": "HEALTHY (UP)" }
+              },
+              "type": "value"
+            }
           ],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
         }
       }
     },
@@ -85,11 +97,26 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (application) (rate(http_server_requests_seconds_count[1m]))",
-          "legendFormat": "{{application}}",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count[1m]))",
+          "legendFormat": "Status {{status}}",
           "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (application) (rate(http_server_requests_seconds_count[1m]))",
+          "legendFormat": "Total {{application}}",
+          "refId": "B"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          },
+          "unit": "reqps"
+        }
+      }
     },
     {
       "collapsed": false,
@@ -102,10 +129,19 @@
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "http_server_requests_seconds_max",
-          "legendFormat": "{{application}} - {{uri}}",
+          "legendFormat": "{{method}} {{uri}}",
           "refId": "A"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          },
+          "unit": "s"
+        }
+      }
     },
     {
       "collapsed": false,
@@ -117,7 +153,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "{job=~\"gatelms-backend.*\"} |~ \"(?i)(ERROR|Exception|failed|timeout|refused|deadlock)\" or {app=~\"gate-lms-backend.*\"} |~ \"(?i)(ERROR|Exception|failed|timeout|refused|deadlock)\"",
+          "expr": "{job=~\"gatelms-backend.*|.*backend.*\"} |~ \"(?i)(ERROR|Exception|failed|timeout|refused|deadlock)\"",
           "refId": "A"
         }
       ],
@@ -139,7 +175,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "{job=~\"gatelms-backend.*\"} or {app=~\"gate-lms-backend.*\"}",
+          "expr": "{job=~\"gatelms-backend.*|.*backend.*\"}",
           "refId": "A"
         }
       ],
@@ -154,7 +190,7 @@
   ],
   "refresh": "5s",
   "schemaVersion": 39,
-  "tags": ["gatelms", "microservices", "loki", "prometheus", "observability"],
+  "tags": ["gatelms", "microservices", "loki", "prometheus", "observability", "live-logs"],
   "time": {
     "from": "now-15m",
     "to": "now"
@@ -165,5 +201,5 @@
   "timezone": "browser",
   "title": "GateLMS - Live Observability & Logs Dashboard",
   "uid": "gatelms-live-observability",
-  "version": 1
+  "version": 4
 }
