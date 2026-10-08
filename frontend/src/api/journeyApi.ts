@@ -51,8 +51,8 @@ export const journeyApi = {
     });
   },
 
-  getContinue: async (): Promise<JourneyContinue> => {
-    return request<JourneyContinue>('/journey/continue');
+  getContinue: async (): Promise<JourneyContinue | null> => {
+    return request<JourneyContinue | null>('/journey/continue');
   },
 
   getCurationPrimers: async (page = 0, size = 20): Promise<PageResponse<TopicPrimer>> => {

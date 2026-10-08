@@ -4,7 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SubjectNotebookPage } from '../SubjectNotebookPage';
 import { journeyApi } from '../../api/journeyApi';
-import { anatomyApi } from '../../api/anatomyApi';
+import { anatomyApi, QuestionAnatomyDto } from '../../api/anatomyApi';
 import { SubjectNotebookResponse } from '../../types/journey';
 
 const mockNavigate = vi.fn();
@@ -25,7 +25,7 @@ vi.mock('../../api/journeyApi', () => ({
 
 vi.mock('../../api/anatomyApi', () => ({
   anatomyApi: {
-    getAnatomy: vi.fn(),
+    getQuestionAnatomy: vi.fn(),
   },
 }));
 
@@ -74,7 +74,7 @@ const mockNotebookResponse: SubjectNotebookResponse = {
   ],
 };
 
-const mockAnatomyDossier = {
+const mockAnatomyDossier: QuestionAnatomyDto = {
   id: 'anat-1',
   questionId: 'q-nb-1',
   testedConcept: 'Lossless Decomposition Invariant',
@@ -83,13 +83,16 @@ const mockAnatomyDossier = {
     {
       option: 'A',
       verdict: 'INCORRECT',
+      why_plausible: 'Appears intuitive',
       misconception: 'Assumed dependency preserving implies lossless decomposition.',
     },
   ],
   prerequisites: [],
   similarPatternHint: 'Check functional dependency closures step-by-step.',
-  status: 'ACCEPTED' as const,
-  createdAt: new Date().toISOString(),
+  status: 'ACCEPTED',
+  parseError: null,
+  generatorModel: 'gemini-1.5-pro',
+  generatedAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
 
@@ -154,7 +157,7 @@ describe('SubjectNotebookPage', () => {
 
   it('expands Anatomy Dossier and displays tested concept and invariant (PC-6 zero new AI)', async () => {
     vi.mocked(journeyApi.getSubjectNotebook).mockResolvedValue(mockNotebookResponse);
-    vi.mocked(anatomyApi.getAnatomy).mockResolvedValue(mockAnatomyDossier);
+    vi.mocked(anatomyApi.getQuestionAnatomy).mockResolvedValue(mockAnatomyDossier);
 
     render(
       <MemoryRouter>
@@ -170,7 +173,7 @@ describe('SubjectNotebookPage', () => {
     fireEvent.click(toggleBtn);
 
     await waitFor(() => {
-      expect(anatomyApi.getAnatomy).toHaveBeenCalledWith('q-nb-1');
+      expect(anatomyApi.getQuestionAnatomy).toHaveBeenCalledWith('q-nb-1');
       expect(screen.getByText('Lossless Decomposition Invariant')).toBeInTheDocument();
       expect(screen.getByText('R1 ∩ R2 -> R1 or R1 ∩ R2 -> R2')).toBeInTheDocument();
     });
@@ -178,7 +181,7 @@ describe('SubjectNotebookPage', () => {
 
   it('shows fallback message when anatomy dossier is absent', async () => {
     vi.mocked(journeyApi.getSubjectNotebook).mockResolvedValue(mockNotebookResponse);
-    vi.mocked(anatomyApi.getAnatomy).mockRejectedValue(new Error('Dossier not found'));
+    vi.mocked(anatomyApi.getQuestionAnatomy).mockRejectedValue(new Error('Dossier not found'));
 
     render(
       <MemoryRouter>

@@ -27,6 +27,8 @@ export interface JourneyTopicSummary {
 export interface TopicPrimer {
   id: string;
   topicId: string;
+  topicName?: string;
+  subjectName?: string;
   motivation: string;
   coreIdea: string;
   invariant: string | null;
@@ -35,6 +37,7 @@ export interface TopicPrimer {
   status: 'DRAFT' | 'REVIEWED' | 'ACCEPTED' | 'REJECTED';
   parseError: string | null;
   generatorModel: string | null;
+  generatedBy?: string;
   generatedAt: string;
 }
 

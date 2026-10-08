@@ -73,7 +73,7 @@ export const SubjectNotebookPage: React.FC = () => {
     // Fetch anatomy dossier
     setLoadingAnatomy((prev) => ({ ...prev, [questionId]: true }));
     try {
-      const dossier = await anatomyApi.getAnatomy(questionId);
+      const dossier = await anatomyApi.getQuestionAnatomy(questionId);
       setExpandedAnatomy((prev) => ({ ...prev, [questionId]: dossier }));
     } catch {
       setExpandedAnatomy((prev) => ({ ...prev, [questionId]: null }));
