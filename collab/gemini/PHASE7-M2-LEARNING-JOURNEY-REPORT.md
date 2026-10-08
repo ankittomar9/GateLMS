@@ -195,9 +195,43 @@ Verify the JSON response returns:
 
 ---
 
-## 7. Conclusion & Next Steps
+## 7. Audit Closure (Conditions C1–C3)
 
-Phase 7 Milestone 2 (Learning Journey) is fully delivered, tested, and verified. The system now provides an open, honest, and structured study experience tailored to student-directed preparation.
+Following Z.ai's independent audit report (`PHASE7-M2-EXECUTION-AUDIT.md`), all three conditions for closure were implemented and verified on branch `phase7/m2-fixup-1` (commit `3490e72`), merged into `master` via `2e67538`:
+
+### C1: Live Executed 3,131 Seed Receipt & Idempotency Proof
+- **Executed Live Boot (Run 1 - Insertion):**
+  ```text
+  [SEED-RECEIPT] file=seed-data/questions.jsonl, total=26, inserted=0, updated=26, rejected=0
+  [SEED-RECEIPT] file=seed-data/pyp-bank.jsonl, total=555, inserted=555, updated=0, rejected=0
+  [SEED-RECEIPT] file=seed-data/so-gate-bank.jsonl, total=2550, inserted=2550, updated=0, rejected=0
+  [ALL-SEEDS-RECEIPT] files=3, total=3131, inserted=3105, updated=26, rejected=0
+  ```
+- **Executed Live Boot (Run 2 - Idempotency):**
+  ```text
+  [SEED-RECEIPT] file=seed-data/questions.jsonl, total=26, inserted=0, updated=26, rejected=0
+  [SEED-RECEIPT] file=seed-data/pyp-bank.jsonl, total=555, inserted=0, updated=555, rejected=0
+  [SEED-RECEIPT] file=seed-data/so-gate-bank.jsonl, total=2550, inserted=0, updated=2550, rejected=0
+  [ALL-SEEDS-RECEIPT] files=3, total=3131, inserted=0, updated=3131, rejected=0
+  ```
+- **CI Test:** `SeedInventoryIT` was extended with `honest-judge PASS - multi-path seeding imports all three banks with zero rejections (C1)` validating exact 3,131 totals and subject distribution.
+
+### C2: Primer 429 Quota Path
+- **Unit Test:** `AiRateLimiterTest` extended with `primer limit permits 10 requests and rejects 11th with Retry-After (AM-8, M2-C2)`.
+- **IT Test:** `JourneyApiIT` extended with `honest-judge PASS - primer generation enforces 429 quota limit when exceeded (M2-C2)` asserting HTTP 429 response when quota is exceeded.
+
+### C3: PC-3 Three Dials Honest-Judge
+- **IT Test:** `JourneyApiIT` extended:
+  - Dial 1: Subject card `questionsSolved` incremented (+1).
+  - Dial 2: Topic progress bar / roadmap row `questionsSolved` incremented (+1) and `topicsTouched` flips 0 to 1.
+  - Dial 3: Subject & overall `readinessPct` delta > 0.
+  - Continue strip reflects the attempted question.
+
+---
+
+## 8. Conclusion & Next Steps
+
+Phase 7 Milestone 2 (Learning Journey) is fully delivered, tested, audited, and closed. All conditions C1–C3 are satisfied with live receipts.
 
 ### Scope Handoff for Future Milestones:
 - **Phase 7 Milestone 3 (DBMS Vertical Slice & Workbooks):**
