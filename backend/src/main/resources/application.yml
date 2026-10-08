@@ -68,7 +68,8 @@ app:
   notes:
     storage-dir: ${APP_NOTES_STORAGE_DIR:./docker-data/notes}
   seed:
-    path: seed-data/questions.jsonl
+    paths: ${APP_SEED_PATHS:seed-data/questions.jsonl,seed-data/pyp-bank.jsonl,seed-data/so-gate-bank.jsonl}
+    path: ${APP_SEED_PATH:seed-data/questions.jsonl}
   notifications:
     morning-cron: ${APP_NOTIFICATIONS_MORNING_CRON:0 0 8 * * *}
     evening-cron: ${APP_NOTIFICATIONS_EVENING_CRON:0 0 20 * * *}

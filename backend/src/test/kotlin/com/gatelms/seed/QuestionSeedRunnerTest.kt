@@ -127,4 +127,65 @@ class QuestionSeedRunnerTest {
         assertTrue(report.rejectionReasons.any { it.contains("MCQ requires exactly 1 correct option") })
         verify(exactly = 3) { questionRepository.save(any()) }
     }
+
+    @Test
+    fun `honest-judge PASS - resolvePaths honors multi-path ordering and fallback`() {
+        // Default paths
+        val defaultRunner = QuestionSeedRunner(
+            questionRepository = questionRepository,
+            subjectRepository = subjectRepository,
+            topicRepository = topicRepository,
+            objectMapper = objectMapper,
+            seedPathsStr = "seed-data/questions.jsonl,seed-data/pyp-bank.jsonl,seed-data/so-gate-bank.jsonl",
+            seedPath = ""
+        )
+        val defaultPaths = defaultRunner.resolvePaths()
+        assertEquals(3, defaultPaths.size)
+        assertEquals("seed-data/questions.jsonl", defaultPaths[0])
+        assertEquals("seed-data/pyp-bank.jsonl", defaultPaths[1])
+        assertEquals("seed-data/so-gate-bank.jsonl", defaultPaths[2])
+
+        // Backward compatibility with single seedPath
+        val legacyRunner = QuestionSeedRunner(
+            questionRepository = questionRepository,
+            subjectRepository = subjectRepository,
+            topicRepository = topicRepository,
+            objectMapper = objectMapper,
+            seedPathsStr = "",
+            seedPath = "custom/legacy-path.jsonl"
+        )
+        val legacyPaths = legacyRunner.resolvePaths()
+        assertEquals(listOf("custom/legacy-path.jsonl"), legacyPaths)
+    }
+
+    @Test
+    fun `honest-judge PASS - duplicate externalId across multi-path files updates idempotently`(@TempDir tempDir: Path) {
+        val file1 = File(tempDir.toFile(), "pack1.jsonl").apply {
+            writeText("""{"externalId":"DUP-1","year":2024,"type":"MCQ","marks":1,"subjectSlug":"operating-systems","topicSlug":"virtual-memory-paging","statement":"Original statement","options":{"A":"1","B":"2"},"correctOptions":["A"]}""")
+        }
+        val file2 = File(tempDir.toFile(), "pack2.jsonl").apply {
+            writeText("""{"externalId":"DUP-1","year":2024,"type":"MCQ","marks":1,"subjectSlug":"operating-systems","topicSlug":"virtual-memory-paging","statement":"Updated statement","options":{"A":"1","B":"2"},"correctOptions":["A"]}""")
+        }
+
+        val store = mutableMapOf<String, Question>()
+        every { questionRepository.findByExternalId(any()) } answers { store[firstArg()] }
+        every { questionRepository.save(any()) } answers {
+            val q = firstArg<Question>()
+            store[q.externalId!!] = q
+            q
+        }
+
+        // File 1 imports new
+        val report1 = seedRunner.importQuestions(file1.absolutePath)
+        assertEquals(1, report1.inserted)
+        assertEquals(0, report1.updated)
+        assertEquals("Original statement", store["DUP-1"]?.statement)
+
+        // File 2 encounters duplicate -> updates
+        val report2 = seedRunner.importQuestions(file2.absolutePath)
+        assertEquals(0, report2.inserted)
+        assertEquals(1, report2.updated)
+        assertEquals(0, report2.rejected)
+        assertEquals("Updated statement", store["DUP-1"]?.statement)
+    }
 }

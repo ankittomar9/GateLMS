@@ -92,6 +92,16 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
     @Query("SELECT q.subject.id, q.subject.name, q.curationStatus, count(q) FROM Question q WHERE q.subject IS NOT NULL GROUP BY q.subject.id, q.subject.name, q.curationStatus")
     fun countCurationGroupedBySubject(): List<Array<Any>>
 
+    @Query("""
+        SELECT q.topic.id, q.topic.name, q.subject.id,
+               count(q),
+               sum(CASE WHEN q.curationStatus != 'REJECTED' THEN 1L ELSE 0L END)
+        FROM Question q
+        WHERE q.topic IS NOT NULL AND q.subject IS NOT NULL
+        GROUP BY q.topic.id, q.topic.name, q.subject.id
+    """)
+    fun countTopicQuestionInventory(): List<Array<Any>>
+
     @Query("SELECT q.subject.slug, q.subject.name, q.type, coalesce(q.difficulty, 'UNSPECIFIED'), count(q) FROM Question q WHERE q.subject IS NOT NULL GROUP BY q.subject.slug, q.subject.name, q.type, q.difficulty ORDER BY q.subject.name, q.type")
     fun countDistribution(): List<Array<Any>>
 
