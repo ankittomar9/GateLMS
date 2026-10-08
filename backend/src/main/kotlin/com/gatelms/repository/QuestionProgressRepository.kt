@@ -24,4 +24,30 @@ interface QuestionProgressRepository : JpaRepository<QuestionProgress, QuestionP
 
     @Query("SELECT qp FROM QuestionProgress qp WHERE qp.id.userId = :userId AND qp.id.questionId IN :questionIds")
     fun findAllByUserIdAndQuestionIdIn(@Param("userId") userId: UUID, @Param("questionIds") questionIds: Collection<UUID>): List<QuestionProgress>
+
+    @Query("""
+        SELECT q.topic.id, count(qp) 
+        FROM QuestionProgress qp 
+        JOIN Question q ON q.id = qp.id.questionId
+        WHERE qp.id.userId = :userId 
+          AND qp.pass1Status IN ('SOLVED', 'ASSISTED')
+          AND q.curationStatus <> 'REJECTED'
+          AND q.topic.id IS NOT NULL
+        GROUP BY q.topic.id
+    """)
+    fun countSolvedByTopicForUser(@Param("userId") userId: UUID): List<Array<Any>>
+
+    @Query("""
+        SELECT q.subject.id, count(qp) 
+        FROM QuestionProgress qp 
+        JOIN Question q ON q.id = qp.id.questionId
+        WHERE qp.id.userId = :userId 
+          AND qp.pass1Status IN ('SOLVED', 'ASSISTED')
+          AND q.curationStatus <> 'REJECTED'
+          AND q.subject.id IS NOT NULL
+        GROUP BY q.subject.id
+    """)
+    fun countSolvedBySubjectForUser(@Param("userId") userId: UUID): List<Array<Any>>
+
+    fun findFirstByIdUserIdAndLastAttemptedAtIsNotNullOrderByLastAttemptedAtDesc(userId: UUID): Optional<QuestionProgress>
 }

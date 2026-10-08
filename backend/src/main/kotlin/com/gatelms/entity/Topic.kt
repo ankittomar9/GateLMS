@@ -27,6 +27,9 @@ class Topic(
     @Column(name = "book_chapter_ref", length = 255)
     var bookChapterRef: String? = null,
 
+    @Column(name = "sequence", nullable = false)
+    var sequence: Int = 0,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now(),
 

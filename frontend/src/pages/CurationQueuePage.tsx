@@ -37,6 +37,8 @@ import {
 } from '../api/types';
 import { MathText } from '../components/MathText';
 import { anatomyApi, QuestionAnatomyDto, CurationAnatomyUpdateRequest } from '../api/anatomyApi';
+import { journeyApi, CurationPrimerUpdateRequest } from '../api/journeyApi';
+import { TopicPrimer } from '../types/journey';
 
 export const CurationQueuePage: React.FC = () => {
   // Filter States
@@ -73,8 +75,71 @@ export const CurationQueuePage: React.FC = () => {
   const { data, isLoading, refetch } = useQuestions(queryFilters);
   const updateCuration = useUpdateCurationStatus();
 
-  // Active Tab: Questions or Anatomy Dossiers
-  const [activeTab, setActiveTab] = useState<'questions' | 'anatomy'>('questions');
+  // Active Tab: Questions, Anatomy Dossiers, or Topic Primers
+  const [activeTab, setActiveTab] = useState<'questions' | 'anatomy' | 'primers'>('questions');
+
+  // Topic Primers Curation State
+  const [primerDrafts, setPrimerDrafts] = useState<TopicPrimer[]>([]);
+  const [primerLoading, setPrimerLoading] = useState<boolean>(false);
+  const [primerPage, setPrimerPage] = useState<number>(0);
+  const [primerTotalPages, setPrimerTotalPages] = useState<number>(0);
+  const [primerTotalElements, setPrimerTotalElements] = useState<number>(0);
+  const [editingPrimerId, setEditingPrimerId] = useState<string | null>(null);
+  const [primerEditForm, setPrimerEditForm] = useState<CurationPrimerUpdateRequest>({});
+
+  const loadPrimerDrafts = useCallback(async () => {
+    setPrimerLoading(true);
+    try {
+      const res = await journeyApi.getCurationPrimers(primerPage, 15);
+      setPrimerDrafts(res.content);
+      setPrimerTotalPages(res.totalPages);
+      setPrimerTotalElements(res.totalElements);
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to load topic primer drafts');
+    } finally {
+      setPrimerLoading(false);
+    }
+  }, [primerPage]);
+
+  useEffect(() => {
+    if (activeTab === 'primers') {
+      loadPrimerDrafts();
+    }
+  }, [activeTab, loadPrimerDrafts]);
+
+  const handlePrimerStatus = async (id: string, status: 'ACCEPTED' | 'REJECTED') => {
+    setActionError(null);
+    try {
+      await journeyApi.updateCurationPrimer(id, { status });
+      await loadPrimerDrafts();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to update topic primer status');
+    }
+  };
+
+  const handleStartPrimerEdit = (item: TopicPrimer) => {
+    setEditingPrimerId(item.id);
+    setPrimerEditForm({
+      motivation: item.motivation,
+      coreIdea: item.coreIdea,
+      invariant: item.invariant || '',
+      workedExample: item.workedExample,
+      traps: item.traps || '',
+      status: item.status,
+    });
+  };
+
+  const handleSavePrimerEdit = async (id: string) => {
+    setActionError(null);
+    try {
+      await journeyApi.updateCurationPrimer(id, primerEditForm);
+      setEditingPrimerId(null);
+      setPrimerEditForm({});
+      await loadPrimerDrafts();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to update topic primer');
+    }
+  };
 
   // Anatomy Curation State
   const [anatomyDrafts, setAnatomyDrafts] = useState<QuestionAnatomyDto[]>([]);
@@ -319,6 +384,20 @@ export const CurationQueuePage: React.FC = () => {
         >
           <Sparkles className="w-4 h-4" />
           <span>Anatomy Dossiers {anatomyTotalElements > 0 ? `(${anatomyTotalElements})` : ''}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('primers')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-ds text-xs font-semibold transition-all ${
+            activeTab === 'primers'
+              ? 'bg-ds-accent text-ds-accent-contrast shadow-sm'
+              : 'bg-ds-surface border border-ds-border text-ds-muted hover:text-ds-secondary'
+          }`}
+          data-testid="tab-curation-primers"
+        >
+          <BookOpen className="w-4 h-4" />
+          <span>Topic Primers {primerTotalElements > 0 ? `(${primerTotalElements})` : ''}</span>
         </button>
       </div>
 
@@ -847,6 +926,265 @@ export const CurationQueuePage: React.FC = () => {
                       type="button"
                       disabled={anatomyPage >= anatomyTotalPages - 1}
                       onClick={() => setAnatomyPage((p) => p + 1)}
+                      className="p-1.5 rounded-ds border border-ds-border hover:bg-ds-surface-hover disabled:opacity-40"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'primers' && (
+        <div className="space-y-4" data-testid="curation-primers-tab-content">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-ds-muted">
+              {primerTotalElements} topic primer{primerTotalElements === 1 ? '' : 's'} recorded
+            </span>
+            <button
+              type="button"
+              onClick={loadPrimerDrafts}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-ds border border-ds-border bg-ds-surface text-xs text-ds-secondary hover:text-ds-primary"
+            >
+              <Clock className="w-3.5 h-3.5 text-ds-muted" />
+              <span>Refresh Queue</span>
+            </button>
+          </div>
+
+          {primerLoading && (
+            <div className="p-12 text-center text-xs text-ds-muted flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+              <span>Loading Topic Primers Queue...</span>
+            </div>
+          )}
+
+          {!primerLoading && primerDrafts.length === 0 && (
+            <div className="p-12 rounded-ds border border-ds-border bg-ds-surface text-center space-y-2">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+              <h3 className="text-sm font-semibold text-ds-primary">No Topic Primers in Queue</h3>
+              <p className="text-xs text-ds-muted max-w-md mx-auto">
+                No topic primers have been generated yet or all have been reviewed.
+              </p>
+            </div>
+          )}
+
+          {!primerLoading && primerDrafts.length > 0 && (
+            <div className="space-y-4">
+              {primerDrafts.map((primer) => {
+                const isEditing = editingPrimerId === primer.id;
+
+                return (
+                  <div
+                    key={primer.id}
+                    className="p-5 rounded-ds border border-ds-border bg-ds-surface space-y-4 shadow-sm"
+                    data-testid={`curation-primer-card-${primer.id}`}
+                  >
+                    {/* Header: Topic + Subject + Status */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-ds-border">
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-semibold text-sm text-ds-primary">
+                          {primer.topicName || `Topic: ${primer.topicId.slice(0, 8)}...`}
+                        </span>
+                        {primer.subjectName && (
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-ds-surface-raised text-ds-muted border border-ds-border">
+                            {primer.subjectName}
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${
+                          primer.status === 'ACCEPTED'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : primer.status === 'REJECTED'
+                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}>
+                          {primer.status}
+                        </span>
+                        {primer.generatedBy && (
+                          <span className="text-[10px] font-mono text-ds-muted bg-ds-surface-raised px-2 py-0.5 rounded border border-ds-border">
+                            {primer.generatedBy}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Actions: Accept, Reject, Edit */}
+                      <div className="flex items-center gap-2">
+                        {primer.status !== 'ACCEPTED' && (
+                          <button
+                            type="button"
+                            onClick={() => handlePrimerStatus(primer.id, 'ACCEPTED')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-ds bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors"
+                            data-testid={`btn-accept-primer-${primer.id}`}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Accept</span>
+                          </button>
+                        )}
+                        {primer.status !== 'REJECTED' && (
+                          <button
+                            type="button"
+                            onClick={() => handlePrimerStatus(primer.id, 'REJECTED')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-ds bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-medium transition-colors"
+                            data-testid={`btn-reject-primer-${primer.id}`}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Reject</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isEditing) {
+                              setEditingPrimerId(null);
+                            } else {
+                              handleStartPrimerEdit(primer);
+                            }
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-ds border border-ds-border hover:bg-ds-surface-hover text-xs font-medium text-ds-secondary"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>{isEditing ? 'Cancel' : 'Edit'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {isEditing ? (
+                      /* Inline Edit Form */
+                      <div className="space-y-3 pt-2">
+                        <div>
+                          <label className="text-[11px] font-semibold text-ds-muted uppercase">Motivation (Why study this?):</label>
+                          <textarea
+                            value={primerEditForm.motivation || ''}
+                            onChange={(e) => setPrimerEditForm(prev => ({ ...prev, motivation: e.target.value }))}
+                            rows={2}
+                            className="w-full mt-1 bg-ds-surface-input border border-ds-border rounded-ds p-2.5 text-xs text-ds-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-ds-muted uppercase">Core Idea:</label>
+                          <textarea
+                            value={primerEditForm.coreIdea || ''}
+                            onChange={(e) => setPrimerEditForm(prev => ({ ...prev, coreIdea: e.target.value }))}
+                            rows={3}
+                            className="w-full mt-1 bg-ds-surface-input border border-ds-border rounded-ds p-2.5 text-xs text-ds-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-ds-muted uppercase">Core Invariant:</label>
+                          <textarea
+                            value={primerEditForm.invariant || ''}
+                            onChange={(e) => setPrimerEditForm(prev => ({ ...prev, invariant: e.target.value }))}
+                            rows={2}
+                            className="w-full mt-1 bg-ds-surface-input border border-ds-border rounded-ds p-2.5 text-xs text-ds-primary font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-ds-muted uppercase">Worked Example (&ge;150 words):</label>
+                          <textarea
+                            value={primerEditForm.workedExample || ''}
+                            onChange={(e) => setPrimerEditForm(prev => ({ ...prev, workedExample: e.target.value }))}
+                            rows={5}
+                            className="w-full mt-1 bg-ds-surface-input border border-ds-border rounded-ds p-2.5 text-xs text-ds-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-ds-muted uppercase">Traps &amp; Common Pitfalls:</label>
+                          <textarea
+                            value={primerEditForm.traps || ''}
+                            onChange={(e) => setPrimerEditForm(prev => ({ ...prev, traps: e.target.value }))}
+                            rows={2}
+                            className="w-full mt-1 bg-ds-surface-input border border-ds-border rounded-ds p-2.5 text-xs text-ds-primary"
+                          />
+                        </div>
+                        <div className="flex justify-end pt-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSavePrimerEdit(primer.id)}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-ds bg-ds-accent text-ds-accent-contrast text-xs font-semibold"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>Save Changes</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Read-Only Primer Preview */
+                      <div className="space-y-3 text-xs">
+                        <div className="p-3 rounded-ds bg-ds-surface-raised border border-ds-border">
+                          <span className="font-semibold text-indigo-400 mb-1 flex items-center gap-1.5">
+                            <BookOpen className="w-3 h-3" /> 1. Motivation:
+                          </span>
+                          <div className="text-ds-primary">
+                            <MathText content={primer.motivation} />
+                          </div>
+                        </div>
+
+                        <div className="p-3 rounded-ds bg-ds-surface-raised border border-ds-border">
+                          <span className="font-semibold text-cyan-400 mb-1 flex items-center gap-1.5">
+                            <Sparkles className="w-3 h-3" /> 2. Core Idea:
+                          </span>
+                          <div className="text-ds-primary">
+                            <MathText content={primer.coreIdea} />
+                          </div>
+                        </div>
+
+                        {primer.invariant && (
+                          <div className="p-3 rounded-ds bg-amber-500/5 border border-amber-500/20 text-amber-200">
+                            <span className="font-semibold text-amber-400 mb-1 flex items-center gap-1.5">
+                              <Key className="w-3 h-3" /> 3. Core Invariant:
+                            </span>
+                            <div className="font-mono">
+                              <MathText content={primer.invariant} />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="p-3 rounded-ds bg-ds-surface-raised border border-ds-border">
+                          <span className="font-semibold text-emerald-400 mb-1 flex items-center gap-1.5">
+                            <BookOpen className="w-3 h-3" /> 4. Worked Example:
+                          </span>
+                          <div className="text-ds-primary leading-relaxed">
+                            <MathText content={primer.workedExample} />
+                          </div>
+                        </div>
+
+                        {primer.traps && (
+                          <div className="p-3 rounded-ds bg-rose-500/5 border border-rose-500/20 text-rose-200">
+                            <span className="font-semibold text-rose-400 mb-1 flex items-center gap-1.5">
+                              <AlertOctagon className="w-3 h-3" /> 5. Common Traps:
+                            </span>
+                            <div>
+                              <MathText content={primer.traps} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Primer Pagination */}
+              {primerTotalPages > 1 && (
+                <div className="flex items-center justify-between text-xs text-ds-muted pt-4 border-t border-ds-border">
+                  <span>
+                    Page {primerPage + 1} of {primerTotalPages}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={primerPage === 0}
+                      onClick={() => setPrimerPage((p) => Math.max(0, p - 1))}
+                      className="p-1.5 rounded-ds border border-ds-border hover:bg-ds-surface-hover disabled:opacity-40"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={primerPage >= primerTotalPages - 1}
+                      onClick={() => setPrimerPage((p) => p + 1)}
                       className="p-1.5 rounded-ds border border-ds-border hover:bg-ds-surface-hover disabled:opacity-40"
                     >
                       <ChevronRight className="w-4 h-4" />

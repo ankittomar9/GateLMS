@@ -1,0 +1,438 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { 
+  ArrowLeft, 
+  BookOpen, 
+  HelpCircle, 
+  CheckCircle2, 
+  Circle, 
+  Sparkles, 
+  AlertTriangle, 
+  FileQuestion, 
+  BookMarked,
+  Layers,
+  ArrowRight,
+  ExternalLink,
+  Loader2
+} from 'lucide-react';
+import { journeyApi } from '../api/journeyApi';
+import { TopicPrimerResponse, TopicPrimer } from '../types/journey';
+import { MathText } from '../components/MathText';
+import { ConceptUnitDialog } from '../components/ConceptUnitDialog';
+import { useQuestions } from '../hooks/useQueries';
+
+export const TopicPage: React.FC = () => {
+  const { topicId } = useParams<{ topicId: string }>();
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState<'theory' | 'questions' | 'notebook'>('theory');
+  const [primerData, setPrimerData] = useState<TopicPrimerResponse | null>(null);
+  const [loadingPrimer, setLoadingPrimer] = useState<boolean>(true);
+  const [generatingPrimer, setGeneratingPrimer] = useState<boolean>(false);
+  const [primerError, setPrimerError] = useState<string | null>(null);
+
+  // Selected concept for ConceptUnitDialog
+  const [selectedConceptSlug, setSelectedConceptSlug] = useState<string | null>(null);
+
+  // Questions for this topic
+  const { data: questionsPage, isLoading: loadingQuestions } = useQuestions({
+    topicId: topicId,
+    size: 50,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadPrimer() {
+      if (!topicId) return;
+      try {
+        setLoadingPrimer(true);
+        setPrimerError(null);
+        const data = await journeyApi.getTopicPrimer(topicId);
+        if (isMounted) {
+          setPrimerData(data);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setPrimerError(err?.message || 'Failed to load topic theory primer');
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingPrimer(false);
+        }
+      }
+    }
+    loadPrimer();
+    return () => {
+      isMounted = false;
+    };
+  }, [topicId]);
+
+  const handleGeneratePrimer = async () => {
+    if (!topicId) return;
+    try {
+      setGeneratingPrimer(true);
+      setPrimerError(null);
+      const generated = await journeyApi.generateTopicPrimer(topicId);
+      setPrimerData(generated);
+    } catch (err: any) {
+      setPrimerError(err?.message || 'Failed to generate topic primer');
+    } finally {
+      setGeneratingPrimer(false);
+    }
+  };
+
+  const primer = primerData?.primer;
+  const questions = questionsPage?.content || [];
+  const solvedQuestions = questions.filter(
+    (q) => q.pass1Status === 'SOLVED'
+  );
+
+  return (
+    <div className="p-6 md:p-8 space-y-8 max-w-5xl mx-auto" data-testid="topic-page">
+      {/* Top Header / Back Navigation */}
+      <div className="flex items-center justify-between border-b border-ds-border pb-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 text-xs font-mono font-semibold text-ds-secondary hover:text-ds-primary transition-colors"
+          data-testid="back-to-roadmap-btn"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Roadmap</span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          {primerData?.bookChapterRef && (
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-ds-surface border border-ds-border text-ds-muted">
+              {primerData.bookChapterRef}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Topic Title & Stepper Tabs */}
+      <div className="space-y-4">
+        <div>
+          <div className="text-xs font-mono text-ds-accent uppercase tracking-wider font-semibold">
+            Topic Learning Stepper
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-ds-primary mt-1">
+            {topicId?.replace(/-/g, ' ').replace('topic ', '').toUpperCase()}
+          </h1>
+        </div>
+
+        {/* 3 Stepper Tabs (Freely Switchable - PC-1) */}
+        <div className="flex border-b border-ds-border gap-2" role="tablist">
+          <button
+            onClick={() => setActiveTab('theory')}
+            role="tab"
+            aria-selected={activeTab === 'theory'}
+            className={`px-4 py-2.5 text-xs font-semibold font-mono border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === 'theory'
+                ? 'border-ds-accent text-ds-primary bg-ds-surface-hover'
+                : 'border-transparent text-ds-muted hover:text-ds-primary hover:bg-ds-surface'
+            }`}
+            data-testid="tab-theory"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-ds-accent" />
+            <span>1. Theory Primer</span>
+            {primer && (
+              <span className="w-2 h-2 rounded-full bg-ds-success" />
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('questions')}
+            role="tab"
+            aria-selected={activeTab === 'questions'}
+            className={`px-4 py-2.5 text-xs font-semibold font-mono border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === 'questions'
+                ? 'border-ds-accent text-ds-primary bg-ds-surface-hover'
+                : 'border-transparent text-ds-muted hover:text-ds-primary hover:bg-ds-surface'
+            }`}
+            data-testid="tab-questions"
+          >
+            <FileQuestion className="w-3.5 h-3.5 text-ds-info" />
+            <span>2. Practice Questions</span>
+            <span className="text-[11px] text-ds-muted">({questions.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('notebook')}
+            role="tab"
+            aria-selected={activeTab === 'notebook'}
+            className={`px-4 py-2.5 text-xs font-semibold font-mono border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === 'notebook'
+                ? 'border-ds-accent text-ds-primary bg-ds-surface-hover'
+                : 'border-transparent text-ds-muted hover:text-ds-primary hover:bg-ds-surface'
+            }`}
+            data-testid="tab-notebook"
+          >
+            <BookMarked className="w-3.5 h-3.5 text-ds-warning" />
+            <span>3. Solved Notebook</span>
+            <span className="text-[11px] text-ds-muted">({solvedQuestions.length})</span>
+          </button>
+        </div>
+      </div>
+
+      {/* TAB 1: THEORY PRIMER */}
+      {activeTab === 'theory' && (
+        <div className="space-y-6" data-testid="theory-tab-content">
+          {loadingPrimer ? (
+            <div className="p-8 text-center text-xs font-mono text-ds-muted">
+              Loading topic theory primer...
+            </div>
+          ) : primer ? (
+            <div className="space-y-6">
+              {/* Primer Status Badge */}
+              <div className="flex items-center justify-between bg-ds-surface border border-ds-border rounded-ds p-3 text-xs font-mono">
+                <div className="flex items-center gap-2">
+                  {primer.status === 'DRAFT' ? (
+                    <span 
+                      className="px-2 py-0.5 rounded bg-ds-warning/15 border border-ds-warning/30 text-ds-warning font-bold text-[11px]"
+                      data-testid="draft-badge"
+                    >
+                      AI-GENERATED — UNREVIEWED
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded bg-ds-success/15 border border-ds-success/30 text-ds-success font-bold text-[11px]">
+                      {primer.status}
+                    </span>
+                  )}
+                  {primer.generatorModel && (
+                    <span className="text-ds-muted">Model: {primer.generatorModel}</span>
+                  )}
+                </div>
+                <span className="text-ds-muted">
+                  Grounding: GATE Exam Pool
+                </span>
+              </div>
+
+              {/* Motivation Section */}
+              <div className="bg-ds-surface border border-ds-border rounded-ds p-5 space-y-2">
+                <div className="text-xs font-mono font-bold text-ds-accent uppercase tracking-wider">
+                  Motivation & Engineering Context
+                </div>
+                <div className="text-sm text-ds-primary leading-relaxed">
+                  <MathText content={primer.motivation} />
+                </div>
+              </div>
+
+              {/* Core Idea Section */}
+              <div className="bg-ds-surface border border-ds-border rounded-ds p-5 space-y-2">
+                <div className="text-xs font-mono font-bold text-ds-info uppercase tracking-wider">
+                  Core Idea & Definitions
+                </div>
+                <div className="text-sm text-ds-primary leading-relaxed">
+                  <MathText content={primer.coreIdea} />
+                </div>
+              </div>
+
+              {/* Fundamental Invariant */}
+              {primer.invariant && (
+                <div className="bg-ds-surface-raised border border-ds-border-strong rounded-ds p-5 space-y-2">
+                  <div className="text-xs font-mono font-bold text-ds-warning uppercase tracking-wider">
+                    Core Invariant
+                  </div>
+                  <div className="text-sm text-ds-primary font-mono leading-relaxed bg-ds-bg/50 p-3 rounded border border-ds-border">
+                    <MathText content={primer.invariant} />
+                  </div>
+                </div>
+              )}
+
+              {/* Worked Example (Mandatory >= 150 words) */}
+              <div className="bg-ds-surface border border-ds-border rounded-ds p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-mono font-bold text-ds-success uppercase tracking-wider">
+                    Canonical Worked Example
+                  </div>
+                  <span className="text-[11px] font-mono text-ds-muted">Step-by-Step Walkthrough</span>
+                </div>
+                <div className="text-sm text-ds-primary leading-relaxed space-y-2">
+                  <MathText content={primer.workedExample} />
+                </div>
+              </div>
+
+              {/* Traps & Pitfalls */}
+              {primer.traps && (
+                <div className="bg-ds-surface border border-ds-border rounded-ds p-5 space-y-2">
+                  <div className="text-xs font-mono font-bold text-ds-danger uppercase tracking-wider flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Examiner Traps & Common Distractors</span>
+                  </div>
+                  <div className="text-sm text-ds-secondary leading-relaxed">
+                    <MathText content={primer.traps} />
+                  </div>
+                </div>
+              )}
+
+              {/* Prerequisite Concept Units */}
+              {primerData?.conceptSlugs && primerData.conceptSlugs.length > 0 && (
+                <div className="bg-ds-surface border border-ds-border rounded-ds p-5 space-y-3">
+                  <div className="text-xs font-mono font-bold text-ds-secondary uppercase tracking-wider flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-ds-accent" />
+                    <span>Prerequisite Concept Units</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {primerData.conceptSlugs.map((slug) => (
+                      <button
+                        key={slug}
+                        onClick={() => setSelectedConceptSlug(slug)}
+                        className="px-3 py-1.5 rounded-ds bg-ds-surface-raised hover:bg-ds-surface-hover border border-ds-border text-xs font-mono text-ds-primary flex items-center gap-1.5 transition-colors"
+                        data-testid={`concept-chip-${slug}`}
+                      >
+                        <span>{slug}</span>
+                        <ExternalLink className="w-3 h-3 text-ds-muted" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-ds-surface border border-ds-border rounded-ds p-8 text-center space-y-4" data-testid="empty-primer-box">
+              <div className="w-12 h-12 rounded-full bg-ds-accent/10 border border-ds-accent/20 flex items-center justify-center text-ds-accent mx-auto">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-base text-ds-primary">
+                  Theory Primer Not Yet Generated
+                </h3>
+                <p className="text-xs text-ds-secondary max-w-md mx-auto">
+                  Study this topic from first principles. Generate a curated theory primer grounded on authentic GATE questions.
+                </p>
+              </div>
+
+              {primerError && (
+                <p className="text-xs text-ds-danger font-medium">{primerError}</p>
+              )}
+
+              <button
+                onClick={handleGeneratePrimer}
+                disabled={generatingPrimer}
+                className="px-5 py-2.5 bg-ds-accent text-ds-accent-contrast rounded-ds text-xs font-bold inline-flex items-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-sm"
+                data-testid="generate-primer-btn"
+              >
+                {generatingPrimer ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Synthesizing Theory Primer...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Generate Theory Primer</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: QUESTIONS */}
+      {activeTab === 'questions' && (
+        <div className="space-y-4" data-testid="questions-tab-content">
+          <div className="flex items-center justify-between text-xs font-mono text-ds-muted pb-2 border-b border-ds-border">
+            <span>Showing {questions.length} questions for this topic</span>
+            <span>Solved: {solvedQuestions.length} / {questions.length}</span>
+          </div>
+
+          {loadingQuestions ? (
+            <div className="p-8 text-center text-xs font-mono text-ds-muted">
+              Loading topic questions...
+            </div>
+          ) : questions.length === 0 ? (
+            <div className="p-8 text-center text-xs font-mono text-ds-muted bg-ds-surface rounded-ds border border-ds-border">
+              No questions found in this topic yet.
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {questions.map((q) => {
+                const isSolved = q.pass1Status === 'SOLVED';
+                return (
+                  <div
+                    key={q.id}
+                    onClick={() => navigate(`/questions/${q.id}`)}
+                    className="bg-ds-surface hover:bg-ds-surface-hover border border-ds-border hover:border-ds-border-strong rounded-ds p-4 flex items-center justify-between gap-4 transition-all cursor-pointer group shadow-sm"
+                    data-testid={`topic-question-${q.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {isSolved ? (
+                        <CheckCircle2 className="w-4 h-4 text-ds-success shrink-0" />
+                      ) : (
+                        <Circle className="w-4 h-4 text-ds-muted shrink-0" />
+                      )}
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-[11px] font-mono">
+                          <span className="font-bold text-ds-accent">{q.year}</span>
+                          <span className="text-ds-muted">·</span>
+                          <span className="text-ds-secondary">{q.type}</span>
+                          <span className="text-ds-muted">·</span>
+                          <span className="text-ds-secondary">{q.marks} Marks</span>
+                        </div>
+                        <div className="text-sm text-ds-primary group-hover:text-ds-accent transition-colors line-clamp-2">
+                          <MathText content={q.statement} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-ds-muted group-hover:text-ds-primary transition-colors shrink-0">
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: NOTEBOOK */}
+      {activeTab === 'notebook' && (
+        <div className="space-y-4" data-testid="notebook-tab-content">
+          <div className="flex items-center justify-between text-xs font-mono text-ds-muted pb-2 border-b border-ds-border">
+            <span>Solved Log ({solvedQuestions.length} entries)</span>
+          </div>
+
+          {solvedQuestions.length === 0 ? (
+            <div className="p-8 text-center text-xs font-mono text-ds-muted bg-ds-surface rounded-ds border border-ds-border">
+              No questions solved in this topic yet. Start solving in the Practice Questions tab!
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {solvedQuestions.map((q) => (
+                <div
+                  key={q.id}
+                  onClick={() => navigate(`/questions/${q.id}`)}
+                  className="bg-ds-surface border border-ds-border rounded-ds p-4 space-y-2 cursor-pointer hover:bg-ds-surface-hover transition-colors"
+                >
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-ds-success font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      {q.pass1Status}
+                    </span>
+                    <span className="text-ds-muted">{q.year} · {q.type}</span>
+                  </div>
+                  <div className="text-sm text-ds-primary">
+                    <MathText content={q.statement} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Concept Unit Dialog Modal */}
+      {selectedConceptSlug && (
+        <ConceptUnitDialog
+          slug={selectedConceptSlug}
+          onClose={() => setSelectedConceptSlug(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default TopicPage;
