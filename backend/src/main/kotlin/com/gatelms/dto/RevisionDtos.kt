@@ -6,6 +6,7 @@ data class RevisionOverviewDto(
     val dueMistakes: Long,
     val dueTopics: Long,
     val pass2Pending: Long,
+    val dueCards: Long,
     val bookmarked: Long,
     val drillsCompleted: Long,
     val generatedAt: Instant

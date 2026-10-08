@@ -102,4 +102,84 @@ class AnatomyValidationService(
             throw AnatomyValidationException(errors.joinToString("; "))
         }
     }
+
+    // ---- WP2: Concept Unit + retrieval card emission validation (SPEC §6.1, §6.4) ----
+
+    private val yesNoPromptRegex =
+        Regex("(?i)^(is|are|was|were|do|does|did|can|could|will|would|should|shall|has|have|had)\\b[^?]*\\?\\s*$")
+    private val yesNoAnswerSet = setOf("yes", "no", "true", "false", "y", "n")
+
+    /**
+     * PC-1 binding (SPEC §6.1): a concept unit is a teaching artifact, not a summary.
+     * The differentiator is the worked example — the validator rejects anything under
+     * 150 words, because a summary cannot contain a worked example. Also validates the
+     * 2-4 active-recall card emission contract.
+     */
+    fun validateConceptUnitPayload(payload: UnitGenerationPayload) {
+        val errors = mutableListOf<String>()
+
+        if (payload.title.isBlank()) {
+            errors.add("title must not be blank")
+        }
+        if (payload.motivation.isBlank()) {
+            errors.add("motivation must not be blank")
+        }
+        if (payload.coreIdea.isBlank()) {
+            errors.add("core_idea must not be blank")
+        }
+
+        val wordCount = payload.workedExample.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.size
+        if (wordCount < WORKED_EXAMPLE_MIN_WORDS) {
+            errors.add(
+                "PC-1 violation: worked_example must be >= $WORKED_EXAMPLE_MIN_WORDS words (actual: $wordCount). " +
+                    "A concept unit cannot be a shallow summary."
+            )
+        }
+
+        validateEmissionCardsInternal(payload.cards, errors)
+
+        if (errors.isNotEmpty()) {
+            throw AnatomyValidationException(errors.joinToString("; "))
+        }
+    }
+
+    /**
+     * Card emission gate (SPEC §6.4): 2-4 cards, prompt != answer, no yes/no prompts.
+     * Prompts must force active recall — statement-recognition and binary questions are
+     * rejected outright.
+     */
+    fun validateEmissionCards(cards: List<UnitGenerationCard>) {
+        val errors = mutableListOf<String>()
+        validateEmissionCardsInternal(cards, errors)
+        if (errors.isNotEmpty()) {
+            throw AnatomyValidationException(errors.joinToString("; "))
+        }
+    }
+
+    private fun validateEmissionCardsInternal(cards: List<UnitGenerationCard>, errors: MutableList<String>) {
+        if (cards.size !in 2..4) {
+            errors.add("Unit must emit between 2 and 4 retrieval cards (actual: ${cards.size})")
+        }
+        for ((idx, card) in cards.withIndex()) {
+            val prompt = card.prompt.trim()
+            val answer = card.answer.trim()
+            if (prompt.isBlank() || answer.isBlank()) {
+                errors.add("Card ${idx + 1}: prompt and answer must not be blank")
+                continue
+            }
+            if (prompt.equals(answer, ignoreCase = true)) {
+                errors.add("Card ${idx + 1}: prompt and answer must differ (active recall, not recognition)")
+            }
+            if (yesNoPromptRegex.matches(prompt)) {
+                errors.add("Card ${idx + 1}: yes/no prompts are forbidden (the prompt must force active recall)")
+            }
+            if (answer.lowercase() in yesNoAnswerSet) {
+                errors.add("Card ${idx + 1}: yes/no answers are forbidden (the answer must state the mechanism)")
+            }
+        }
+    }
+
+    companion object {
+        const val WORKED_EXAMPLE_MIN_WORDS = 150
+    }
 }

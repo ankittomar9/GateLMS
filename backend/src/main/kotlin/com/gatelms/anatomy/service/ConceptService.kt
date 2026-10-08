@@ -12,7 +12,6 @@ import com.gatelms.anatomy.dto.ConceptUnitDto
 import com.gatelms.anatomy.dto.RetrievalCardDto
 import com.gatelms.anatomy.entity.*
 import com.gatelms.anatomy.exception.AnatomyNotFoundException
-import com.gatelms.anatomy.exception.AnatomyValidationException
 import com.gatelms.anatomy.exception.NoSourceQuestionsException
 import com.gatelms.anatomy.repository.*
 import com.gatelms.dto.QuestionSummaryDto
@@ -148,14 +147,8 @@ class ConceptService(
             val jsonText = anatomyValidationService.extractJson(response.reply)
             val parsed = objectMapper.readValue(jsonText, UnitGenerationPayload::class.java)
 
-            // Validate PC-1: worked_example must be >= 150 words with numbered steps
-            val wordCount = parsed.workedExample.trim().split(Regex("\\s+")).size
-            if (wordCount < 150) {
-                throw AnatomyValidationException("PC-1 violation: worked_example must be >= 150 words (actual: $wordCount). A concept unit cannot be a shallow summary.")
-            }
-            if (parsed.cards.size !in 2..4) {
-                throw AnatomyValidationException("Unit must emit between 2 and 4 retrieval cards (actual: ${parsed.cards.size})")
-            }
+            // PC-1 + card emission contract (SPEC §6.1, §6.4) — enforced by the shared validator
+            anatomyValidationService.validateConceptUnitPayload(parsed)
 
             payload = parsed
         } catch (e: Exception) {

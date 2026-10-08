@@ -1,5 +1,6 @@
 package com.gatelms.service
 
+import com.gatelms.anatomy.repository.RetrievalCardStateRepository
 import com.gatelms.dto.PracticeSessionResponse
 import com.gatelms.dto.RevisionDrillRequest
 import com.gatelms.dto.RevisionDrillSource
@@ -26,7 +27,8 @@ class RevisionService(
     private val questionRepository: QuestionRepository,
     private val mockAttemptRepository: MockAttemptRepository,
     private val practiceService: PracticeService,
-    private val currentUserProvider: CurrentUserProvider
+    private val currentUserProvider: CurrentUserProvider,
+    private val retrievalCardStateRepository: RetrievalCardStateRepository
 ) {
 
     fun getOverview(): RevisionOverviewDto {
@@ -35,6 +37,7 @@ class RevisionService(
         val dueMistakes = mistakeLogRepository.countDueReviews(currentUserId, now)
         val dueTopics = topicMasteryRepository.countDueForRevision(currentUserId, now)
         val pass2Pending = questionRepository.countPass2Pending(currentUserId)
+        val dueCards = retrievalCardStateRepository.countByIdUserIdAndDueAtLessThanEqual(currentUserId, now)
         val bookmarked = questionRepository.countBookmarked(currentUserId)
         val drillsCompleted = mockAttemptRepository.countCompletedDrills(currentUserId)
 
@@ -42,6 +45,7 @@ class RevisionService(
             dueMistakes = dueMistakes,
             dueTopics = dueTopics,
             pass2Pending = pass2Pending,
+            dueCards = dueCards,
             bookmarked = bookmarked,
             drillsCompleted = drillsCompleted,
             generatedAt = now

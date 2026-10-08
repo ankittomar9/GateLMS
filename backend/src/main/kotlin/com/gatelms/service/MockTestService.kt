@@ -2,6 +2,7 @@ package com.gatelms.service
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.gatelms.anatomy.service.CardSchedulingService
 import com.gatelms.dto.*
 import com.gatelms.entity.*
 import com.gatelms.repository.*
@@ -33,7 +34,8 @@ class MockTestService(
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private val planProgressService: PlanProgressService? = null,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private val achievementService: AchievementService? = null
+    private val achievementService: AchievementService? = null,
+    private val cardSchedulingService: CardSchedulingService
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(MockTestService::class.java)
 
@@ -429,6 +431,13 @@ class MockTestService(
             } else {
                 wrongCount++
                 negativeScoreSum += grading.penalty
+                // PHASE7-M1 WP2 (SPEC §6.3, PC-2): wrong mock answer -> prerequisite card
+                // enrollment. Non-fatal, idempotent.
+                try {
+                    attempt.userId?.let { cardSchedulingService.enrollPrerequisiteCards(it, qid) }
+                } catch (e: Exception) {
+                    logger.warn("Card auto-enrollment hook failure ignored for question {}: {}", qid, e.message)
+                }
             }
         }
         gateLmsMetrics?.recordGradingDuration("mock", java.time.Duration.ofNanos(System.nanoTime() - startNano))
