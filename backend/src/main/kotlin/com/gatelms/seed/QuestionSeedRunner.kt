@@ -52,32 +52,78 @@ class QuestionSeedRunner(
     private val subjectRepository: SubjectRepository,
     private val topicRepository: TopicRepository,
     private val objectMapper: ObjectMapper,
-    @Value("\${app.seed.path:seed-data/questions.jsonl}")
-    private val seedPath: String = "seed-data/questions.jsonl"
+    @Value("\${app.seed.paths:seed-data/questions.jsonl,seed-data/pyp-bank.jsonl,seed-data/so-gate-bank.jsonl}")
+    private val seedPathsStr: String = "seed-data/questions.jsonl,seed-data/pyp-bank.jsonl,seed-data/so-gate-bank.jsonl",
+    @Value("\${app.seed.path:}")
+    private val seedPath: String = ""
 ) : ApplicationRunner {
 
     private val logger = LoggerFactory.getLogger(QuestionSeedRunner::class.java)
 
-    override fun run(args: ApplicationArguments?) {
-        val effectivePath = args?.getOptionValues("app.seed.path")?.firstOrNull()
-            ?: args?.getOptionValues("seed.path")?.firstOrNull()
-            ?: seedPath
+    fun resolvePaths(args: ApplicationArguments? = null): List<String> {
+        val argPaths = args?.getOptionValues("app.seed.paths")?.firstOrNull()
+            ?: args?.getOptionValues("seed.paths")?.firstOrNull()
+        if (!argPaths.isNullOrBlank()) {
+            return argPaths.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        }
 
-        logger.info("Initializing GateLMS Question Seed Pipeline from: {}", effectivePath)
-        val report = importQuestions(effectivePath)
-        logger.info(
-            "[SEED-RECEIPT] total={}, inserted={}, updated={}, rejected={}",
-            report.total,
-            report.inserted,
-            report.updated,
-            report.rejected
-        )
-        if (report.rejectionReasons.isNotEmpty()) {
-            logger.warn("Rejection summary ({} items):", report.rejectionReasons.size)
-            report.rejectionReasons.take(20).forEach { reason ->
-                logger.warn(" - {}", reason)
+        val argSingle = args?.getOptionValues("app.seed.path")?.firstOrNull()
+            ?: args?.getOptionValues("seed.path")?.firstOrNull()
+        if (!argSingle.isNullOrBlank()) {
+            return listOf(argSingle.trim())
+        }
+
+        if (seedPath.isNotBlank() && seedPath != "seed-data/questions.jsonl") {
+            return listOf(seedPath.trim())
+        }
+
+        if (seedPathsStr.isNotBlank()) {
+            return seedPathsStr.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        }
+
+        return listOf(seedPath.ifBlank { "seed-data/questions.jsonl" })
+    }
+
+    override fun run(args: ApplicationArguments?) {
+        val paths = resolvePaths(args)
+        logger.info("Initializing GateLMS Question Seed Pipeline with {} files: {}", paths.size, paths)
+
+        var grandTotal = 0
+        var grandInserted = 0
+        var grandUpdated = 0
+        var grandRejected = 0
+
+        paths.forEach { path ->
+            val report = importQuestions(path)
+            grandTotal += report.total
+            grandInserted += report.inserted
+            grandUpdated += report.updated
+            grandRejected += report.rejected
+
+            logger.info(
+                "[SEED-RECEIPT] file={}, total={}, inserted={}, updated={}, rejected={}",
+                path,
+                report.total,
+                report.inserted,
+                report.updated,
+                report.rejected
+            )
+            if (report.rejectionReasons.isNotEmpty()) {
+                logger.warn("Rejection summary for {} ({} items):", path, report.rejectionReasons.size)
+                report.rejectionReasons.take(20).forEach { reason ->
+                    logger.warn(" - {}", reason)
+                }
             }
         }
+
+        logger.info(
+            "[ALL-SEEDS-RECEIPT] files={}, total={}, inserted={}, updated={}, rejected={}",
+            paths.size,
+            grandTotal,
+            grandInserted,
+            grandUpdated,
+            grandRejected
+        )
     }
 
     @Transactional
@@ -251,13 +297,20 @@ class QuestionSeedRunner(
         }
     }
 
-    private fun resolveFile(filePath: String): File? {
+    fun resolveFile(filePath: String): File? {
+        val fileName = File(filePath).name
         val candidates = listOf(
             File(filePath),
+            File("seed-data/$fileName"),
             File("backend/$filePath"),
+            File("backend/seed-data/$fileName"),
             File("../$filePath"),
+            File("../seed-data/$fileName"),
             File(System.getProperty("user.dir"), filePath),
-            File(System.getProperty("user.dir"), "backend/$filePath")
+            File(System.getProperty("user.dir"), "seed-data/$fileName"),
+            File(System.getProperty("user.dir"), "backend/$filePath"),
+            File(System.getProperty("user.dir"), "backend/seed-data/$fileName"),
+            File(System.getProperty("user.dir"), "../seed-data/$fileName")
         )
         return candidates.firstOrNull { it.exists() && it.isFile }
     }
