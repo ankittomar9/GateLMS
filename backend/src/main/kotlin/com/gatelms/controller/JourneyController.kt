@@ -39,11 +39,26 @@ class JourneyController(
         @PathVariable topicId: String,
         @RequestParam(required = false) provider: String?,
         @RequestParam(required = false) model: String?,
+        @RequestParam(defaultValue = "false") force: Boolean,
         @RequestHeader(value = "X-Api-Key", required = false) authHeaderKey: String?
     ): ResponseEntity<TopicPrimerResponseDto> {
         val userId = currentUserProvider.getCurrentUserId()
-        val res = topicPrimerService.generateOrGetCached(topicId, userId, provider, model, authHeaderKey)
+        val res = topicPrimerService.generateOrGetCached(topicId, userId, provider, model, authHeaderKey, force)
         return ResponseEntity.ok(res)
+    }
+
+    @PutMapping("/journey/topics/{topicId}/primer")
+    fun updatePrimer(
+        @PathVariable topicId: String,
+        @RequestBody req: CurationPrimerUpdateRequest
+    ): ResponseEntity<TopicPrimerDto> {
+        return ResponseEntity.ok(topicPrimerService.updatePrimerByTopic(topicId, req))
+    }
+
+    @DeleteMapping("/journey/topics/{topicId}/primer")
+    fun deletePrimer(@PathVariable topicId: String): ResponseEntity<Map<String, String>> {
+        topicPrimerService.deletePrimer(topicId)
+        return ResponseEntity.ok(mapOf("status" to "deleted", "topicId" to topicId))
     }
 
     @GetMapping("/journey/continue")

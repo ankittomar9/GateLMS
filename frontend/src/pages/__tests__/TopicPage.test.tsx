@@ -21,6 +21,8 @@ vi.mock('../../api/journeyApi', () => ({
   journeyApi: {
     getTopicPrimer: vi.fn(),
     generateTopicPrimer: vi.fn(),
+    updateTopicPrimer: vi.fn(),
+    deleteTopicPrimer: vi.fn(),
   },
 }));
 
@@ -178,5 +180,109 @@ describe('TopicPage', () => {
     await waitFor(() => {
       expect(journeyApi.generateTopicPrimer).toHaveBeenCalledWith('topic_vm');
     });
+  });
+
+  it('allows editing primer and saving modifications', async () => {
+    vi.mocked(journeyApi.getTopicPrimer).mockResolvedValue(mockPrimerResponse);
+    const updatedPrimer = {
+      ...mockPrimerResponse.primer!,
+      motivation: 'Updated motivation text by teacher',
+    };
+    vi.mocked(journeyApi.updateTopicPrimer).mockResolvedValue(updatedPrimer);
+
+    render(
+      <MemoryRouter>
+        <TopicPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('edit-primer-btn')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('edit-primer-btn'));
+    expect(screen.getByTestId('primer-edit-form')).toBeInTheDocument();
+
+    const textareas = screen.getAllByRole('textbox');
+    fireEvent.change(textareas[0], { target: { value: 'Updated motivation text by teacher' } });
+
+    const saveBtn = screen.getByRole('button', { name: /save changes/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(journeyApi.updateTopicPrimer).toHaveBeenCalledWith(
+        'topic_vm',
+        expect.objectContaining({ motivation: 'Updated motivation text by teacher' })
+      );
+    });
+  });
+
+  it('allows regenerating primer with force=true', async () => {
+    vi.mocked(journeyApi.getTopicPrimer).mockResolvedValue(mockPrimerResponse);
+    vi.mocked(journeyApi.generateTopicPrimer).mockResolvedValue(mockPrimerResponse);
+
+    render(
+      <MemoryRouter>
+        <TopicPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('regenerate-primer-btn')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('regenerate-primer-btn'));
+
+    await waitFor(() => {
+      expect(journeyApi.generateTopicPrimer).toHaveBeenCalledWith('topic_vm', { force: true });
+    });
+  });
+
+  it('allows deleting primer and confirms via window.confirm', async () => {
+    vi.mocked(journeyApi.getTopicPrimer).mockResolvedValue(mockPrimerResponse);
+    vi.mocked(journeyApi.deleteTopicPrimer).mockResolvedValue({ status: 'deleted', topicId: 'topic_vm' });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <MemoryRouter>
+        <TopicPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-primer-btn')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('delete-primer-btn'));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(journeyApi.deleteTopicPrimer).toHaveBeenCalledWith('topic_vm');
+    });
+    confirmSpy.mockRestore();
+  });
+
+  it('renders parseError alert banner when primer contains generation error', async () => {
+    const errorPrimerRes: TopicPrimerResponse = {
+      ...mockPrimerResponse,
+      primer: {
+        ...mockPrimerResponse.primer!,
+        parseError: 'Provider returned 5xx server error: 503 Service Unavailable',
+      },
+    };
+    vi.mocked(journeyApi.getTopicPrimer).mockResolvedValue(errorPrimerRes);
+
+    render(
+      <MemoryRouter>
+        <TopicPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('primer-error-banner')).toBeInTheDocument();
+    });
+    expect(screen.getByText(/503 Service Unavailable/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry synthesis now/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /discard failed draft/i })).toBeInTheDocument();
   });
 });

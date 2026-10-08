@@ -23,6 +23,8 @@ import com.gatelms.repository.QuestionProgressRepository
 import com.gatelms.repository.QuestionRepository
 import com.gatelms.security.CurrentUserProvider
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
+import org.springframework.web.server.ResponseStatusException
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
@@ -106,7 +108,7 @@ class ConceptService(
     ): ConceptUnitDto {
         // 1. Cached check
         val existing = conceptUnitRepository.findByConceptTagSlug(slug)
-        if (existing.isPresent && existing.get().status != ConceptUnitStatus.REJECTED) {
+        if (existing.isPresent && existing.get().status != ConceptUnitStatus.REJECTED && existing.get().parseError == null) {
             val cards = retrievalCardRepository.findByConceptUnitIdOrderByCardOrderAsc(existing.get().id!!)
                 .map { it.toDto() }
             return existing.get().toDto(cards)
@@ -191,15 +193,10 @@ class ConceptService(
 
             return savedUnit.toDto(savedCards)
         } else {
-            unit.title = conceptTag.label
-            unit.motivation = "Generation parsing incomplete"
-            unit.coreIdea = "Incomplete"
-            unit.workedExample = "Incomplete"
-            unit.status = ConceptUnitStatus.DRAFT
-            unit.parseError = parseError
-            unit.generatorModel = resolvedModel
-            val savedUnit = conceptUnitRepository.save(unit)
-            return savedUnit.toDto(emptyList())
+            throw ResponseStatusException(
+                HttpStatus.BAD_GATEWAY,
+                "Concept unit generation failed: ${parseError ?: "AI service unavailable"}"
+            )
         }
     }
 

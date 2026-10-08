@@ -70,6 +70,18 @@ class GlobalExceptionHandler {
             .body(problem)
     }
 
+    @ExceptionHandler(com.gatelms.ai.exception.AiRateLimitException::class)
+    fun handleAiRateLimit(ex: com.gatelms.ai.exception.AiRateLimitException): org.springframework.http.ResponseEntity<ProblemDetail> {
+        val problem = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.message ?: "Rate limit exceeded")
+        problem.type = URI.create("about:blank")
+        problem.title = "Too Many Requests"
+        problem.setProperty("retryAfterSeconds", ex.retryAfterSeconds)
+        return org.springframework.http.ResponseEntity
+            .status(HttpStatus.TOO_MANY_REQUESTS)
+            .header("Retry-After", ex.retryAfterSeconds.toString())
+            .body(problem)
+    }
+
     @ExceptionHandler(ForbiddenException::class, org.springframework.security.access.AccessDeniedException::class)
     fun handleForbidden(ex: Exception): ProblemDetail {
         val problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.message ?: "Access denied")
