@@ -43,7 +43,9 @@ seed-data/pyp-raw/
 backend/seed-data/pyp-raw/
 seed-data/pyp-src/
 backend/seed-data/pyp-src/
-docker-data/notes/
-__pycache__/
-*.pyc
+# Books and Reference library
+references/
+books/
+*.pdf
+
 
