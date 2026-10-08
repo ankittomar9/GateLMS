@@ -50,3 +50,33 @@ export interface JourneyContinue {
   subjectId: string | null;
   questionId: string | null;
 }
+
+export interface NotebookEntry {
+  questionId: string;
+  year: number | null;
+  source: string | null;
+  statementSnippet: string;
+  solvedAt: string | null;
+  starred: boolean;
+  anatomyAvailable: boolean;
+}
+
+export interface TopicNotebookGroup {
+  topicId: string;
+  topicName: string;
+  sequence: number;
+  entries: NotebookEntry[];
+}
+
+export interface SubjectNotebookResponse {
+  subjectId: string;
+  subjectName: string;
+  topics: TopicNotebookGroup[];
+  totalEntries: number;
+}
+
+export interface SimilarQuestionsResponse {
+  questions: any[];
+  similarityBasis: 'CONCEPT' | 'TOPIC';
+}
+

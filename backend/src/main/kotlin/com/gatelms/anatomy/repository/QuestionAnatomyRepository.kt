@@ -14,4 +14,15 @@ interface QuestionAnatomyRepository : JpaRepository<QuestionAnatomy, UUID> {
     fun findByQuestionId(questionId: UUID): Optional<QuestionAnatomy>
     fun findByStatus(status: AnatomyStatus, pageable: Pageable): Page<QuestionAnatomy>
     fun countByStatus(status: AnatomyStatus): Long
+
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT qa.question.id
+        FROM QuestionAnatomy qa
+        WHERE qa.question.id IN :questionIds
+          AND qa.status <> com.gatelms.anatomy.entity.AnatomyStatus.REJECTED
+    """)
+    fun findQuestionIdsWithValidAnatomy(
+        @org.springframework.data.repository.query.Param("questionIds") questionIds: Collection<UUID>
+    ): Set<UUID>
 }
+

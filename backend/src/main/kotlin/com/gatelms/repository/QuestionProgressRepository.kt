@@ -50,4 +50,30 @@ interface QuestionProgressRepository : JpaRepository<QuestionProgress, QuestionP
     fun countSolvedBySubjectForUser(@Param("userId") userId: UUID): List<Array<Any>>
 
     fun findFirstByIdUserIdAndLastAttemptedAtIsNotNullOrderByLastAttemptedAtDesc(userId: UUID): Optional<QuestionProgress>
+
+    @Query("""
+        SELECT qp.id.questionId 
+        FROM QuestionProgress qp 
+        WHERE qp.id.userId = :userId 
+          AND qp.pass1Status IN ('SOLVED', 'ASSISTED')
+    """)
+    fun findSolvedQuestionIdsForUser(@Param("userId") userId: UUID): Set<UUID>
+
+    @Query("""
+        SELECT qp, q 
+        FROM QuestionProgress qp
+        JOIN Question q ON q.id = qp.id.questionId
+        WHERE qp.id.userId = :userId
+          AND (q.subject.id = :subjectId OR q.subject.slug = :subjectId)
+          AND qp.pass1Status IN ('SOLVED', 'ASSISTED')
+          AND q.curationStatus <> 'REJECTED'
+          AND (:starredOnly = false OR qp.isBookmarked = true)
+        ORDER BY qp.lastAttemptedAt DESC NULLS LAST, q.createdAt DESC
+    """)
+    fun findSolvedQuestionsForSubject(
+        @Param("userId") userId: UUID,
+        @Param("subjectId") subjectId: String,
+        @Param("starredOnly") starredOnly: Boolean
+    ): List<Array<Any>>
 }
+

@@ -28,6 +28,7 @@ import { useAiStudio } from '../context/AiStudioContext';
 import { AnatomyPanel } from '../components/AnatomyPanel';
 import { LayeredHints } from '../components/LayeredHints';
 import { ConceptUnitDialog } from '../components/ConceptUnitDialog';
+import { SimilarQuestionsPanel } from '../components/SimilarQuestionsPanel';
 import { anatomyApi, QuestionAnatomyDto } from '../api/anatomyApi';
 import { useAuth } from '../context/AuthContext';
 
@@ -733,6 +734,9 @@ export const QuestionDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Similar Practice Questions (PC-5) */}
+      <SimilarQuestionsPanel questionId={q.id} />
 
       {/* Concept Unit Modal */}
       <ConceptUnitDialog

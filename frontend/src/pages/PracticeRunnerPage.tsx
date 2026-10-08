@@ -36,6 +36,7 @@ import {
 import { MathText } from '../components/MathText';
 import { useAiStudio } from '../context/AiStudioContext';
 import { AnatomyPanel } from '../components/AnatomyPanel';
+import { SimilarQuestionsPanel } from '../components/SimilarQuestionsPanel';
 
 interface OptionItem {
   label: string;
@@ -443,6 +444,12 @@ export const PracticeRunnerPage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {session?.questions && session.questions.length > 0 && (
+            <div className="pt-4 border-t border-ds-border">
+              <SimilarQuestionsPanel questionId={session.questions[0].id} />
+            </div>
+          )}
         </div>
       </div>
     );

@@ -396,7 +396,7 @@ class QuestionService(
         }
     }
 
-    private fun Question.toSummaryDto(progress: QuestionProgress? = null): QuestionSummaryDto {
+    fun Question.toSummaryDto(progress: QuestionProgress? = null): QuestionSummaryDto {
         return QuestionSummaryDto(
             id = id!!,
             externalId = externalId,

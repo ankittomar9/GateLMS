@@ -51,6 +51,15 @@ class JourneyController(
         return ResponseEntity.ok(journeyService.getContinue())
     }
 
+    @GetMapping("/journey/subjects/{subjectId}/notebook")
+    fun getSubjectNotebook(
+        @PathVariable subjectId: String,
+        @RequestParam(defaultValue = "false") starredOnly: Boolean,
+        @RequestParam(required = false) topicId: String?
+    ): ResponseEntity<SubjectNotebookDto> {
+        return ResponseEntity.ok(journeyService.getSubjectNotebook(subjectId, starredOnly, topicId))
+    }
+
     @GetMapping("/curation/primers")
     @PreAuthorize("hasRole('ADMIN')")
     fun getCurationPrimers(
