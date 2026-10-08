@@ -8,7 +8,11 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.net.URI
 
-@RestControllerAdvice(basePackages = ["com.gatelms.ai"])
+import org.springframework.core.Ordered
+import org.springframework.core.annotation.Order
+
+@Order(Ordered.HIGHEST_PRECEDENCE)
+@RestControllerAdvice(basePackages = ["com.gatelms.ai", "com.gatelms.anatomy", "com.gatelms.controller"])
 class AiExceptionAdvice {
 
     @ExceptionHandler(AiValidationException::class)

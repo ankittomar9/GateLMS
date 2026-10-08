@@ -34,7 +34,7 @@ export const journeyApi = {
 
   generateTopicPrimer: async (
     topicId: string,
-    options?: { provider?: string; model?: string; apiKey?: string }
+    options?: { provider?: string; model?: string; apiKey?: string; force?: boolean }
   ): Promise<TopicPrimerResponse> => {
     const headers: Record<string, string> = {};
     if (options?.apiKey) {
@@ -43,11 +43,28 @@ export const journeyApi = {
     const params: Record<string, string> = {};
     if (options?.provider) params.provider = options.provider;
     if (options?.model) params.model = options.model;
+    if (options?.force) params.force = 'true';
 
     return request<TopicPrimerResponse>(`/journey/topics/${topicId}/primer/generate`, {
       method: 'POST',
       headers,
       params,
+    });
+  },
+
+  updateTopicPrimer: async (
+    topicId: string,
+    req: CurationPrimerUpdateRequest
+  ): Promise<TopicPrimer> => {
+    return request<TopicPrimer>(`/journey/topics/${topicId}/primer`, {
+      method: 'PUT',
+      body: JSON.stringify(req),
+    });
+  },
+
+  deleteTopicPrimer: async (topicId: string): Promise<{ status: string; topicId: string }> => {
+    return request<{ status: string; topicId: string }>(`/journey/topics/${topicId}/primer`, {
+      method: 'DELETE',
     });
   },
 

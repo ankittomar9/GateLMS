@@ -63,13 +63,14 @@ class TopicPrimerService(
         userId: UUID,
         provider: String? = null,
         model: String? = null,
-        authHeaderKey: String? = null
+        authHeaderKey: String? = null,
+        force: Boolean = false
     ): TopicPrimerResponseDto {
         val topic = findTopic(topicId)
         val existing = topicPrimerRepository.findByTopicId(topic.id)
 
-        // 1. Cached check: return existing if non-REJECTED
-        if (existing.isPresent && existing.get().status != TopicPrimerStatus.REJECTED) {
+        // 1. Cached check: return existing if non-REJECTED, has no parseError, and not forced
+        if (!force && existing.isPresent && existing.get().status != TopicPrimerStatus.REJECTED && existing.get().parseError == null) {
             val conceptSlugs = conceptTagRepository.findByTopicId(topic.id).map { it.slug }
             return TopicPrimerResponseDto(
                 primer = existing.get().toDto(),
@@ -93,7 +94,7 @@ class TopicPrimerService(
             mode = "study"
         )
 
-        // 4. Generate with 1 internal retry and never-500 fallback
+        // 4. Generate with 1 internal retry
         var payload: TopicPrimerPayload? = null
         var parseError: String? = null
         val resolvedModel = model ?: "gemini-3.8-flash"
@@ -112,28 +113,27 @@ class TopicPrimerService(
             }
         }
 
-        // 5. Persist primer
+        // If generation failed or could not be parsed, DO NOT persist an incomplete/corrupted placeholder to the DB!
+        if (payload == null) {
+            throw ResponseStatusException(
+                HttpStatus.BAD_GATEWAY,
+                "Topic primer generation failed: ${parseError ?: "AI service unavailable"}"
+            )
+        }
+
+        // 5. Persist primer only if successfully generated & validated
         val primer = existing.orElseGet {
             TopicPrimer(topic = topic)
         }
 
-        if (payload != null) {
-            primer.motivation = payload.motivation
-            primer.coreIdea = payload.coreIdea
-            primer.invariant = payload.invariant
-            primer.workedExample = payload.workedExample
-            primer.traps = payload.traps
-            primer.status = TopicPrimerStatus.DRAFT
-            primer.parseError = null
-            primer.generatorModel = resolvedModel
-        } else {
-            primer.motivation = "Generation parsing incomplete"
-            primer.coreIdea = "Incomplete"
-            primer.workedExample = "Incomplete worked example placeholder due to generation failure"
-            primer.status = TopicPrimerStatus.DRAFT
-            primer.parseError = parseError
-            primer.generatorModel = resolvedModel
-        }
+        primer.motivation = payload.motivation
+        primer.coreIdea = payload.coreIdea
+        primer.invariant = payload.invariant
+        primer.workedExample = payload.workedExample
+        primer.traps = payload.traps
+        primer.status = TopicPrimerStatus.DRAFT
+        primer.parseError = null
+        primer.generatorModel = resolvedModel
 
         val saved = topicPrimerRepository.save(primer)
         val conceptSlugs = conceptTagRepository.findByTopicId(topic.id).map { it.slug }
@@ -144,6 +144,33 @@ class TopicPrimerService(
             bookChapterRef = topic.bookChapterRef,
             subjectStandardBookRef = topic.subject?.standardBookRef
         )
+    }
+
+    @Transactional
+    fun deletePrimer(topicId: String) {
+        val topic = findTopic(topicId)
+        val existing = topicPrimerRepository.findByTopicId(topic.id)
+        if (existing.isPresent) {
+            topicPrimerRepository.delete(existing.get())
+        }
+    }
+
+    @Transactional
+    fun updatePrimerByTopic(topicId: String, req: CurationPrimerUpdateRequest): TopicPrimerDto {
+        val topic = findTopic(topicId)
+        val primer = topicPrimerRepository.findByTopicId(topic.id)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Topic primer not found for topic: $topicId") }
+
+        req.status?.let { primer.status = it }
+        req.motivation?.let { primer.motivation = it }
+        req.coreIdea?.let { primer.coreIdea = it }
+        req.invariant?.let { primer.invariant = it }
+        req.workedExample?.let { primer.workedExample = it }
+        req.traps?.let { primer.traps = it }
+        primer.parseError = null
+
+        val saved = topicPrimerRepository.save(primer)
+        return saved.toDto()
     }
 
     @Transactional(readOnly = true)

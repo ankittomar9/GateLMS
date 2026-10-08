@@ -346,4 +346,95 @@ class JourneyApiIT : BaseIntegrationTest() {
         )
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, resp.statusCode)
     }
+
+    @Test
+    fun `honest-judge PASS - primer update and delete endpoints manage primer in DB`() {
+        loginAs("ankur", "admin123")
+
+        val primerJson = objectMapper.writeValueAsString(
+            mapOf(
+                "motivation" to "Original motivation",
+                "core_idea" to "Original core idea",
+                "invariant" to "Original invariant",
+                "worked_example" to validWorkedExample,
+                "traps" to "Original traps"
+            )
+        )
+
+        `when`(aiChatService.chat(any(AiChatRequest::class.java) ?: AiChatRequest(messages = emptyList(), provider = ""), nullable(String::class.java))).thenReturn(
+            AiChatResponse(
+                reply = primerJson,
+                provider = "GEMINI",
+                model = "gemini-3.8-flash",
+                latencyMs = 150
+            )
+        )
+
+        // 1. Generate primer
+        val genResp = restTemplate.postForEntity(
+            "/api/v1/journey/topics/topic_dbms_relational_alg/primer/generate",
+            null,
+            TopicPrimerResponseDto::class.java
+        )
+        assertEquals(HttpStatus.OK, genResp.statusCode)
+        assertNotNull(genResp.body?.primer)
+
+        // 2. Update primer via PUT /journey/topics/{topicId}/primer
+        val updateReq = com.gatelms.dto.CurationPrimerUpdateRequest(
+            motivation = "Teacher edited motivation",
+            coreIdea = "Teacher edited core idea"
+        )
+        val putEntity = org.springframework.http.HttpEntity(updateReq)
+        val updateResp = restTemplate.exchange(
+            "/api/v1/journey/topics/topic_dbms_relational_alg/primer",
+            HttpMethod.PUT,
+            putEntity,
+            com.gatelms.dto.TopicPrimerDto::class.java
+        )
+        assertEquals(HttpStatus.OK, updateResp.statusCode)
+        assertEquals("Teacher edited motivation", updateResp.body?.motivation)
+
+        // Check in DB
+        val dbPrimer = topicPrimerRepository.findByTopicId("topic_dbms_relational_alg")
+        assertTrue(dbPrimer.isPresent)
+        assertEquals("Teacher edited motivation", dbPrimer.get().motivation)
+
+        // 3. Delete primer via DELETE /journey/topics/{topicId}/primer
+        val deleteResp = restTemplate.exchange(
+            "/api/v1/journey/topics/topic_dbms_relational_alg/primer",
+            HttpMethod.DELETE,
+            null,
+            Map::class.java
+        )
+        assertEquals(HttpStatus.OK, deleteResp.statusCode)
+
+        // Must be deleted from DB
+        val dbPrimerAfterDelete = topicPrimerRepository.findByTopicId("topic_dbms_relational_alg")
+        assertFalse(dbPrimerAfterDelete.isPresent)
+    }
+
+    @Test
+    fun `honest-judge PASS - primer generation failure does not persist corrupt row in DB`() {
+        loginAs("ankur", "admin123")
+        // Ensure no primer exists initially
+        topicPrimerRepository.findByTopicId("topic_dbms_relational_alg").ifPresent {
+            topicPrimerRepository.delete(it)
+        }
+
+        // Mock AI to throw 503 Provider error
+        `when`(aiChatService.chat(any(AiChatRequest::class.java) ?: AiChatRequest(messages = emptyList(), provider = ""), nullable(String::class.java))).thenThrow(
+            RuntimeException("503 Service Unavailable: High demand")
+        )
+
+        val resp = restTemplate.postForEntity(
+            "/api/v1/journey/topics/topic_dbms_relational_alg/primer/generate",
+            null,
+            String::class.java
+        )
+        assertEquals(HttpStatus.BAD_GATEWAY, resp.statusCode)
+
+        // Prove NO corrupt placeholder was saved to the database
+        val dbPrimer = topicPrimerRepository.findByTopicId("topic_dbms_relational_alg")
+        assertFalse(dbPrimer.isPresent, "Failed generation must never persist corrupt placeholder into the database")
+    }
 }
