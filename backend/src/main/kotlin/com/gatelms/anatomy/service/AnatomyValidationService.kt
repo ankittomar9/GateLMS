@@ -179,7 +179,65 @@ class AnatomyValidationService(
         }
     }
 
+    // ---- WP2: Topic Primer validation (SPEC §6.2) ----
+
+    fun parseAndValidatePrimer(rawResponse: String): TopicPrimerPayload {
+        val jsonText = extractJson(rawResponse)
+        val payload = try {
+            objectMapper.readValue(jsonText, TopicPrimerPayload::class.java)
+        } catch (e: Exception) {
+            throw AnatomyValidationException("Malformed or unparseable JSON: ${e.message}")
+        }
+        validatePrimerPayload(payload)
+        return payload
+    }
+
+    fun validatePrimerPayload(payload: TopicPrimerPayload) {
+        val errors = mutableListOf<String>()
+
+        if (payload.motivation.isBlank()) {
+            errors.add("motivation must not be blank")
+        }
+        if (payload.coreIdea.isBlank()) {
+            errors.add("core_idea must not be blank")
+        }
+
+        val wordCount = payload.workedExample.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.size
+        if (wordCount < WORKED_EXAMPLE_MIN_WORDS) {
+            errors.add(
+                "PC-1 violation: worked_example must be >= $WORKED_EXAMPLE_MIN_WORDS words (actual: $wordCount). " +
+                    "A topic primer cannot be a shallow summary."
+            )
+        }
+
+        // AF-1: Anti-fabrication of student-population statistics
+        val allText = buildString {
+            append(payload.motivation).append(" ")
+            append(payload.coreIdea).append(" ")
+            payload.invariant?.let { append(it).append(" ") }
+            append(payload.workedExample).append(" ")
+            payload.traps?.let { append(it).append(" ") }
+        }
+
+        if (populationStatRegex.containsMatchIn(allText)) {
+            errors.add("AF-1 violation: primer contains fabricated student-population statistics or percentage claims")
+        }
+
+        if (errors.isNotEmpty()) {
+            throw AnatomyValidationException(errors.joinToString("; "))
+        }
+    }
+
     companion object {
         const val WORKED_EXAMPLE_MIN_WORDS = 150
     }
 }
+
+data class TopicPrimerPayload(
+    @com.fasterxml.jackson.annotation.JsonProperty("motivation") val motivation: String = "",
+    @com.fasterxml.jackson.annotation.JsonProperty("core_idea") val coreIdea: String = "",
+    @com.fasterxml.jackson.annotation.JsonProperty("invariant") val invariant: String? = null,
+    @com.fasterxml.jackson.annotation.JsonProperty("worked_example") val workedExample: String = "",
+    @com.fasterxml.jackson.annotation.JsonProperty("traps") val traps: String? = null
+)
+

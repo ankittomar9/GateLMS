@@ -16,4 +16,7 @@ interface TopicRepository : JpaRepository<Topic, String> {
 
     @Query("SELECT t FROM Topic t WHERE (t.subject.id = :subjectIdOrSlug OR t.subject.slug = :subjectIdOrSlug) AND t.slug = :topicSlug")
     fun findBySubjectAndTopicSlug(subjectIdOrSlug: String, topicSlug: String): Topic?
+
+    @Query("SELECT t FROM Topic t WHERE t.subject.id = :subjectIdOrSlug OR t.subject.slug = :subjectIdOrSlug ORDER BY t.sequence ASC, t.name ASC")
+    fun findBySubjectIdOrSlugOrderBySequenceAscNameAsc(subjectIdOrSlug: String): List<Topic>
 }

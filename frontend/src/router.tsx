@@ -1,6 +1,9 @@
 import React from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { JourneyHomePage } from './pages/JourneyHomePage';
+import { SubjectPage } from './pages/SubjectPage';
+import { TopicPage } from './pages/TopicPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SyllabusPage } from './pages/SyllabusPage';
 import { QuestionsPage } from './pages/QuestionsPage';
@@ -40,7 +43,19 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
+        element: <JourneyHomePage />,
+      },
+      {
+        path: 'dashboard',
         element: <DashboardPage />,
+      },
+      {
+        path: 'subjects/:subjectId',
+        element: <SubjectPage />,
+      },
+      {
+        path: 'topics/:topicId',
+        element: <TopicPage />,
       },
       {
         path: 'planner',

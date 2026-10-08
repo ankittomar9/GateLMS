@@ -15,12 +15,14 @@ class AiRateLimiter(
     private val statusTimestamps = ConcurrentHashMap<UUID, MutableList<Long>>()
     private val anatomyTimestamps = ConcurrentHashMap<UUID, MutableList<Long>>()
     private val conceptTimestamps = ConcurrentHashMap<UUID, MutableList<Long>>()
+    private val primerTimestamps = ConcurrentHashMap<UUID, MutableList<Long>>()
 
     private val chatWindowMs = 3600_000L // 1 hour
     private val transcribeWindowMs = 600_000L // 10 minutes
     private val statusWindowMs = 3600_000L // 1 hour
     private val anatomyWindowMs = 3600_000L // 1 hour
     private val conceptWindowMs = 3600_000L // 1 hour
+    private val primerWindowMs = 3600_000L // 1 hour
 
     fun checkChatLimit(userId: UUID) {
         val maxAttempts = aiProperties.quota.chatPerHour
@@ -77,6 +79,17 @@ class AiRateLimiter(
         )
     }
 
+    fun checkPrimerGenerateLimit(userId: UUID) {
+        val maxAttempts = aiProperties.quota.primerGeneratePerHour
+        checkLimit(
+            userId = userId,
+            store = primerTimestamps,
+            maxAttempts = maxAttempts,
+            windowMs = primerWindowMs,
+            actionName = "Topic primer generation"
+        )
+    }
+
     private fun checkLimit(
         userId: UUID,
         store: ConcurrentHashMap<UUID, MutableList<Long>>,
@@ -112,5 +125,8 @@ class AiRateLimiter(
         chatTimestamps.clear()
         transcribeTimestamps.clear()
         statusTimestamps.clear()
+        anatomyTimestamps.clear()
+        conceptTimestamps.clear()
+        primerTimestamps.clear()
     }
 }

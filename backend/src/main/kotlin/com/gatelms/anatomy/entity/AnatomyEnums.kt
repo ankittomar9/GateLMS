@@ -15,3 +15,7 @@ enum class RetrievalCardStatus {
 enum class ConceptTagSource {
     ANATOMY, MANUAL
 }
+
+enum class TopicPrimerStatus {
+    DRAFT, REVIEWED, ACCEPTED, REJECTED
+}

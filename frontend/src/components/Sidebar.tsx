@@ -17,7 +17,8 @@ import {
   NotebookPen,
   RotateCcw,
   FileClock,
-  CalendarRange
+  CalendarRange,
+  Compass
 } from 'lucide-react';
 import { useDesign } from '../context/DesignContext';
 import { useDashboardLayout } from '../context/LayoutContext';
@@ -30,7 +31,8 @@ export const Sidebar: React.FC = () => {
   const [practiceOpen, setPracticeOpen] = useState(true);
 
   const pathname = location.pathname;
-  const isDashboard = pathname === '/';
+  const isJourney = pathname === '/' || pathname.startsWith('/subjects') || pathname.startsWith('/topics');
+  const isDashboard = pathname.startsWith('/dashboard');
   const isPlanner = pathname.startsWith('/planner');
   const isPyp = pathname.startsWith('/pyp');
   const isInsights = pathname.startsWith('/insights');
@@ -82,6 +84,16 @@ export const Sidebar: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/')}
+              title="Learning Journey"
+              aria-label="Learning Journey"
+              className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isJourney)}`}
+            >
+              <Compass className={`w-4 h-4 ${isJourney ? 'text-ds-accent' : 'text-ds-muted'}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
               title="Dashboard"
               aria-label="Dashboard"
               className={`w-10 h-10 mx-auto flex items-center justify-center rounded-ds transition-all ${getActiveNavClass(isDashboard)}`}
@@ -239,6 +251,15 @@ export const Sidebar: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isJourney)}`}
+              >
+                <Compass className={`w-4 h-4 ${isJourney ? 'text-ds-accent' : 'text-ds-muted'}`} />
+                <span>Learning Journey</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-ds font-medium transition-all ${getActiveNavClass(isDashboard)}`}
               >
                 <LayoutDashboard className={`w-4 h-4 ${isDashboard ? 'text-ds-accent' : 'text-ds-muted'}`} />

@@ -212,4 +212,13 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
 
     @Query("SELECT q.topic.id, COUNT(q) FROM Question q WHERE q.topic.id IS NOT NULL GROUP BY q.topic.id")
     fun countQuestionsGroupedByTopic(): List<Array<Any>>
+
+    @Query("SELECT q.subject.id, COUNT(q) FROM Question q WHERE q.curationStatus <> 'REJECTED' AND q.subject.id IS NOT NULL GROUP BY q.subject.id")
+    fun countVisibleQuestionsGroupedBySubject(): List<Array<Any>>
+
+    @Query("SELECT q.topic.id, COUNT(q) FROM Question q WHERE q.curationStatus <> 'REJECTED' AND q.topic.id IS NOT NULL GROUP BY q.topic.id")
+    fun countVisibleQuestionsGroupedByTopic(): List<Array<Any>>
+
+    @Query("SELECT q FROM Question q WHERE (q.topic.id = :topicId OR q.topic.slug = :topicId) AND q.curationStatus <> 'REJECTED' ORDER BY q.year DESC")
+    fun findSampleQuestionsByTopic(@Param("topicId") topicId: String, pageable: Pageable): List<Question>
 }
