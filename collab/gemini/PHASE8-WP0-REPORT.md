@@ -17,7 +17,7 @@ All 5 binding acceptance gates specified in `collab/z/PHASE8-CONCEPT-LAYER-SPEC.
 | Acceptance Gate | Requirement | Measured Result | Verdict |
 |---|---|---|---|
 | **Gate 1** | 10/10 concepts $\ge 12$ unique; 0 normalized duplicates; receipts logged | **10/10 concepts $\ge 15$ unique** (100% $\ge 12$); **0 normalized duplicates** verified by validator | **PASS** |
-| **Gate 2** | `removals.jsonl` applied: `[REMOVAL-RECEIPT] deleted=52` on first run; idempotent second run deletes 0 | **`deleted=52`** (42 SO clones + 10 PYP clones) on run 1; **`deleted=0`** on run 2 | **PASS** |
+| **Gate 2** | `removals.jsonl` applied: `[REMOVAL-RECEIPT] deleted=52` on initial reseed; idempotent second run deletes 0; C1 completed with 18 prefix-pruned SO IDs added (total 70) | **`deleted=52`** (run 1 initial) / **`deleted=70`** full manifest (60 SO clones + 10 PYP clones); **`deleted=0`** on second run | **PASS** |
 | **Gate 3** | 10 random rows hand-checkable for correctness of answers/explanations | **10 full questions across 10 concepts** documented in §4 below with verified math & KaTeX | **PASS** |
 | **Gate 4** | Full backend suite + vitest green; new validator & removals unit tests green | **Vitest:** 52 files / 278 tests green<br>**Backend Unit:** 128 run, 0 fail, 0 error, 1 skip<br>**SeedInventoryIT:** 3/3 green<br>**QuestionSeedRunnerTest:** 10/10 green | **PASS** |
 | **Gate 5** | Execution report published with receipts, counts, and per-concept table | Published in `collab/omnirush/PHASE8-WP0-REPORT.md` and `collab/gemini/PHASE8-WP0-REPORT.md` | **PASS** |
@@ -33,15 +33,15 @@ Seed Bank File                     Before WP0      Removals     Authored / Kept 
 -----------------------------------------------------------------------------------------------------
 seed-data/questions.jsonl                 26             0                   0             26
 seed-data/pyp-bank.jsonl                 555           -10                +130            675
-seed-data/so-gate-bank.jsonl           2,550           -42                 -18          2,490
+seed-data/so-gate-bank.jsonl           2,550           -60                 +0           2,490
 -----------------------------------------------------------------------------------------------------
-TOTAL STUDENT-VISIBLE BANK             3,131           -52                +112          3,191
+TOTAL STUDENT-VISIBLE BANK             3,131           -70                +130          3,191
 -----------------------------------------------------------------------------------------------------
 ```
 
 ### Breakdown for Pilot Topic (`process-synchronization`):
 - **Before WP0:** 83 questions total (70 SO-GATE + 12 PYP + 1 starter `SYN-OS-2024-Q16`), of which only 41 were unique statements and 6 concepts were completely empty.
-- **Removals Manifest (`seed-data/removals.jsonl`):** Exactly 52 rows (42 SO +48-offset clones + 10 PYP template clones).
+- **Removals Manifest (`seed-data/removals.jsonl`):** 70 rows (60 SO clones [42 +48-offset + 18 prefix-rotated duplicates per C1] + 10 PYP template clones). Both copies updated.
 - **Surviving Historical Items:**
   - 1 starter item: `SYN-OS-2024-Q16`
   - 2 re-labeled parameter variants from PYP template family: `AUTH-OS-PSYNC-VAR1` and `AUTH-OS-PSYNC-VAR2` (`source: AUTHORED`, `curationStatus: UNREVIEWED`, `year: null`)
