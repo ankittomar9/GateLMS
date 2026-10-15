@@ -48,6 +48,7 @@ class JourneyController(
     }
 
     @PutMapping("/journey/topics/{topicId}/primer")
+    @PreAuthorize("hasRole('ADMIN')")
     fun updatePrimer(
         @PathVariable topicId: String,
         @RequestBody req: CurationPrimerUpdateRequest
@@ -56,6 +57,7 @@ class JourneyController(
     }
 
     @DeleteMapping("/journey/topics/{topicId}/primer")
+    @PreAuthorize("hasRole('ADMIN')")
     fun deletePrimer(@PathVariable topicId: String): ResponseEntity<Map<String, String>> {
         topicPrimerService.deletePrimer(topicId)
         return ResponseEntity.ok(mapOf("status" to "deleted", "topicId" to topicId))

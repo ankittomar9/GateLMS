@@ -6,6 +6,7 @@ import { TopicPage } from '../TopicPage';
 import { journeyApi } from '../../api/journeyApi';
 import * as queryHooks from '../../hooks/useQueries';
 import { TopicPrimerResponse } from '../../types/journey';
+import { useAuth, User } from '../../context/AuthContext';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -29,6 +30,20 @@ vi.mock('../../api/journeyApi', () => ({
 vi.mock('../../hooks/useQueries', () => ({
   useQuestions: vi.fn(),
 }));
+
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: vi.fn(),
+}));
+
+const mockAuthRole = (role: User['role']) => {
+  vi.mocked(useAuth).mockReturnValue({
+    user: { userId: 'user-1', username: 'test-user', displayName: 'Test User', role },
+    isLoading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    refetchUser: vi.fn(),
+  });
+};
 
 // Mock MathText to avoid KaTeX rendering issues in test environment
 vi.mock('../../components/MathText', () => ({
@@ -94,6 +109,7 @@ const mockQuestions = [
 describe('TopicPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuthRole('STUDENT');
     vi.mocked(queryHooks.useQuestions).mockReturnValue({
       data: { content: mockQuestions, totalElements: 2 },
       isLoading: false,
@@ -151,7 +167,7 @@ describe('TopicPage', () => {
     expect(screen.queryByText(/Calculate the effective memory access time/)).not.toBeInTheDocument();
   });
 
-  it('allows generating primer on demand if absent', async () => {
+  it('allows students to generate an absent primer without force', async () => {
     const emptyPrimerRes: TopicPrimerResponse = {
       primer: null,
       conceptSlugs: [],
@@ -172,7 +188,7 @@ describe('TopicPage', () => {
       expect(screen.getByTestId('topic-page')).toBeInTheDocument();
     });
 
-    const generateBtn = screen.getByTestId('generate-primer-btn');
+    const generateBtn = await screen.findByTestId('generate-primer-btn');
     expect(generateBtn).toBeInTheDocument();
 
     fireEvent.click(generateBtn);
@@ -180,9 +196,47 @@ describe('TopicPage', () => {
     await waitFor(() => {
       expect(journeyApi.generateTopicPrimer).toHaveBeenCalledWith('topic_vm');
     });
+    expect(await screen.findByText(mockPrimerResponse.primer!.motivation)).toBeInTheDocument();
+    expect(journeyApi.generateTopicPrimer).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('edit-primer-btn')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('regenerate-primer-btn')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('delete-primer-btn')).not.toBeInTheDocument();
+  });
+
+  it.each(['ADMIN', 'STUDENT'] as const)('renders primer management controls only for ADMIN (role=%s)', async (role) => {
+    mockAuthRole(role);
+    vi.mocked(journeyApi.getTopicPrimer).mockResolvedValue(mockPrimerResponse);
+
+    render(<MemoryRouter><TopicPage /></MemoryRouter>);
+
+    expect(await screen.findByText(mockPrimerResponse.primer!.motivation)).toBeInTheDocument();
+    for (const testId of ['edit-primer-btn', 'regenerate-primer-btn', 'delete-primer-btn']) {
+      if (role === 'ADMIN') {
+        expect(screen.getByTestId(testId)).toBeInTheDocument();
+      } else {
+        expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
+      }
+    }
+  });
+
+  it('hides failed-draft forced retry and discard actions from students', async () => {
+    vi.mocked(journeyApi.getTopicPrimer).mockResolvedValue({
+      ...mockPrimerResponse,
+      primer: { ...mockPrimerResponse.primer!, parseError: 'Provider unavailable' },
+    });
+
+    render(<MemoryRouter><TopicPage /></MemoryRouter>);
+
+    expect(await screen.findByTestId('primer-error-banner')).toBeInTheDocument();
+    expect(screen.getByText('Provider unavailable')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /retry synthesis now/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /discard failed draft/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('regenerate-primer-btn')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('delete-primer-btn')).not.toBeInTheDocument();
   });
 
   it('allows editing primer and saving modifications', async () => {
+    mockAuthRole('ADMIN');
     vi.mocked(journeyApi.getTopicPrimer).mockResolvedValue(mockPrimerResponse);
     const updatedPrimer = {
       ...mockPrimerResponse.primer!,
@@ -218,6 +272,7 @@ describe('TopicPage', () => {
   });
 
   it('allows regenerating primer with force=true', async () => {
+    mockAuthRole('ADMIN');
     vi.mocked(journeyApi.getTopicPrimer).mockResolvedValue(mockPrimerResponse);
     vi.mocked(journeyApi.generateTopicPrimer).mockResolvedValue(mockPrimerResponse);
 
@@ -239,6 +294,7 @@ describe('TopicPage', () => {
   });
 
   it('allows deleting primer and confirms via window.confirm', async () => {
+    mockAuthRole('ADMIN');
     vi.mocked(journeyApi.getTopicPrimer).mockResolvedValue(mockPrimerResponse);
     vi.mocked(journeyApi.deleteTopicPrimer).mockResolvedValue({ status: 'deleted', topicId: 'topic_vm' });
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
@@ -263,6 +319,7 @@ describe('TopicPage', () => {
   });
 
   it('renders parseError alert banner when primer contains generation error', async () => {
+    mockAuthRole('ADMIN');
     const errorPrimerRes: TopicPrimerResponse = {
       ...mockPrimerResponse,
       primer: {
