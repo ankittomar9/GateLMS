@@ -16,12 +16,24 @@ import java.io.File
 import java.time.Instant
 import java.util.*
 
+data class TopicSeedStats(
+    val uniqueStatements: Int,
+    val distinctPatterns: Int
+)
+
+data class RemovalRow(
+    val externalId: String = ""
+)
+
 data class SeedReport(
     val total: Int,
     val inserted: Int,
     val updated: Int,
     val rejected: Int,
-    val rejectionReasons: List<String>
+    val rejectionReasons: List<String>,
+    val uniqueStatements: Int = 0,
+    val distinctPatterns: Int = 0,
+    val topicStats: Map<String, TopicSeedStats> = emptyMap()
 )
 
 data class SeedQuestionJson(
@@ -55,10 +67,44 @@ class QuestionSeedRunner(
     @Value("\${app.seed.paths:seed-data/questions.jsonl,seed-data/pyp-bank.jsonl,seed-data/so-gate-bank.jsonl}")
     private val seedPathsStr: String = "seed-data/questions.jsonl,seed-data/pyp-bank.jsonl,seed-data/so-gate-bank.jsonl",
     @Value("\${app.seed.path:}")
-    private val seedPath: String = ""
+    private val seedPath: String = "",
+    @Value("\${app.seed.removals-path:seed-data/removals.jsonl}")
+    private val removalsPath: String = "seed-data/removals.jsonl",
+    @Value("\${app.seed.dedup-topics:process-synchronization}")
+    private val dedupTopicsStr: String = "process-synchronization"
 ) : ApplicationRunner {
 
     private val logger = LoggerFactory.getLogger(QuestionSeedRunner::class.java)
+
+    companion object {
+        val KNOWN_PREFIXES = listOf(
+            Regex("^for\\s+[^:]+:\\s*", RegexOption.IGNORE_CASE),
+            Regex("^evaluate\\s+for\\s+[^:]+:\\s*", RegexOption.IGNORE_CASE),
+            Regex("^with\\s+[^:]+parameters:\\s*", RegexOption.IGNORE_CASE),
+            Regex("^from\\s+[^:]+concepts:\\s*", RegexOption.IGNORE_CASE),
+            Regex("^on\\s+[^:]+:\\s*", RegexOption.IGNORE_CASE),
+            Regex("^in\\s+[^:]+formulation:\\s*", RegexOption.IGNORE_CASE),
+            Regex("^as\\s+applied\\s+to\\s+[^:]+:\\s*", RegexOption.IGNORE_CASE),
+            Regex("^under\\s+the\\s+principles\\s+of\\s+[^:]+:\\s*", RegexOption.IGNORE_CASE),
+            Regex("^reviewing\\s+[^:]+:\\s*", RegexOption.IGNORE_CASE),
+            Regex("^in\\s+the\\s+domain\\s+of\\s+[^:]+:\\s*", RegexOption.IGNORE_CASE)
+        )
+
+        fun normalizeStatement(stmt: String): String {
+            var s = stmt.trim()
+            for (p in KNOWN_PREFIXES) {
+                if (p.containsMatchIn(s)) {
+                    s = p.replace(s, "").trim()
+                    break
+                }
+            }
+            return s.lowercase().replace(Regex("\\s+"), " ").trim()
+        }
+
+        fun statementPattern(normalized: String): String {
+            return normalized.replace(Regex("\\d+"), "#")
+        }
+    }
 
     fun resolvePaths(args: ApplicationArguments? = null): List<String> {
         val argPaths = args?.getOptionValues("app.seed.paths")?.firstOrNull()
@@ -85,6 +131,9 @@ class QuestionSeedRunner(
     }
 
     override fun run(args: ApplicationArguments?) {
+        // 1. Apply removals manifest first if present
+        applyRemovals(removalsPath)
+
         val paths = resolvePaths(args)
         logger.info("Initializing GateLMS Question Seed Pipeline with {} files: {}", paths.size, paths)
 
@@ -101,12 +150,14 @@ class QuestionSeedRunner(
             grandRejected += report.rejected
 
             logger.info(
-                "[SEED-RECEIPT] file={}, total={}, inserted={}, updated={}, rejected={}",
+                "[SEED-RECEIPT] file={}, total={}, inserted={}, updated={}, rejected={}, uniqueStatements={}, distinctPatterns={}",
                 path,
                 report.total,
                 report.inserted,
                 report.updated,
-                report.rejected
+                report.rejected,
+                report.uniqueStatements,
+                report.distinctPatterns
             )
             if (report.rejectionReasons.isNotEmpty()) {
                 logger.warn("Rejection summary for {} ({} items):", path, report.rejectionReasons.size)
@@ -127,7 +178,49 @@ class QuestionSeedRunner(
     }
 
     @Transactional
-    fun importQuestions(filePath: String): SeedReport {
+    fun applyRemovals(manifestPath: String = removalsPath): Int {
+        val file = resolveFile(manifestPath)
+            ?: run {
+                logger.info("[REMOVAL-RECEIPT] Manifest not found at: {}, skipping removals", manifestPath)
+                return 0
+            }
+
+        var requested = 0
+        var deleted = 0
+        var absent = 0
+
+        file.useLines { lines ->
+            lines.forEach { line ->
+                val trimmed = line.trim()
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) return@forEach
+                requested++
+                try {
+                    val row = objectMapper.readValue(trimmed, RemovalRow::class.java)
+                    if (row.externalId.isNotBlank()) {
+                        val existing = questionRepository.findByExternalId(row.externalId)
+                        if (existing != null) {
+                            questionRepository.delete(existing)
+                            deleted++
+                        } else {
+                            absent++
+                        }
+                    }
+                } catch (e: Exception) {
+                    logger.warn("Failed to parse removal line: {}", trimmed, e)
+                }
+            }
+        }
+
+        logger.info(
+            "[REMOVAL-RECEIPT] file={}, requested={}, deleted={}, absent={}",
+            manifestPath, requested, deleted, absent
+        )
+        logger.info("[REMOVAL-RECEIPT] deleted={}", deleted)
+        return deleted
+    }
+
+    @Transactional
+    fun importQuestions(filePath: String, forceCheckDedupAllTopics: Boolean = false): SeedReport {
         val file = resolveFile(filePath)
             ?: run {
                 logger.error("Seed file not found at: {}", filePath)
@@ -140,6 +233,11 @@ class QuestionSeedRunner(
         var rejected = 0
         val rejectionReasons = mutableListOf<String>()
 
+        val dedupTopics = if (dedupTopicsStr.isBlank()) emptySet() else dedupTopicsStr.split(",").map { it.trim() }.toSet()
+        val seenNormalizedPerTopic = mutableMapOf<String, MutableMap<String, Int>>()
+        val topicStatements = mutableMapOf<String, MutableSet<String>>()
+        val topicPatterns = mutableMapOf<String, MutableSet<String>>()
+
         file.useLines { lines ->
             lines.forEachIndexed { index, line ->
                 val lineNum = index + 1
@@ -151,13 +249,28 @@ class QuestionSeedRunner(
                 total++
                 try {
                     val raw: SeedQuestionJson = objectMapper.readValue(trimmed, SeedQuestionJson::class.java)
-                    val validationError = validateQuestion(raw)
+                    val topicSlug = raw.topicSlug ?: ""
+                    val shouldCheckDedup = forceCheckDedupAllTopics || topicSlug in dedupTopics
+
+                    val seenForTopic = if (shouldCheckDedup) {
+                        seenNormalizedPerTopic.computeIfAbsent(topicSlug) { mutableMapOf() }
+                    } else null
+
+                    val validationError = validateQuestion(raw, seenForTopic, lineNum)
                     if (validationError != null) {
                         rejected++
                         if (rejectionReasons.size < 20) {
                             rejectionReasons.add("Line $lineNum [${raw.externalId ?: "unknown"}]: $validationError")
                         }
                         return@forEachIndexed
+                    }
+
+                    // Track topic stats
+                    if (!raw.statement.isNullOrBlank() && topicSlug.isNotBlank()) {
+                        val norm = normalizeStatement(raw.statement)
+                        val pat = statementPattern(norm)
+                        topicStatements.computeIfAbsent(topicSlug) { mutableSetOf() }.add(norm)
+                        topicPatterns.computeIfAbsent(topicSlug) { mutableSetOf() }.add(pat)
                     }
 
                     val subject = subjectRepository.findBySlug(raw.subjectSlug!!)!!
@@ -175,7 +288,7 @@ class QuestionSeedRunner(
                     if (existing != null) {
                         existing.subject = subject
                         existing.topic = topic
-                        existing.year = raw.year!!
+                        existing.year = raw.year
                         existing.type = qType
                         existing.marks = raw.marks!!
                         existing.statement = raw.statement!!
@@ -197,7 +310,7 @@ class QuestionSeedRunner(
                             externalId = raw.externalId,
                             subject = subject,
                             topic = topic,
-                            year = raw.year!!,
+                            year = raw.year,
                             type = qType,
                             marks = raw.marks!!,
                             statement = raw.statement!!,
@@ -224,16 +337,67 @@ class QuestionSeedRunner(
             }
         }
 
-        return SeedReport(total, inserted, updated, rejected, rejectionReasons)
+        val topicStatsMap = topicStatements.mapValues { (slug, stmts) ->
+            TopicSeedStats(stmts.size, topicPatterns[slug]?.size ?: 0)
+        }
+        val totalUnique = topicStatements.values.sumOf { it.size }
+        val totalPatterns = topicPatterns.values.flatMap { it }.toSet().size
+
+        // Log template saturation warnings if unique:pattern ratio < 3:1
+        topicStatsMap.forEach { (topic, stats) ->
+            if (stats.distinctPatterns > 0 && stats.uniqueStatements.toDouble() / stats.distinctPatterns < 3.0) {
+                logger.warn(
+                    "[TEMPLATE-SATURATION-WARN] topic='{}': unique:pattern ratio ({}:{}) < 3:1 in file {}",
+                    topic, stats.uniqueStatements, stats.distinctPatterns, filePath
+                )
+            }
+        }
+
+        return SeedReport(
+            total = total,
+            inserted = inserted,
+            updated = updated,
+            rejected = rejected,
+            rejectionReasons = rejectionReasons,
+            uniqueStatements = totalUnique,
+            distinctPatterns = totalPatterns,
+            topicStats = topicStatsMap
+        )
     }
 
-    private fun validateQuestion(raw: SeedQuestionJson): String? {
+    fun validateQuestion(
+        raw: SeedQuestionJson,
+        seenNormalizedStatements: MutableMap<String, Int>? = null,
+        lineNum: Int = 0
+    ): String? {
         if (raw.externalId.isNullOrBlank()) return "externalId is required"
-        if (raw.year == null || raw.year < 1980 || raw.year > 2030) return "Valid year is required (1980-2030)"
+
+        val validSources = setOf("SAMPLE", "SO_DERIVED", "AUTHORED", "GATE_PYP", "APT", "AI_GENERATED")
+        if (raw.source != null && raw.source.uppercase() !in validSources) {
+            return "Invalid source '${raw.source}'. Must be one of $validSources"
+        }
+
+        val isAuthoredOrAi = raw.source?.uppercase() in setOf("AUTHORED", "AI_GENERATED")
+        if (!isAuthoredOrAi) {
+            if (raw.year == null || raw.year < 1980 || raw.year > 2030) return "Valid year is required (1980-2030)"
+        } else if (raw.year != null && (raw.year < 1980 || raw.year > 2030)) {
+            return "Year if provided must be between 1980 and 2030"
+        }
+
         if (raw.marks == null || (raw.marks != 1 && raw.marks != 2)) return "marks must be 1 or 2"
         if (raw.subjectSlug.isNullOrBlank()) return "subjectSlug is required"
         if (raw.topicSlug.isNullOrBlank()) return "topicSlug is required"
         if (raw.statement.isNullOrBlank()) return "statement is required"
+
+        // Deduplication guardrail: normalized statement check within file
+        if (seenNormalizedStatements != null && !raw.statement.isNullOrBlank()) {
+            val normalized = normalizeStatement(raw.statement)
+            if (seenNormalizedStatements.containsKey(normalized)) {
+                val prevLine = seenNormalizedStatements[normalized]
+                return "Duplicate normalized statement detected (matches line $prevLine)"
+            }
+            seenNormalizedStatements[normalized] = lineNum
+        }
 
         val subject = subjectRepository.findBySlug(raw.subjectSlug)
             ?: return "subjectSlug '${raw.subjectSlug}' does not exist in database"

@@ -260,6 +260,7 @@ CRITICAL RULES:
             coreIdea = coreIdea,
             invariant = invariant,
             workedExample = workedExample,
+            workedExampleExternalId = workedExampleExternalId,
             traps = traps,
             deepLinkRef = deepLinkRef,
             status = status,

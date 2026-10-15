@@ -78,6 +78,7 @@ data class ConceptUnitDto(
     val coreIdea: String,
     val invariant: String?,
     val workedExample: String,
+    val workedExampleExternalId: String? = null,
     val traps: String?,
     val deepLinkRef: String?,
     val status: ConceptUnitStatus,

@@ -188,4 +188,123 @@ class QuestionSeedRunnerTest {
         assertEquals(0, report2.rejected)
         assertEquals("Updated statement", store["DUP-1"]?.statement)
     }
+
+    @Test
+    fun `honest-judge PASS - exact duplicate question statement rejected in deduplicated topic`(@TempDir tempDir: Path) {
+        val fixtureFile = File(tempDir.toFile(), "dup_statement.jsonl")
+        fixtureFile.writeText(
+            """
+            {"externalId":"DUP-EXACT-1","year":2024,"type":"MCQ","marks":1,"subjectSlug":"operating-systems","topicSlug":"process-synchronization","statement":"Consider two processes sharing a variable.","options":{"A":"1","B":"2"},"correctOptions":["A"]}
+            {"externalId":"DUP-EXACT-2","year":2024,"type":"MCQ","marks":1,"subjectSlug":"operating-systems","topicSlug":"process-synchronization","statement":"Consider two processes sharing a variable.","options":{"A":"1","B":"2"},"correctOptions":["A"]}
+            """.trimIndent()
+        )
+
+        every { questionRepository.findByExternalId(any()) } returns null
+        every { questionRepository.save(any()) } answers { firstArg() }
+
+        val report = seedRunner.importQuestions(fixtureFile.absolutePath)
+
+        assertEquals(2, report.total)
+        assertEquals(1, report.inserted)
+        assertEquals(0, report.updated)
+        assertEquals(1, report.rejected)
+        assertTrue(report.rejectionReasons.any { it.contains("Duplicate normalized statement detected") })
+    }
+
+    @Test
+    fun `honest-judge PASS - prefix-rotated duplicate statement rejected in deduplicated topic`(@TempDir tempDir: Path) {
+        val fixtureFile = File(tempDir.toFile(), "prefix_rotated_dup.jsonl")
+        fixtureFile.writeText(
+            """
+            {"externalId":"BASE-1","year":2024,"type":"MCQ","marks":1,"subjectSlug":"operating-systems","topicSlug":"process-synchronization","statement":"Consider two processes sharing a variable.","options":{"A":"1","B":"2"},"correctOptions":["A"]}
+            {"externalId":"PREFIX-DUP-1","year":2024,"type":"MCQ","marks":1,"subjectSlug":"operating-systems","topicSlug":"process-synchronization","statement":"For Process Synchronization: Consider two processes sharing a variable.","options":{"A":"1","B":"2"},"correctOptions":["A"]}
+            """.trimIndent()
+        )
+
+        every { questionRepository.findByExternalId(any()) } returns null
+        every { questionRepository.save(any()) } answers { firstArg() }
+
+        val report = seedRunner.importQuestions(fixtureFile.absolutePath)
+
+        assertEquals(2, report.total)
+        assertEquals(1, report.inserted)
+        assertEquals(0, report.updated)
+        assertEquals(1, report.rejected)
+        assertTrue(report.rejectionReasons.any { it.contains("Duplicate normalized statement detected") })
+    }
+
+    @Test
+    fun `honest-judge PASS - parameter variants with different numbers are accepted and distinct patterns tracked`(@TempDir tempDir: Path) {
+        val fixtureFile = File(tempDir.toFile(), "param_variants.jsonl")
+        fixtureFile.writeText(
+            """
+            {"externalId":"PARAM-1","year":2024,"type":"MCQ","marks":1,"subjectSlug":"operating-systems","topicSlug":"process-synchronization","statement":"There are 3 processes sharing 4 resources of the same type.","options":{"A":"1","B":"2"},"correctOptions":["A"]}
+            {"externalId":"PARAM-2","year":2024,"type":"MCQ","marks":1,"subjectSlug":"operating-systems","topicSlug":"process-synchronization","statement":"There are 5 processes sharing 7 resources of the same type.","options":{"A":"1","B":"2"},"correctOptions":["A"]}
+            """.trimIndent()
+        )
+
+        every { questionRepository.findByExternalId(any()) } returns null
+        every { questionRepository.save(any()) } answers { firstArg() }
+
+        val report = seedRunner.importQuestions(fixtureFile.absolutePath)
+
+        assertEquals(2, report.total)
+        assertEquals(2, report.inserted)
+        assertEquals(0, report.rejected)
+        assertEquals(2, report.uniqueStatements)
+        assertEquals(1, report.distinctPatterns)
+        val topicStat = report.topicStats["process-synchronization"]
+        assertTrue(topicStat != null)
+        assertEquals(2, topicStat!!.uniqueStatements)
+        assertEquals(1, topicStat.distinctPatterns)
+    }
+
+    @Test
+    fun `honest-judge PASS - applyRemovals deletes matching questions and is idempotent`(@TempDir tempDir: Path) {
+        val removalsFile = File(tempDir.toFile(), "removals.jsonl")
+        removalsFile.writeText(
+            """
+            {"externalId":"REM-1"}
+            {"externalId":"REM-2"}
+            {"externalId":"REM-ABSENT"}
+            """.trimIndent()
+        )
+
+        val q1 = Question(id = UUID.randomUUID(), externalId = "REM-1", subject = mockSubject, topic = mockTopic, year = 2024, type = QuestionType.MCQ, marks = 1, statement = "To delete 1")
+        val q2 = Question(id = UUID.randomUUID(), externalId = "REM-2", subject = mockSubject, topic = mockTopic, year = 2024, type = QuestionType.MCQ, marks = 1, statement = "To delete 2")
+
+        val store = mutableMapOf("REM-1" to q1, "REM-2" to q2)
+        every { questionRepository.findByExternalId(any()) } answers { store[firstArg()] }
+        every { questionRepository.delete(any()) } answers {
+            val q = firstArg<Question>()
+            store.remove(q.externalId)
+        }
+
+        // Run 1: 2 items deleted
+        val deletedFirst = seedRunner.applyRemovals(removalsFile.absolutePath)
+        assertEquals(2, deletedFirst)
+        verify(exactly = 2) { questionRepository.delete(any()) }
+
+        // Run 2: idempotent, 0 items deleted
+        val deletedSecond = seedRunner.applyRemovals(removalsFile.absolutePath)
+        assertEquals(0, deletedSecond)
+        verify(exactly = 2) { questionRepository.delete(any()) }
+    }
+
+    @Test
+    fun `honest-judge PASS - statement normalization strips known prefixes and masks digits in pattern`() {
+        val prefixExample = "For Process Synchronization:   Consider  3  processes and 5 semaphores.  "
+        val normalized = QuestionSeedRunner.normalizeStatement(prefixExample)
+        assertEquals("consider 3 processes and 5 semaphores.", normalized)
+
+        val pattern = QuestionSeedRunner.statementPattern(normalized)
+        assertEquals("consider # processes and # semaphores.", pattern)
+
+        val evalExample = "Evaluate for Readers-Writers: Consider 2 readers and 1 writer."
+        val normEval = QuestionSeedRunner.normalizeStatement(evalExample)
+        assertEquals("consider 2 readers and 1 writer.", normEval)
+
+        val patEval = QuestionSeedRunner.statementPattern(normEval)
+        assertEquals("consider # readers and # writer.", patEval)
+    }
 }

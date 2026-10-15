@@ -31,6 +31,9 @@ class ConceptUnit(
     @Column(name = "worked_example", columnDefinition = "TEXT", nullable = false)
     var workedExample: String = "",
 
+    @Column(name = "worked_example_external_id", length = 120)
+    var workedExampleExternalId: String? = null,
+
     @Column(name = "traps", columnDefinition = "TEXT")
     var traps: String? = null,
 
