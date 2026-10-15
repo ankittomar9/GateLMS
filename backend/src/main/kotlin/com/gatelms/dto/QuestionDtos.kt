@@ -59,7 +59,8 @@ data class QuestionDto(
     val difficulty: String? = null,
     val createdAt: Instant,
     val updatedAt: Instant?,
-    val version: Int
+    val version: Int,
+    val conceptTags: List<String> = emptyList()
 )
 
 data class BookmarkRequest(

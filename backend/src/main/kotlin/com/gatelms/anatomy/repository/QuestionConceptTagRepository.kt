@@ -33,5 +33,17 @@ interface QuestionConceptTagRepository : JpaRepository<QuestionConceptTag, Quest
         @Param("slugs") slugs: Collection<String>,
         @Param("sourceQuestionId") sourceQuestionId: UUID
     ): List<Array<Any>>
+
+    @Query("SELECT COUNT(DISTINCT qct.id.questionId) FROM QuestionConceptTag qct")
+    fun countDistinctQuestions(): Long
+
+    @Query("""
+        SELECT qct.id.conceptTagSlug, q.id, q.statement
+        FROM QuestionConceptTag qct
+        JOIN Question q ON q.id = qct.id.questionId
+        WHERE qct.id.conceptTagSlug IN :slugs
+          AND q.curationStatus <> 'REJECTED'
+    """)
+    fun findTaggedQuestionInfos(@Param("slugs") slugs: Collection<String>): List<Array<Any>>
 }
 

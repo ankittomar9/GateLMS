@@ -233,5 +233,19 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
         @Param("topicId") topicId: String,
         @Param("sourceQuestionId") sourceQuestionId: UUID
     ): List<Array<Any>>
+
+    @Query("""
+        SELECT q FROM Question q
+        WHERE (:topicId IS NULL OR q.topic.id = :topicId OR q.topic.slug = :topicId)
+          AND q.curationStatus <> 'REJECTED'
+          AND q.id NOT IN (
+              SELECT qct.id.questionId FROM QuestionConceptTag qct WHERE qct.confidence >= 0.8
+          )
+        ORDER BY q.createdAt DESC
+    """)
+    fun findUnmappedOrLowConfidenceQuestions(
+        @Param("topicId") topicId: String?,
+        pageable: Pageable
+    ): Page<Question>
 }
 

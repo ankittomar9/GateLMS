@@ -59,6 +59,7 @@ data class SeedQuestionJson(
 
 @Component
 @Profile("seed")
+@org.springframework.core.annotation.Order(1)
 class QuestionSeedRunner(
     private val questionRepository: QuestionRepository,
     private val subjectRepository: SubjectRepository,

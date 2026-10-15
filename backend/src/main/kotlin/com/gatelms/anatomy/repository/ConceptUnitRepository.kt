@@ -16,5 +16,8 @@ interface ConceptUnitRepository : JpaRepository<ConceptUnit, UUID> {
     @Query("SELECT cu FROM ConceptUnit cu WHERE cu.conceptTag.slug = :slug")
     fun findByConceptTagSlug(@Param("slug") slug: String): Optional<ConceptUnit>
 
+    @Query("SELECT cu FROM ConceptUnit cu WHERE cu.conceptTag.slug IN :slugs")
+    fun findByConceptTagSlugIn(@Param("slugs") slugs: Collection<String>): List<ConceptUnit>
+
     fun findByStatus(status: ConceptUnitStatus, pageable: Pageable): Page<ConceptUnit>
 }

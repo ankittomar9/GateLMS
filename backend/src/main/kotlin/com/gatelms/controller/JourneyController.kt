@@ -1,5 +1,7 @@
 package com.gatelms.controller
 
+import com.gatelms.anatomy.dto.*
+import com.gatelms.anatomy.service.ConceptCoverageService
 import com.gatelms.anatomy.service.TopicPrimerService
 import com.gatelms.dto.*
 import com.gatelms.security.CurrentUserProvider
@@ -17,7 +19,8 @@ import java.util.UUID
 class JourneyController(
     private val journeyService: JourneyService,
     private val topicPrimerService: TopicPrimerService,
-    private val currentUserProvider: CurrentUserProvider
+    private val currentUserProvider: CurrentUserProvider,
+    private val conceptCoverageService: ConceptCoverageService
 ) {
     @GetMapping("/journey/overview")
     fun getOverview(): ResponseEntity<List<JourneyOverviewSubjectDto>> {
@@ -92,5 +95,28 @@ class JourneyController(
         @RequestBody req: CurationPrimerUpdateRequest
     ): ResponseEntity<TopicPrimerDto> {
         return ResponseEntity.ok(topicPrimerService.updateCuration(id, req))
+    }
+
+    @GetMapping("/journey/topics/{topicId}/concepts")
+    fun getTopicConcepts(@PathVariable topicId: String): ResponseEntity<TopicConceptCoverageResponseDto> {
+        return ResponseEntity.ok(conceptCoverageService.getTopicConceptCoverage(topicId))
+    }
+
+    @GetMapping("/curation/mappings/unmapped")
+    @PreAuthorize("hasRole('ADMIN')")
+    fun getUnmappedQuestions(
+        @RequestParam(required = false) topicId: String?,
+        @PageableDefault(size = 20) pageable: Pageable
+    ): ResponseEntity<Page<UnmappedMappingQuestionDto>> {
+        return ResponseEntity.ok(conceptCoverageService.getUnmappedQuestions(topicId, pageable))
+    }
+
+    @PatchMapping("/curation/questions/{questionId}/concepts")
+    @PreAuthorize("hasRole('ADMIN')")
+    fun patchQuestionConcepts(
+        @PathVariable questionId: UUID,
+        @RequestBody req: CurationQuestionConceptsPatchRequest
+    ): ResponseEntity<QuestionDto> {
+        return ResponseEntity.ok(conceptCoverageService.patchQuestionConcepts(questionId, req))
     }
 }
