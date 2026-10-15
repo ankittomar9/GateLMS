@@ -86,22 +86,22 @@ class SeedInventoryIT : BaseIntegrationTest() {
         // Authored PYP bank
         val rep2 = questionSeedRunner.importQuestions("seed-data/pyp-bank.jsonl")
         assertEquals(0, rep2.rejected)
-        assertEquals(555, rep2.total)
+        assertEquals(675, rep2.total)
 
         // GATE-Overflow bank
         val rep3 = questionSeedRunner.importQuestions("seed-data/so-gate-bank.jsonl")
         assertEquals(0, rep3.rejected)
-        assertEquals(2550, rep3.total)
+        assertEquals(2490, rep3.total)
 
         val total = rep1.total + rep2.total + rep3.total
-        assertEquals(3131, total)
+        assertEquals(3191, total)
 
         loginAs("ankur", "admin123")
         val adminResp = restTemplate.getForEntity("/api/v1/admin/seed/inventory", SeedInventoryResponse::class.java)
         assertEquals(HttpStatus.OK, adminResp.statusCode)
         val inv = adminResp.body!!
-        assertEquals(3131L, inv.totalQuestions)
-        assertEquals(3131L, inv.totalVisibleQuestions)
+        assertEquals(3191L, inv.totalQuestions)
+        assertEquals(3191L, inv.totalVisibleQuestions)
         assertEquals(10, inv.subjects.size)
     }
 }
