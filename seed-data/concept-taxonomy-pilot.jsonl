@@ -1,0 +1,10 @@
+{"slug": "critical-section-requirements", "label": "Critical Section & Mutual Exclusion Requirements", "topicSlug": "process-synchronization"}
+{"slug": "peterson-software-solutions", "label": "Peterson's Software Solution", "topicSlug": "process-synchronization"}
+{"slug": "hardware-atomic-primitives", "label": "Hardware Atomic Primitives (Test-and-Set, CAS, Spinlocks)", "topicSlug": "process-synchronization"}
+{"slug": "semaphore-operations", "label": "Semaphore Operations & Conventions", "topicSlug": "process-synchronization"}
+{"slug": "semaphore-state-tracing", "label": "Semaphore State Tracing", "topicSlug": "process-synchronization"}
+{"slug": "producer-consumer-bounded-buffer", "label": "Producer–Consumer / Bounded Buffer", "topicSlug": "process-synchronization"}
+{"slug": "readers-writers", "label": "Readers–Writers Problem", "topicSlug": "process-synchronization"}
+{"slug": "dining-philosophers", "label": "Dining Philosophers Problem", "topicSlug": "process-synchronization"}
+{"slug": "monitors-condition-variables", "label": "Monitors & Condition Variables", "topicSlug": "process-synchronization"}
+{"slug": "race-interleavings", "label": "Race Conditions & Interleavings", "topicSlug": "process-synchronization"}

@@ -37,7 +37,9 @@ class QuestionService(
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private val gateLmsMetrics: com.gatelms.metrics.GateLmsMetrics? = null,
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private val achievementService: AchievementService? = null
+    private val achievementService: AchievementService? = null,
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private val questionConceptTagRepository: com.gatelms.anatomy.repository.QuestionConceptTagRepository? = null
 ) {
 
     @Transactional(readOnly = true)
@@ -100,7 +102,8 @@ class QuestionService(
         }
         val userId = currentUserProvider.getCurrentUserId()
         val progress = questionProgressRepository.findByIdUserIdAndIdQuestionId(userId, id).orElse(null)
-        return question.toDto(progress)
+        val tags = questionConceptTagRepository?.findSlugsByQuestionId(id) ?: emptyList()
+        return question.toDto(progress, tags)
     }
 
     fun createQuestion(dto: QuestionUpsertDto): QuestionDto {
@@ -421,7 +424,10 @@ class QuestionService(
         )
     }
 
-    private fun Question.toDto(progress: QuestionProgress? = null): QuestionDto {
+    private fun Question.toDto(progress: QuestionProgress? = null, conceptTags: List<String> = emptyList()): QuestionDto {
+        val resolvedTags = if (conceptTags.isNotEmpty()) conceptTags else {
+            questionConceptTagRepository?.findSlugsByQuestionId(id!!) ?: emptyList()
+        }
         return QuestionDto(
             id = id!!,
             externalId = externalId,
@@ -450,7 +456,8 @@ class QuestionService(
             difficulty = difficulty,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            version = version
+            version = version,
+            conceptTags = resolvedTags
         )
     }
 }
