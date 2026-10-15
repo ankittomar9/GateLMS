@@ -25,10 +25,13 @@ import { TopicPrimerResponse, TopicPrimer } from '../types/journey';
 import { MathText } from '../components/MathText';
 import { ConceptUnitDialog } from '../components/ConceptUnitDialog';
 import { useQuestions } from '../hooks/useQueries';
+import { useAuth } from '../context/AuthContext';
 
 export const TopicPage: React.FC = () => {
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   const [activeTab, setActiveTab] = useState<'theory' | 'questions' | 'notebook'>('theory');
   const [primerData, setPrimerData] = useState<TopicPrimerResponse | null>(null);
@@ -89,7 +92,7 @@ export const TopicPage: React.FC = () => {
   }, [topicId]);
 
   const handleGeneratePrimer = async (force: unknown = false) => {
-    if (!topicId) return;
+    if (!topicId || (force === true && !isAdmin)) return;
     try {
       setGeneratingPrimer(true);
       setPrimerError(null);
@@ -107,7 +110,7 @@ export const TopicPage: React.FC = () => {
   };
 
   const handleStartEdit = () => {
-    if (!primerData?.primer) return;
+    if (!isAdmin || !primerData?.primer) return;
     const p = primerData.primer;
     setPrimerEditForm({
       motivation: p.motivation || '',
@@ -120,7 +123,7 @@ export const TopicPage: React.FC = () => {
   };
 
   const handleSaveEdit = async () => {
-    if (!topicId) return;
+    if (!topicId || !isAdmin) return;
     try {
       setSavingPrimerEdit(true);
       setPrimerError(null);
@@ -140,7 +143,7 @@ export const TopicPage: React.FC = () => {
   };
 
   const handleDeletePrimer = async () => {
-    if (!topicId) return;
+    if (!topicId || !isAdmin) return;
     const confirmed = window.confirm('Are you sure you want to delete this topic theory primer?');
     if (!confirmed) return;
     try {
@@ -284,6 +287,7 @@ export const TopicPage: React.FC = () => {
                 </div>
 
                 {/* Management Action Buttons */}
+                {isAdmin && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleStartEdit}
@@ -318,6 +322,7 @@ export const TopicPage: React.FC = () => {
                     <span>{deletingPrimer ? 'Deleting...' : 'Delete'}</span>
                   </button>
                 </div>
+                )}
               </div>
 
               {/* Error Banner if generation failed or parseError is present */}
@@ -330,6 +335,7 @@ export const TopicPage: React.FC = () => {
                   <div className="text-ds-muted text-[11px] bg-ds-bg/60 p-2.5 rounded border border-ds-border font-mono overflow-x-auto whitespace-pre-wrap">
                     {primer.parseError}
                   </div>
+                  {isAdmin && (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleGeneratePrimer(true)}
@@ -348,6 +354,7 @@ export const TopicPage: React.FC = () => {
                       <span>Discard Failed Draft</span>
                     </button>
                   </div>
+                  )}
                 </div>
               )}
 
@@ -358,7 +365,7 @@ export const TopicPage: React.FC = () => {
               )}
 
               {/* EDIT FORM (when isEditingPrimer is true) */}
-              {isEditingPrimer ? (
+              {isAdmin && isEditingPrimer ? (
                 <div className="bg-ds-surface border border-ds-accent/40 rounded-ds p-6 space-y-5" data-testid="primer-edit-form">
                   <div className="flex items-center justify-between border-b border-ds-border pb-3">
                     <div className="flex items-center gap-2">

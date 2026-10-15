@@ -35,6 +35,7 @@ Thumbs.db
 # Scratch & temporary workspace files
 scratch/
 _inbox/
+.opencode/
 uploads/notes/*.pdf
 uploads/temp/
 seed-data/so-raw/

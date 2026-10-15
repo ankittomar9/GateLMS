@@ -8,6 +8,7 @@ import com.gatelms.anatomy.repository.TopicPrimerRepository
 import com.gatelms.dto.JourneyContinueDto
 import com.gatelms.dto.JourneyOverviewSubjectDto
 import com.gatelms.dto.JourneyTopicSummaryDto
+import com.gatelms.dto.CurationPrimerUpdateRequest
 import com.gatelms.dto.TopicPrimerResponseDto
 import com.gatelms.entity.*
 import com.gatelms.repository.*
@@ -79,6 +80,7 @@ class JourneyApiIT : BaseIntegrationTest() {
 
     @BeforeEach
     fun setUpData() {
+        topicPrimerRepository.deleteAll()
         val seedRunner = QuestionSeedRunner(
             questionRepository = questionRepository,
             subjectRepository = subjectRepository,
@@ -411,6 +413,83 @@ class JourneyApiIT : BaseIntegrationTest() {
         // Must be deleted from DB
         val dbPrimerAfterDelete = topicPrimerRepository.findByTopicId("topic_dbms_relational_alg")
         assertFalse(dbPrimerAfterDelete.isPresent)
+    }
+
+    @Test
+    fun `honest-judge FAIL - student cannot update or delete an existing primer`() {
+        val primerJson = objectMapper.writeValueAsString(
+            mapOf(
+                "motivation" to "Original motivation",
+                "core_idea" to "Original core idea",
+                "invariant" to "Original invariant",
+                "worked_example" to validWorkedExample,
+                "traps" to "Original traps"
+            )
+        )
+        `when`(aiChatService.chat(any(AiChatRequest::class.java) ?: AiChatRequest(messages = emptyList(), provider = ""), nullable(String::class.java))).thenReturn(
+            AiChatResponse(
+                reply = primerJson,
+                provider = "GEMINI",
+                model = "gemini-3.8-flash",
+                latencyMs = 150
+            )
+        )
+
+        // Establish an original shared row as an administrator.
+        loginAs("ankur", "admin123")
+        val generated = restTemplate.postForEntity(
+            "/api/v1/journey/topics/topic_dbms_relational_alg/primer/generate",
+            null,
+            TopicPrimerResponseDto::class.java
+        )
+        assertEquals(HttpStatus.OK, generated.statusCode)
+        val original = topicPrimerRepository.findByTopicId("topic_dbms_relational_alg")
+        assertTrue(original.isPresent)
+        val originalMotivation = original.get().motivation
+        val originalCoreIdea = original.get().coreIdea
+
+        val username = "student_primer_authz_${UUID.randomUUID().toString().take(8)}"
+        userRepository.save(
+            User(
+                username = username,
+                displayName = "Primer Student",
+                passwordHash = passwordEncoder.encode("password123"),
+                role = UserRole.STUDENT
+            )
+        )
+        loginAs(username, "password123")
+
+        val updateResp = restTemplate.exchange(
+            "/api/v1/journey/topics/topic_dbms_relational_alg/primer",
+            HttpMethod.PUT,
+            org.springframework.http.HttpEntity<CurationPrimerUpdateRequest>(
+                CurationPrimerUpdateRequest(
+                    motivation = "Student must not overwrite this",
+                    coreIdea = "Student must not overwrite this"
+                )
+            ),
+            Map::class.java
+        )
+        assertEquals(HttpStatus.FORBIDDEN, updateResp.statusCode)
+        assertEquals(403, updateResp.body?.get("status"))
+        assertEquals("about:blank", updateResp.body?.get("type"))
+        assertEquals("Forbidden", updateResp.body?.get("title"))
+
+        val deleteResp = restTemplate.exchange(
+            "/api/v1/journey/topics/topic_dbms_relational_alg/primer",
+            HttpMethod.DELETE,
+            null,
+            Map::class.java
+        )
+        assertEquals(HttpStatus.FORBIDDEN, deleteResp.statusCode)
+        assertEquals(403, deleteResp.body?.get("status"))
+        assertEquals("about:blank", deleteResp.body?.get("type"))
+        assertEquals("Forbidden", deleteResp.body?.get("title"))
+
+        val unchanged = topicPrimerRepository.findByTopicId("topic_dbms_relational_alg")
+        assertTrue(unchanged.isPresent)
+        assertEquals(originalMotivation, unchanged.get().motivation)
+        assertEquals(originalCoreIdea, unchanged.get().coreIdea)
     }
 
     @Test
