@@ -4,6 +4,7 @@
 - **Executor:** Gemini Antigravity (OmniRush retired)
 - **Base Commit:** `139f7c9` (WP0 merged to master)
 - **Branch:** `phase8/wp1-taxonomy-mapping` (`99e511c`)
+- **Merge Commit:** `834e4c9` (merged to master with `--no-ff`)
 - **Audit Regime:** Post-merge audit (≤24 h per SPEC §8.2; probation ended with 2/2 gates cleared)
 - **Date:** 2026-10-15
 
