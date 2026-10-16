@@ -223,7 +223,7 @@ interface QuestionRepository : JpaRepository<Question, UUID> {
     fun findSampleQuestionsByTopic(@Param("topicId") topicId: String, pageable: Pageable): List<Question>
 
     @Query("""
-        SELECT q.id, q.year, q.createdAt
+        SELECT q.id, q.year, q.createdAt, q.statement
         FROM Question q
         WHERE (q.topic.id = :topicId OR q.topic.slug = :topicId)
           AND q.curationStatus <> 'REJECTED'

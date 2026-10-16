@@ -41,19 +41,19 @@ class RevisionDrillIT : BaseIntegrationTest() {
     @Autowired
     lateinit var topicMasteryRepository: TopicMasteryRepository
 
+    @Autowired
+    lateinit var questionConceptTagRepository: com.gatelms.anatomy.repository.QuestionConceptTagRepository
+
+    @Autowired
+    lateinit var conceptTagRepository: com.gatelms.anatomy.repository.ConceptTagRepository
+
     private val operatorId = UUID.fromString("00000000-0000-0000-0000-000000000001")
     private lateinit var subject: Subject
     private lateinit var topic: Topic
 
     @BeforeEach
     fun setup() {
-        mistakeLogRepository.deleteAll()
-        attemptAnswerRepository.deleteAll()
-        mockAttemptRepository.deleteAll()
-        mockExamRepository.deleteAll()
-        questionProgressRepository.deleteAll()
-        topicMasteryRepository.deleteAll()
-        questionRepository.deleteAll()
+        cleanup()
 
         subject = subjectRepository.findById("subj_cn").orElseGet {
             subjectRepository.save(Subject(id = "subj_cn", name = "Computer Networks", slug = "cn", cluster = "applied", avgWeightage = 7.0))
@@ -62,6 +62,23 @@ class RevisionDrillIT : BaseIntegrationTest() {
         topic = topicRepository.findById("top_cn_tcp").orElseGet {
             topicRepository.save(Topic(id = "top_cn_tcp", subject = subject, name = "TCP and Congestion", slug = "tcp"))
         }
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    fun teardown() {
+        cleanup()
+    }
+
+    private fun cleanup() {
+        mistakeLogRepository.deleteAll()
+        attemptAnswerRepository.deleteAll()
+        mockAttemptRepository.deleteAll()
+        mockExamRepository.deleteAll()
+        questionConceptTagRepository.deleteAll()
+        conceptTagRepository.deleteAll()
+        questionProgressRepository.deleteAll()
+        topicMasteryRepository.deleteAll()
+        questionRepository.deleteAll()
     }
 
     @Test
@@ -354,5 +371,55 @@ class RevisionDrillIT : BaseIntegrationTest() {
         val session = resp.body!!
         assertEquals(1, session.totalQuestions)
         assertEquals(q.id, session.questions[0].id)
+    }
+
+    @Test
+    fun `8 Revision drill filters candidates by conceptSlug (PC-7)`() {
+        val q1 = questionRepository.save(Question(
+            statement = "TCP Sliding Window Concept A",
+            subject = subject,
+            topic = topic,
+            type = QuestionType.MCQ,
+            correctOptions = "A"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, q1.id!!),
+            pass1Status = Pass1Status.FAILED,
+            pass2Status = Pass2Status.PENDING
+        ))
+
+        val q2 = questionRepository.save(Question(
+            statement = "TCP Retransmission Concept B",
+            subject = subject,
+            topic = topic,
+            type = QuestionType.MCQ,
+            correctOptions = "B"
+        ))
+        questionProgressRepository.save(QuestionProgress(
+            id = QuestionProgressId(operatorId, q2.id!!),
+            pass1Status = Pass1Status.FAILED,
+            pass2Status = Pass2Status.PENDING
+        ))
+
+        val slugA = "sliding-window-protocol"
+        conceptTagRepository.save(com.gatelms.anatomy.entity.ConceptTag(slug = slugA, label = "Sliding Window", topic = topic))
+        questionConceptTagRepository.save(
+            com.gatelms.anatomy.entity.QuestionConceptTag(
+                com.gatelms.anatomy.entity.QuestionConceptTagId(q1.id!!, slugA),
+                source = com.gatelms.anatomy.entity.ConceptTagSource.MANUAL
+            )
+        )
+
+        val req = RevisionDrillRequest(
+            source = RevisionDrillSource.PASS2,
+            conceptSlug = slugA,
+            count = 10
+        )
+
+        val resp = restTemplate.postForEntity("/api/v1/revision/drills", req, PracticeSessionResponse::class.java)
+        assertEquals(HttpStatus.OK, resp.statusCode)
+        val session = resp.body!!
+        assertEquals(1, session.totalQuestions)
+        assertEquals(q1.id, session.questions[0].id)
     }
 }

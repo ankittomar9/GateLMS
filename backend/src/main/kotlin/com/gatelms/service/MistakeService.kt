@@ -35,6 +35,9 @@ class MistakeService(
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(MistakeService::class.java)
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    var questionConceptTagRepository: com.gatelms.anatomy.repository.QuestionConceptTagRepository? = null
+
     private val reviewIntervals = listOf(1L, 3L, 7L, 14L, 30L, 60L)
 
     @Transactional
@@ -182,6 +185,8 @@ class MistakeService(
         loggedAt = loggedAt,
         reviewCount = reviewCount,
         nextReviewAt = nextReviewAt,
-        resolved = resolved
+        resolved = resolved,
+        conceptTags = question?.id?.let { questionConceptTagRepository?.findSlugsByQuestionId(it) } ?: emptyList(),
+        topicId = question?.topic?.id
     )
 }

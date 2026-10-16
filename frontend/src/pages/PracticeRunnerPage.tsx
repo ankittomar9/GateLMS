@@ -37,6 +37,7 @@ import { MathText } from '../components/MathText';
 import { useAiStudio } from '../context/AiStudioContext';
 import { AnatomyPanel } from '../components/AnatomyPanel';
 import { SimilarQuestionsPanel } from '../components/SimilarQuestionsPanel';
+import { ConceptUnitDialog } from '../components/ConceptUnitDialog';
 
 interface OptionItem {
   label: string;
@@ -70,6 +71,9 @@ export const PracticeRunnerPage: React.FC = () => {
 
   // Reveal confirm modal
   const [showRevealConfirm, setShowRevealConfirm] = useState<boolean>(false);
+
+  // Active concept slug for lesson dialog (WP3)
+  const [activeConceptSlug, setActiveConceptSlug] = useState<string | null>(null);
 
   // Summary state
   const [finishSummary, setFinishSummary] = useState<PracticeFinishResponse | null>(null);
@@ -702,6 +706,32 @@ export const PracticeRunnerPage: React.FC = () => {
                   )}
                 </div>
 
+                {/* Tested Concepts & Lesson Route (PC-7 / WP3) */}
+                {((currentVerdict.conceptTags && currentVerdict.conceptTags.length > 0) ||
+                  (currentQuestion.conceptTags && currentQuestion.conceptTags.length > 0)) && (
+                  <div className="mt-3 pt-3 border-t border-ds-border/60 flex flex-wrap items-center gap-2" data-testid="verdict-concept-chips">
+                    <span className="text-xs font-mono font-semibold text-ds-muted uppercase tracking-wider flex items-center gap-1">
+                      <BookOpen className="w-3.5 h-3.5 text-ds-accent" />
+                      <span>Tested Concepts:</span>
+                    </span>
+                    {(currentVerdict.conceptTags && currentVerdict.conceptTags.length > 0
+                      ? currentVerdict.conceptTags
+                      : currentQuestion.conceptTags || []
+                    ).map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setActiveConceptSlug(tag)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-ds text-xs font-mono font-medium bg-ds-accent-soft hover:bg-ds-accent/20 text-ds-accent border border-ds-accent/30 transition-colors"
+                        data-testid={`verdict-concept-chip-${tag}`}
+                      >
+                        <BookOpen className="w-3 h-3" />
+                        <span>{tag}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Log Mistake Form if Incorrect */}
                 {!currentVerdict.correct && currentVerdict.mistakeLogPrompt && (
                   <div className="mt-4 pt-4 border-t border-ds-border space-y-3">
@@ -868,6 +898,12 @@ export const PracticeRunnerPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Concept Unit Modal (PC-7 / WP3) */}
+      <ConceptUnitDialog
+        slug={activeConceptSlug}
+        onClose={() => setActiveConceptSlug(null)}
+      />
     </div>
   );
 };

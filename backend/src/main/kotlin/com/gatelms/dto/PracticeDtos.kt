@@ -24,7 +24,8 @@ data class PracticeQuestionDto(
     val optionsJson: String?,
     val topicId: String?,
     val subjectId: String?,
-    val year: Int?
+    val year: Int?,
+    val conceptTags: List<String> = emptyList()
 )
 
 data class PracticeSessionResponse(
@@ -49,7 +50,8 @@ data class PracticeVerdictResponse(
     val numericMax: Double? = null,
     val explanation: String? = null,
     val topicMastery: Int,
-    val mistakeLogPrompt: Boolean
+    val mistakeLogPrompt: Boolean,
+    val conceptTags: List<String> = emptyList()
 )
 
 data class PracticeQuestionActionRequest(
@@ -96,7 +98,9 @@ data class MistakeDto(
     val loggedAt: Instant,
     val reviewCount: Int,
     val nextReviewAt: Instant?,
-    val resolved: Boolean
+    val resolved: Boolean,
+    val conceptTags: List<String> = emptyList(),
+    val topicId: String? = null
 )
 
 data class TopicMasteryStatsDto(
