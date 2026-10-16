@@ -175,6 +175,7 @@ export interface PracticeQuestionDto {
   topicId: string | null;
   subjectId: string | null;
   year: number | null;
+  conceptTags?: string[];
 }
 
 export interface PracticeSessionResponse {
@@ -200,6 +201,7 @@ export interface PracticeVerdictResponse {
   explanation?: string | null;
   topicMastery: number;
   mistakeLogPrompt: boolean;
+  conceptTags?: string[];
 }
 
 export interface PracticeTopicSummary {
@@ -243,6 +245,8 @@ export interface MistakeDto {
   reviewCount: number;
   nextReviewAt: string | null;
   resolved: boolean;
+  conceptTags?: string[];
+  topicId?: string | null;
 }
 
 export interface TopicMasteryStatsDto {
@@ -364,6 +368,7 @@ export interface MockQuestionReviewDto {
   state: string;
   timeSpentSeconds: number;
   explanation?: string | null;
+  conceptTags?: string[];
 }
 
 export interface MockSectionScoreDto {

@@ -40,6 +40,13 @@ class PracticeService(
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(PracticeService::class.java)
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    var questionConceptTagRepository: com.gatelms.anatomy.repository.QuestionConceptTagRepository? = null
+
+    private fun getConceptTagsForQuestion(questionId: UUID?): List<String> {
+        return questionId?.let { questionConceptTagRepository?.findSlugsByQuestionId(it) } ?: emptyList()
+    }
+
     @Transactional
     fun createSession(request: PracticeSessionCreateRequest): PracticeSessionResponse {
         val count = request.count.coerceIn(1, 50)
@@ -134,7 +141,8 @@ class PracticeService(
                 optionsJson = q.optionsJson,
                 topicId = q.topic?.id,
                 subjectId = q.subject?.id,
-                year = q.year
+                year = q.year,
+                conceptTags = getConceptTagsForQuestion(q.id)
             )
         }
 
@@ -189,7 +197,8 @@ class PracticeService(
                 optionsJson = q.optionsJson,
                 topicId = q.topic?.id,
                 subjectId = q.subject?.id,
-                year = q.year
+                year = q.year,
+                conceptTags = getConceptTagsForQuestion(q.id)
             )
         }
 
@@ -310,6 +319,7 @@ class PracticeService(
             logger.warn("Achievement check failed in practice grading: ${e.message}", e)
         }
 
+        val qTags = getConceptTagsForQuestion(question.id)
         return PracticeVerdictResponse(
             correct = grading.isCorrect,
             marksAwarded = grading.marksAwarded,
@@ -318,7 +328,8 @@ class PracticeService(
             numericMax = question.numericMax,
             explanation = question.explanation,
             topicMastery = updatedMastery,
-            mistakeLogPrompt = !grading.isCorrect
+            mistakeLogPrompt = !grading.isCorrect,
+            conceptTags = qTags
         )
     }
 
@@ -372,6 +383,7 @@ class PracticeService(
             topicMasteryRepository.findByIdUserIdAndIdTopicId(currentUserId, tId).orElse(null)?.masteryLevel
         } ?: 0
 
+        val qTags = getConceptTagsForQuestion(question.id)
         return PracticeVerdictResponse(
             correct = false,
             marksAwarded = 0.0,
@@ -380,7 +392,8 @@ class PracticeService(
             numericMax = question.numericMax,
             explanation = question.explanation,
             topicMastery = topicMastery,
-            mistakeLogPrompt = false
+            mistakeLogPrompt = false,
+            conceptTags = qTags
         )
     }
 

@@ -317,4 +317,103 @@ class SimilarApiIT : BaseIntegrationTest() {
         assertEquals("TOPIC", body.similarityBasis)
         assertTrue(body.questions.isEmpty(), "Should return empty list since no other questions exist in topic")
     }
+
+    @Test
+    fun `honest-judge PASS - similar results exclude normalized-duplicate siblings and return concept-tagged candidate (PC-7)`() {
+        val topic = topicRepository.save(
+            Topic(
+                id = "sim_dedup_topic_${UUID.randomUUID().toString().take(6)}",
+                subject = testSubject,
+                name = "Sim Dedup Topic",
+                slug = "sim-dedup-topic-${UUID.randomUUID().toString().take(6)}",
+                sequence = 100
+            )
+        )
+
+        val slugA = "dedup-slug-a-${UUID.randomUUID().toString().take(6)}"
+        val slugB = "dedup-slug-b-${UUID.randomUUID().toString().take(6)}"
+        conceptTagRepository.save(ConceptTag(slug = slugA, label = "Concept A", topic = topic))
+        conceptTagRepository.save(ConceptTag(slug = slugB, label = "Concept B", topic = topic))
+
+        // Source question with intro prefix
+        val sourceQ = questionRepository.save(
+            Question(
+                statement = "For process synchronization, solve: Consider a counting semaphore S initialized to 10.",
+                year = 2020,
+                marks = 2,
+                topic = topic,
+                subject = testSubject,
+                curationStatus = "ACCEPTED"
+            )
+        )
+
+        // Sibling clone with rotated prefix (same normalized statement!)
+        val cloneQ = questionRepository.save(
+            Question(
+                statement = "In process synchronization formulation: Consider a counting semaphore S initialized to 10.",
+                year = 2021,
+                marks = 2,
+                topic = topic,
+                subject = testSubject,
+                curationStatus = "ACCEPTED"
+            )
+        )
+
+        // Distinct pattern question sharing both concepts
+        val distinctConceptQ = questionRepository.save(
+            Question(
+                statement = "Two processes P1 and P2 share a binary semaphore mutex. What is the minimum value achievable?",
+                year = 2022,
+                marks = 2,
+                topic = topic,
+                subject = testSubject,
+                curationStatus = "ACCEPTED"
+            )
+        )
+
+        // Distinct pattern question sharing one concept
+        val distinctConceptQ2 = questionRepository.save(
+            Question(
+                statement = "A system has 3 processes sharing resources managed by counting semaphores.",
+                year = 2023,
+                marks = 1,
+                topic = topic,
+                subject = testSubject,
+                curationStatus = "ACCEPTED"
+            )
+        )
+
+        // Tag source with slugA and slugB
+        questionConceptTagRepository.save(QuestionConceptTag(QuestionConceptTagId(sourceQ.id!!, slugA), source = ConceptTagSource.MANUAL))
+        questionConceptTagRepository.save(QuestionConceptTag(QuestionConceptTagId(sourceQ.id!!, slugB), source = ConceptTagSource.MANUAL))
+
+        // Tag cloneQ with slugA and slugB (would normally rank high because it shares 2 slugs!)
+        questionConceptTagRepository.save(QuestionConceptTag(QuestionConceptTagId(cloneQ.id!!, slugA), source = ConceptTagSource.MANUAL))
+        questionConceptTagRepository.save(QuestionConceptTag(QuestionConceptTagId(cloneQ.id!!, slugB), source = ConceptTagSource.MANUAL))
+
+        // Tag distinctConceptQ with slugA and slugB
+        questionConceptTagRepository.save(QuestionConceptTag(QuestionConceptTagId(distinctConceptQ.id!!, slugA), source = ConceptTagSource.MANUAL))
+        questionConceptTagRepository.save(QuestionConceptTag(QuestionConceptTagId(distinctConceptQ.id!!, slugB), source = ConceptTagSource.MANUAL))
+
+        // Tag distinctConceptQ2 with slugA
+        questionConceptTagRepository.save(QuestionConceptTag(QuestionConceptTagId(distinctConceptQ2.id!!, slugA), source = ConceptTagSource.MANUAL))
+
+        val resp = restTemplate.getForEntity(
+            "/api/v1/questions/${sourceQ.id}/similar?limit=5",
+            SimilarQuestionsResponseDto::class.java
+        )
+
+        assertEquals(HttpStatus.OK, resp.statusCode)
+        val body = resp.body!!
+
+        // Core assertion: clone must be pre-filtered (0 normalized duplicates)
+        assertFalse(body.questions.any { it.id == cloneQ.id }, "Normalized duplicate clone must be excluded from similar results")
+        assertFalse(body.questions.any { it.id == sourceQ.id }, "Source question must never be returned in results")
+
+        // Core assertion: concept-tagged distinct questions are returned
+        val returnedIds = body.questions.map { it.id }
+        assertTrue(returnedIds.contains(distinctConceptQ.id), "Concept-tagged distinct pattern question must be included")
+        assertTrue(returnedIds.contains(distinctConceptQ2.id), "Concept-tagged question must be included")
+        assertEquals(distinctConceptQ.id, body.questions[0].id, "Candidate with 2 shared slugs must rank first")
+    }
 }

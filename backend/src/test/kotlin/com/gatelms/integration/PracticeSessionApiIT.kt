@@ -34,13 +34,19 @@ class PracticeSessionApiIT : BaseIntegrationTest() {
     lateinit var attemptAnswerRepository: AttemptAnswerRepository
 
     @Autowired
+    lateinit var questionConceptTagRepository: com.gatelms.anatomy.repository.QuestionConceptTagRepository
+
+    @Autowired
+    lateinit var conceptTagRepository: com.gatelms.anatomy.repository.ConceptTagRepository
+
+    @Autowired
     lateinit var objectMapper: ObjectMapper
 
     private val operatorId = java.util.UUID.fromString("00000000-0000-0000-0000-000000000001")
 
     @BeforeEach
     fun setUp() {
-        if (questionRepository.count() < 10) {
+        if (questionRepository.count() < 10 || questionRepository.findAll().none { it.explanation != null }) {
             val runner = QuestionSeedRunner(
                 questionRepository = questionRepository,
                 subjectRepository = subjectRepository,
@@ -214,5 +220,64 @@ class PracticeSessionApiIT : BaseIntegrationTest() {
         val resp = restTemplate.postForEntity("/api/v1/practice/sessions", createReq, PracticeSessionResponse::class.java)
         assertEquals(HttpStatus.OK, resp.statusCode)
         assertTrue((resp.body?.totalQuestions ?: 0) > 0)
+    }
+
+    @Test
+    fun `honest-judge PASS - wrong answer submission returns concept tags in verdict response (PC-7)`() {
+        val topic = topicRepository.save(
+            com.gatelms.entity.Topic(
+                id = "prac_concept_top_${UUID.randomUUID().toString().take(6)}",
+                subject = subjectRepository.findAll().first(),
+                name = "Practice Concept Topic",
+                slug = "prac-concept-top-${UUID.randomUUID().toString().take(6)}"
+            )
+        )
+        val question = questionRepository.save(
+            com.gatelms.entity.Question(
+                statement = "Mutual exclusion critical section test question",
+                explanation = "Mutual exclusion is the foundational requirement of critical sections.",
+                topic = topic,
+                subject = topic.subject,
+                type = com.gatelms.entity.QuestionType.MCQ,
+                correctOptions = "B",
+                curationStatus = "ACCEPTED"
+            )
+        )
+        val slug = "critical-section-requirements"
+        conceptTagRepository.save(com.gatelms.anatomy.entity.ConceptTag(slug = slug, label = "Critical Section Requirements", topic = topic))
+        questionConceptTagRepository.save(
+            com.gatelms.anatomy.entity.QuestionConceptTag(
+                com.gatelms.anatomy.entity.QuestionConceptTagId(question.id!!, slug),
+                source = com.gatelms.anatomy.entity.ConceptTagSource.MANUAL
+            )
+        )
+
+        val createReq = PracticeSessionCreateRequest(
+            topicId = topic.id,
+            count = 1
+        )
+        val sessionResp = restTemplate.postForEntity("/api/v1/practice/sessions", createReq, PracticeSessionResponse::class.java)
+        assertEquals(HttpStatus.OK, sessionResp.statusCode)
+        val session = sessionResp.body!!
+        assertEquals(1, session.questions.size)
+        assertEquals(listOf(slug), session.questions[0].conceptTags)
+
+        val submission = PracticeAnswerSubmission(
+            questionId = question.id!!,
+            selectedOptions = "A",
+            timeSpentSeconds = 25
+        )
+
+        val answerResp = restTemplate.postForEntity(
+            "/api/v1/practice/sessions/${session.attemptId}/answers",
+            submission,
+            PracticeVerdictResponse::class.java
+        )
+        assertEquals(HttpStatus.OK, answerResp.statusCode)
+        val verdict = answerResp.body!!
+
+        assertFalse(verdict.correct)
+        assertTrue(verdict.mistakeLogPrompt)
+        assertEquals(listOf(slug), verdict.conceptTags, "Wrong answer verdict must return conceptTags for lesson routing")
     }
 }

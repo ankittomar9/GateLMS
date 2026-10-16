@@ -98,6 +98,7 @@ const mockResultFixture: MockResultResponse = {
       state: 'ANSWERED',
       timeSpentSeconds: 90,
       explanation: '3-SAT is NP-Complete.',
+      conceptTags: ['np-completeness-reductions'],
     },
     {
       questionId: 'q-nat-3',
@@ -198,5 +199,15 @@ describe('ResultPage', () => {
     expect(screen.getByText('+2 Marks')).toBeInTheDocument();
     expect(screen.getByText('-0.67 Marks')).toBeInTheDocument();
     expect(screen.getByText('3-SAT is NP-Complete.')).toBeInTheDocument();
+  });
+
+  it('surfaces tested concept chips on reviewed question cards and opens lesson dialog (PC-7 / WP3)', () => {
+    renderComponent();
+
+    expect(screen.getByTestId('review-concept-chips')).toBeInTheDocument();
+    expect(screen.getByTestId('review-concept-chip-np-completeness-reductions')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('review-concept-chip-np-completeness-reductions'));
+    expect(screen.getByTestId('concept-unit-dialog')).toBeInTheDocument();
   });
 });

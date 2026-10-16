@@ -26,6 +26,7 @@ const mockMistakes: MistakeDto[] = [
     reviewCount: 0,
     nextReviewAt: '2026-10-06T10:00:00Z',
     resolved: false,
+    conceptTags: ['cache-organization', 'set-associative-mapping'],
   },
   {
     id: 'm-02',
@@ -168,5 +169,16 @@ describe('MistakeNotebookPage', () => {
     fireEvent.click(resolvedTab);
 
     expect(resolvedTab).toHaveClass('bg-ds-accent');
+  });
+
+  it('surfaces tested concept chips on mistake cards and opens lesson dialog (PC-7 / WP3)', () => {
+    renderComponent();
+
+    expect(screen.getByTestId('mistake-concept-chips')).toBeInTheDocument();
+    expect(screen.getByTestId('mistake-concept-chip-cache-organization')).toBeInTheDocument();
+    expect(screen.getByTestId('mistake-concept-chip-set-associative-mapping')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('mistake-concept-chip-cache-organization'));
+    expect(screen.getByTestId('concept-unit-dialog')).toBeInTheDocument();
   });
 });

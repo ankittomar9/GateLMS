@@ -187,4 +187,121 @@ class SimilarQuestionRankerTest {
         assertEquals("TOPIC", emptyBasis)
         assertTrue(emptyIds.isEmpty())
     }
+
+    @Test
+    @DisplayName("honest-judge PASS - dedup pre-filter excludes concept candidates matching source normalized statement")
+    fun testDedupPreFilterExcludesConceptDuplicates() {
+        val normalizedSource = "consider 3 processes and 5 semaphores."
+        val conceptCandidates = listOf(
+            SimilarQuestionRanker.CandidateInfo(
+                questionId = q1,
+                sharedSlugCount = 3,
+                year = 2024,
+                normalizedStatement = "consider 3 processes and 5 semaphores." // clone
+            ),
+            SimilarQuestionRanker.CandidateInfo(
+                questionId = q2,
+                sharedSlugCount = 2,
+                year = 2023,
+                normalizedStatement = "different statement about semaphores"
+            ),
+            SimilarQuestionRanker.CandidateInfo(
+                questionId = q3,
+                sharedSlugCount = 1,
+                year = 2022,
+                normalizedStatement = "another distinct question pattern"
+            )
+        )
+
+        val (rankedIds, basis) = SimilarQuestionRanker.rankCandidates(
+            sourceQuestionId = sourceId,
+            conceptCandidates = conceptCandidates,
+            topicCandidates = emptyList(),
+            solvedQuestionIds = emptySet(),
+            limit = 5,
+            sourceNormalizedStatement = normalizedSource
+        )
+
+        assertEquals("CONCEPT", basis)
+        assertFalse(rankedIds.contains(q1), "Clone matching source normalized statement must be filtered out")
+        assertEquals(listOf(q2, q3), rankedIds)
+    }
+
+    @Test
+    @DisplayName("honest-judge PASS - dedup pre-filter excludes topic candidates matching source normalized statement")
+    fun testDedupPreFilterExcludesTopicDuplicates() {
+        val normalizedSource = "producer consumer bounded buffer with mutex."
+        val topicCandidates = listOf(
+            SimilarQuestionRanker.CandidateInfo(
+                questionId = q1,
+                year = 2024,
+                normalizedStatement = "producer consumer bounded buffer with mutex." // duplicate
+            ),
+            SimilarQuestionRanker.CandidateInfo(
+                questionId = q2,
+                year = 2023,
+                normalizedStatement = "distinct topic candidate statement"
+            )
+        )
+
+        val (rankedIds, basis) = SimilarQuestionRanker.rankCandidates(
+            sourceQuestionId = sourceId,
+            conceptCandidates = emptyList(),
+            topicCandidates = topicCandidates,
+            solvedQuestionIds = emptySet(),
+            limit = 5,
+            sourceNormalizedStatement = normalizedSource
+        )
+
+        assertEquals("TOPIC", basis)
+        assertFalse(rankedIds.contains(q1), "Topic clone matching source normalized statement must be excluded")
+        assertEquals(listOf(q2), rankedIds)
+    }
+
+    @Test
+    @DisplayName("honest-judge PASS - dedup pre-filter dropping concept candidates below threshold triggers TOPIC fallback without clones")
+    fun testDedupFilterTriggeringTopicFallback() {
+        val normalizedSource = "semaphore wait and signal sequence analysis."
+        val conceptCandidates = listOf(
+            SimilarQuestionRanker.CandidateInfo(
+                questionId = q1,
+                sharedSlugCount = 2,
+                year = 2024,
+                normalizedStatement = "semaphore wait and signal sequence analysis." // clone
+            ),
+            SimilarQuestionRanker.CandidateInfo(
+                questionId = q2,
+                sharedSlugCount = 2,
+                year = 2023,
+                normalizedStatement = "valid unique concept question"
+            )
+        )
+        val topicCandidates = listOf(
+            SimilarQuestionRanker.CandidateInfo(
+                questionId = q3,
+                year = 2022,
+                normalizedStatement = "topic question 1"
+            ),
+            SimilarQuestionRanker.CandidateInfo(
+                questionId = q4,
+                year = 2021,
+                normalizedStatement = "semaphore wait and signal sequence analysis." // clone in topic pool too
+            )
+        )
+
+        val (rankedIds, basis) = SimilarQuestionRanker.rankCandidates(
+            sourceQuestionId = sourceId,
+            conceptCandidates = conceptCandidates,
+            topicCandidates = topicCandidates,
+            solvedQuestionIds = emptySet(),
+            limit = 5,
+            sourceNormalizedStatement = normalizedSource
+        )
+
+        // Only 1 valid concept candidate left (q2) -> below 2 threshold -> falls back to TOPIC
+        assertEquals("TOPIC", basis)
+        assertFalse(rankedIds.contains(q1), "Concept clone excluded")
+        assertFalse(rankedIds.contains(q4), "Topic clone excluded")
+        assertEquals(listOf(q3), rankedIds)
+    }
 }

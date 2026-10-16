@@ -1,11 +1,22 @@
 package com.gatelms.integration
 
+import com.gatelms.anatomy.entity.ConceptTag
+import com.gatelms.anatomy.entity.ConceptTagSource
+import com.gatelms.anatomy.entity.QuestionConceptTag
+import com.gatelms.anatomy.entity.QuestionConceptTagId
+import com.gatelms.anatomy.repository.ConceptTagRepository
+import com.gatelms.anatomy.repository.QuestionConceptTagRepository
 import com.gatelms.dto.MistakeCreateRequest
 import com.gatelms.dto.MistakeDto
 import com.gatelms.dto.MistakeReviewRequest
 import com.gatelms.entity.MistakeErrorCategory
+import com.gatelms.entity.Question
+import com.gatelms.entity.QuestionType
+import com.gatelms.entity.Topic
 import com.gatelms.repository.MistakeLogRepository
 import com.gatelms.repository.QuestionRepository
+import com.gatelms.repository.SubjectRepository
+import com.gatelms.repository.TopicRepository
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -14,6 +25,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 
 class MistakeApiIT : BaseIntegrationTest() {
 
@@ -22,6 +34,35 @@ class MistakeApiIT : BaseIntegrationTest() {
 
     @Autowired
     lateinit var mistakeLogRepository: MistakeLogRepository
+
+    @Autowired
+    lateinit var questionConceptTagRepository: QuestionConceptTagRepository
+
+    @Autowired
+    lateinit var conceptTagRepository: ConceptTagRepository
+
+    @Autowired
+    lateinit var subjectRepository: SubjectRepository
+
+    @Autowired
+    lateinit var topicRepository: TopicRepository
+
+    @Autowired
+    lateinit var objectMapper: com.fasterxml.jackson.databind.ObjectMapper
+
+    @org.junit.jupiter.api.BeforeEach
+    fun setUp() {
+        if (questionRepository.count() == 0L) {
+            val runner = com.gatelms.seed.QuestionSeedRunner(
+                questionRepository = questionRepository,
+                subjectRepository = subjectRepository,
+                topicRepository = topicRepository,
+                objectMapper = objectMapper,
+                seedPath = "seed-data/questions.jsonl"
+            )
+            runner.importQuestions("seed-data/questions.jsonl")
+        }
+    }
 
     @Test
     fun `create mistake log with valid categories succeeds and schedules review in 1 day`() {
@@ -129,5 +170,56 @@ class MistakeApiIT : BaseIntegrationTest() {
         assertTrue(review3.resolved)
         val daysUntilReview3 = ChronoUnit.DAYS.between(Instant.now(), review3.nextReviewAt)
         assertTrue(daysUntilReview3 in 6..8, "Next review should be scheduled ~7 days out")
+    }
+
+    @Test
+    fun `honest-judge PASS - mistake log surfaces concept tags and topicId for wrong answer review (PC-7)`() {
+        val topic = topicRepository.save(
+            Topic(
+                id = "mistake_concept_top_${UUID.randomUUID().toString().take(6)}",
+                subject = subjectRepository.findAll().first(),
+                name = "Mistake Concept Topic",
+                slug = "mistake-concept-top-${UUID.randomUUID().toString().take(6)}"
+            )
+        )
+        val question = questionRepository.save(
+            Question(
+                statement = "Semaphore wait operation question for mistake tracking",
+                explanation = "Wait decrements the semaphore counter.",
+                topic = topic,
+                subject = topic.subject,
+                type = QuestionType.MCQ,
+                correctOptions = "A",
+                curationStatus = "ACCEPTED"
+            )
+        )
+        val slug = "semaphore-operations"
+        conceptTagRepository.save(ConceptTag(slug = slug, label = "Semaphore Operations", topic = topic))
+        questionConceptTagRepository.save(QuestionConceptTag(QuestionConceptTagId(question.id!!, slug), source = ConceptTagSource.MANUAL))
+
+        val request = MistakeCreateRequest(
+            questionId = question.id!!,
+            errorCategory = "CONCEPTUAL",
+            description = "Confused wait and signal semantics",
+            correctiveTakeaway = "P(S) decrements, V(S) increments"
+        )
+
+        val resp = restTemplate.postForEntity("/api/v1/mistakes", request, MistakeDto::class.java)
+        assertEquals(HttpStatus.CREATED, resp.statusCode)
+        val created = resp.body!!
+
+        assertEquals(listOf(slug), created.conceptTags)
+        assertEquals(topic.id, created.topicId)
+
+        // Also verify GET /api/v1/mistakes returns the concept tags
+        val getResp = restTemplate.getForEntity("/api/v1/mistakes?due=false&resolved=false", String::class.java)
+        assertEquals(HttpStatus.OK, getResp.statusCode)
+        val root = objectMapper.readTree(getResp.body)
+        val content = root.get("content")
+        assertNotNull(content)
+        val foundNode = content.firstOrNull { it.get("id").asText() == created.id.toString() }
+        assertNotNull(foundNode)
+        assertEquals(slug, foundNode!!.get("conceptTags").first().asText())
+        assertEquals(topic.id, foundNode.get("topicId").asText())
     }
 }

@@ -20,14 +20,13 @@ interface QuestionConceptTagRepository : JpaRepository<QuestionConceptTag, Quest
     fun findSlugsByQuestionId(@Param("questionId") questionId: UUID): List<String>
 
     @Query("""
-        SELECT qct.id.questionId, count(qct), q.year, q.createdAt
+        SELECT qct.id.questionId, count(qct), q.year, q.createdAt, q.statement
         FROM QuestionConceptTag qct
         JOIN Question q ON q.id = qct.id.questionId
         WHERE qct.id.conceptTagSlug IN :slugs
-          AND qct.source = com.gatelms.anatomy.entity.ConceptTagSource.ANATOMY
           AND q.curationStatus <> 'REJECTED'
           AND q.id <> :sourceQuestionId
-        GROUP BY qct.id.questionId, q.year, q.createdAt
+        GROUP BY qct.id.questionId, q.year, q.createdAt, q.statement
     """)
     fun findConceptCandidatesWithSharedSlugCount(
         @Param("slugs") slugs: Collection<String>,

@@ -39,6 +39,9 @@ class MockTestService(
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(MockTestService::class.java)
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    var questionConceptTagRepository: com.gatelms.anatomy.repository.QuestionConceptTagRepository? = null
+
     @Transactional
     fun createTemplate(req: CreateMockTemplateRequest): MockTemplateSummaryDto {
         if (req.title.isBlank()) {
@@ -581,7 +584,8 @@ class MockTestService(
                     marksAwarded = answer?.marksAwarded ?: 0.0,
                     state = answer?.state?.name ?: AttemptAnswerState.NOT_VISITED.name,
                     timeSpentSeconds = answer?.timeSpentSeconds ?: 0,
-                    explanation = question.explanation
+                    explanation = question.explanation,
+                    conceptTags = question.id?.let { questionConceptTagRepository?.findSlugsByQuestionId(it) } ?: emptyList()
                 )
             )
         }

@@ -15,6 +15,7 @@ import {
 import { useMistakes, useReviewMistake } from '../hooks/useQueries';
 import { MistakeErrorCategory, MistakeDto } from '../api/types';
 import { MathText } from '../components/MathText';
+import { ConceptUnitDialog } from '../components/ConceptUnitDialog';
 
 export const MistakeNotebookPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ export const MistakeNotebookPage: React.FC = () => {
   );
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [activeConceptSlug, setActiveConceptSlug] = useState<string | null>(null);
 
   const queryParams = {
     due: activeTab === 'due' ? true : undefined,
@@ -229,6 +231,28 @@ export const MistakeNotebookPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Tested Concepts & Lesson Route (PC-7 / WP3) */}
+                {m.conceptTags && m.conceptTags.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1" data-testid="mistake-concept-chips">
+                    <span className="text-[11px] font-mono font-semibold text-ds-muted uppercase tracking-wider flex items-center gap-1">
+                      <BookOpen className="w-3 h-3 text-ds-accent" />
+                      <span>Tested Concepts:</span>
+                    </span>
+                    {m.conceptTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setActiveConceptSlug(tag)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-ds text-[11px] font-mono font-medium bg-ds-accent-soft hover:bg-ds-accent/20 text-ds-accent border border-ds-accent/30 transition-colors"
+                        data-testid={`mistake-concept-chip-${tag}`}
+                      >
+                        <BookOpen className="w-2.5 h-2.5" />
+                        <span>{tag}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Review Flow / Actions */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-ds-border">
                   <span className="text-[11px] text-ds-muted">
@@ -264,6 +288,12 @@ export const MistakeNotebookPage: React.FC = () => {
           })}
         </div>
       )}
+
+      {/* Concept Unit Modal (PC-7 / WP3) */}
+      <ConceptUnitDialog
+        slug={activeConceptSlug}
+        onClose={() => setActiveConceptSlug(null)}
+      />
     </div>
   );
 };

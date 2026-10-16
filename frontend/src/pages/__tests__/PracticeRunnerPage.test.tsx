@@ -302,4 +302,33 @@ describe('PracticeRunnerPage', () => {
       expect(screen.getByRole('button', { name: /return to dashboard/i })).toBeInTheDocument();
     });
   });
+
+  it('surfaces tested concept chips with lesson route on wrong answer (PC-7 / WP3)', async () => {
+    mockSubmitMutate.mockResolvedValueOnce({
+      correct: false,
+      marksAwarded: 0.0,
+      correctOptions: 'B',
+      explanation: 'Explanation text',
+      topicMastery: 2,
+      mistakeLogPrompt: true,
+      conceptTags: ['critical-section-requirements', 'peterson-software-solutions'],
+    });
+
+    renderComponent();
+
+    const optA = screen.getByText('A');
+    fireEvent.click(optA);
+    const submitBtn = screen.getByRole('button', { name: /submit answer/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('verdict-concept-chips')).toBeInTheDocument();
+      expect(screen.getByTestId('verdict-concept-chip-critical-section-requirements')).toBeInTheDocument();
+      expect(screen.getByTestId('verdict-concept-chip-peterson-software-solutions')).toBeInTheDocument();
+    });
+
+    // Clicking chip opens dialog
+    fireEvent.click(screen.getByTestId('verdict-concept-chip-critical-section-requirements'));
+    expect(screen.getByTestId('concept-unit-dialog')).toBeInTheDocument();
+  });
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -31,10 +31,16 @@ import { useAuth } from '../context/AuthContext';
 export const TopicPage: React.FC = () => {
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
 
-  const [activeTab, setActiveTab] = useState<'theory' | 'concepts' | 'questions' | 'notebook'>('theory');
+  const tabParam = searchParams.get('tab');
+  const conceptParam = searchParams.get('concept');
+
+  const [activeTab, setActiveTab] = useState<'theory' | 'concepts' | 'questions' | 'notebook'>(
+    tabParam === 'concepts' || tabParam === 'questions' || tabParam === 'notebook' ? tabParam : 'theory'
+  );
   const [primerData, setPrimerData] = useState<TopicPrimerResponse | null>(null);
   const [loadingPrimer, setLoadingPrimer] = useState<boolean>(true);
   const [generatingPrimer, setGeneratingPrimer] = useState<boolean>(false);
@@ -56,8 +62,21 @@ export const TopicPage: React.FC = () => {
   });
   const [primerError, setPrimerError] = useState<string | null>(null);
 
-  // Selected concept for ConceptUnitDialog
-  const [selectedConceptSlug, setSelectedConceptSlug] = useState<string | null>(null);
+  // Selected concept for ConceptUnitDialog / TopicConceptsTab
+  const [selectedConceptSlug, setSelectedConceptSlug] = useState<string | null>(conceptParam);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const concept = searchParams.get('concept');
+    if (tab === 'concepts') {
+      setActiveTab('concepts');
+      if (concept) {
+        setSelectedConceptSlug(concept);
+      }
+    } else if (tab === 'questions' || tab === 'notebook' || tab === 'theory') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Questions for this topic
   const { data: questionsPage, isLoading: loadingQuestions } = useQuestions({

@@ -9,10 +9,12 @@ import {
   ArrowRight, 
   RotateCcw, 
   Filter, 
-  AlertTriangle 
+  AlertTriangle,
+  BookOpen
 } from 'lucide-react';
 import { MathText } from '../components/MathText';
 import { useMockResult } from '../hooks/useQueries';
+import { ConceptUnitDialog } from '../components/ConceptUnitDialog';
 
 export const ResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -20,6 +22,7 @@ export const ResultPage: React.FC = () => {
   const { data: result, isLoading, error } = useMockResult(attemptId || '');
 
   const [filterType, setFilterType] = useState<'ALL' | 'WRONG' | 'UNATTEMPTED'>('ALL');
+  const [activeConceptSlug, setActiveConceptSlug] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -317,11 +320,39 @@ export const ResultPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Tested Concepts & Lesson Route (PC-7 / WP3) */}
+                {q.conceptTags && q.conceptTags.length > 0 && (
+                  <div className="pt-2 border-t border-ds-border flex flex-wrap items-center gap-1.5" data-testid="review-concept-chips">
+                    <span className="text-[11px] font-mono font-semibold text-ds-muted uppercase tracking-wider flex items-center gap-1">
+                      <BookOpen className="w-3 h-3 text-ds-accent" />
+                      <span>Tested Concepts:</span>
+                    </span>
+                    {q.conceptTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setActiveConceptSlug(tag)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-ds text-[11px] font-mono font-medium bg-ds-accent-soft hover:bg-ds-accent/20 text-ds-accent border border-ds-accent/30 transition-colors"
+                        data-testid={`review-concept-chip-${tag}`}
+                      >
+                        <BookOpen className="w-2.5 h-2.5" />
+                        <span>{tag}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* Concept Unit Modal (PC-7 / WP3) */}
+      <ConceptUnitDialog
+        slug={activeConceptSlug}
+        onClose={() => setActiveConceptSlug(null)}
+      />
     </div>
   );
 };

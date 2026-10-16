@@ -30,6 +30,8 @@ class RevisionService(
     private val currentUserProvider: CurrentUserProvider,
     private val retrievalCardStateRepository: RetrievalCardStateRepository
 ) {
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    var questionConceptTagRepository: com.gatelms.anatomy.repository.QuestionConceptTagRepository? = null
 
     fun getOverview(): RevisionOverviewDto {
         val currentUserId = currentUserProvider.getCurrentUserId()
@@ -99,13 +101,24 @@ class RevisionService(
             }
         }
 
-        if (questions.isEmpty()) {
+        val effectiveQuestions = if (!request.conceptSlug.isNullOrBlank()) {
+            val taggedSlugs = listOf(request.conceptSlug)
+            val taggedInfos = questionConceptTagRepository?.findTaggedQuestionInfos(taggedSlugs) ?: emptyList()
+            val taggedIds = taggedInfos.mapNotNull { it.getOrNull(1) as? UUID }.toSet()
+            val matched = questions.filter { it.id in taggedIds }
+            if (matched.isNotEmpty()) matched else questions
+        } else {
+            questions
+        }
+
+        if (effectiveQuestions.isEmpty()) {
             throw ResponseStatusException(HttpStatus.CONFLICT, "No candidates for this drill source")
         }
 
+        val titleSuffix = if (!request.conceptSlug.isNullOrBlank()) " · ${request.conceptSlug}" else ""
         return practiceService.createDrillSession(
-            questions = questions,
-            title = "Weakness Drill · ${request.source.name}",
+            questions = effectiveQuestions,
+            title = "Weakness Drill · ${request.source.name}$titleSuffix",
             source = request.source.name
         )
     }

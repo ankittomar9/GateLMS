@@ -117,7 +117,8 @@ data class MockQuestionReviewDto(
     val marksAwarded: Double,
     val state: String,
     val timeSpentSeconds: Int,
-    val explanation: String?
+    val explanation: String?,
+    val conceptTags: List<String> = emptyList()
 )
 
 data class MockSectionScoreDto(

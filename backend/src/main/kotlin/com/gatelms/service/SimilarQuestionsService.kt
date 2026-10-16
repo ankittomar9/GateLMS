@@ -27,8 +27,9 @@ class SimilarQuestionsService(
 
         val userId = currentUserProvider.getCurrentUserId()
         val solvedQuestionIds = questionProgressRepository.findSolvedQuestionIdsForUser(userId)
+        val sourceNormalizedStatement = com.gatelms.seed.QuestionSeedRunner.normalizeStatement(sourceQuestion.statement)
 
-        // 1. Fetch concept candidates sharing slugs from ANATOMY tags
+        // 1. Fetch concept candidates sharing slugs
         val sourceSlugs = questionConceptTagRepository.findSlugsByQuestionId(questionId)
         val conceptCandidates = if (sourceSlugs.isNotEmpty()) {
             val rows = questionConceptTagRepository.findConceptCandidatesWithSharedSlugCount(sourceSlugs, questionId)
@@ -37,11 +38,14 @@ class SimilarQuestionsService(
                 val sharedCount = (row[1] as Number).toInt()
                 val year = (row[2] as? Number)?.toInt()
                 val createdAt = (row[3] as? Instant)?.toEpochMilli() ?: 0L
+                val stmt = row.getOrNull(4) as? String
+                val normStmt = stmt?.let { com.gatelms.seed.QuestionSeedRunner.normalizeStatement(it) }
                 SimilarQuestionRanker.CandidateInfo(
                     questionId = qId,
                     sharedSlugCount = sharedCount,
                     year = year,
-                    createdAtEpochMs = createdAt
+                    createdAtEpochMs = createdAt,
+                    normalizedStatement = normStmt
                 )
             }
         } else {
@@ -56,24 +60,28 @@ class SimilarQuestionsService(
                 val qId = row[0] as UUID
                 val year = (row[1] as? Number)?.toInt()
                 val createdAt = (row[2] as? Instant)?.toEpochMilli() ?: 0L
+                val stmt = row.getOrNull(3) as? String
+                val normStmt = stmt?.let { com.gatelms.seed.QuestionSeedRunner.normalizeStatement(it) }
                 SimilarQuestionRanker.CandidateInfo(
                     questionId = qId,
                     sharedSlugCount = 0,
                     year = year,
-                    createdAtEpochMs = createdAt
+                    createdAtEpochMs = createdAt,
+                    normalizedStatement = normStmt
                 )
             }
         } else {
             emptyList()
         }
 
-        // 3. Execute pure ranker (PC-5)
+        // 3. Execute pure ranker (PC-5 + WP3 dedup pre-filter)
         val (rankedIds, similarityBasis) = SimilarQuestionRanker.rankCandidates(
             sourceQuestionId = questionId,
             conceptCandidates = conceptCandidates,
             topicCandidates = topicCandidates,
             solvedQuestionIds = solvedQuestionIds,
-            limit = limit
+            limit = limit,
+            sourceNormalizedStatement = sourceNormalizedStatement
         )
 
         if (rankedIds.isEmpty()) {
