@@ -3,7 +3,8 @@
 - **Work Package:** WP3 — Loop closure + similar-question quality
 - **Executor:** Gemini Antigravity (OmniRush retired)
 - **Base Commit:** `44439ec` (WP2 merged & remote synced on master)
-- **Branch:** `phase8/wp3-loop-closure`
+- **Branch:** `phase8/wp3-loop-closure` (`d2e7622`)
+- **Merge Commit:** `2160b2e` (merged to master with `--no-ff`)
 - **Audit Regime:** Post-merge audit (≤24 h per SPEC §8.2)
 - **Date:** 2026-10-17
 
