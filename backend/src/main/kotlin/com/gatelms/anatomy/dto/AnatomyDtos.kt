@@ -136,3 +136,63 @@ data class CardReviewResponse(
     val intervalDays: Float,
     val ease: Float
 )
+
+// ---- Phase 8 WP2: Concept Lessons contract (SPEC §5.4, §7) ----
+
+data class ConceptLessonPayload(
+    @JsonProperty("title") val title: String = "",
+    @JsonProperty("motivation") val motivation: String = "",
+    @JsonProperty("core_idea") val coreIdea: String = "",
+    @JsonProperty("invariant") val invariant: String? = null,
+    @JsonProperty("worked_example") val workedExample: String = "",
+    @JsonProperty("worked_example_external_id") val workedExampleExternalId: String = "",
+    @JsonProperty("traps") val traps: String? = null
+)
+
+data class ConceptLessonDto(
+    val id: UUID,
+    val conceptTagSlug: String,
+    val conceptTagLabel: String,
+    val title: String,
+    val motivation: String,
+    val coreIdea: String,
+    val invariant: String?,
+    val workedExample: String,
+    val workedExampleExternalId: String?,
+    val traps: String?,
+    val status: String,
+    val parseError: String?,
+    val generatorModel: String?,
+    val generatedAt: Instant
+)
+
+data class ConceptLessonResponseDto(
+    val lesson: ConceptLessonDto?,
+    val conceptTagSlug: String,
+    val conceptTagLabel: String,
+    val topicId: String,
+    val topicName: String,
+    val mappedQuestionCount: Int,
+    val mappedQuestions: List<ConceptMappedQuestionItemDto> = emptyList()
+)
+
+data class ConceptMappedQuestionItemDto(
+    val id: UUID,
+    val externalId: String,
+    val statement: String,
+    val type: String,
+    val difficulty: String?,
+    val year: Int?
+)
+
+data class CurationLessonUpdateRequest(
+    val status: ConceptUnitStatus? = null,
+    val title: String? = null,
+    val motivation: String? = null,
+    val coreIdea: String? = null,
+    val invariant: String? = null,
+    val workedExample: String? = null,
+    val workedExampleExternalId: String? = null,
+    val traps: String? = null
+)
+

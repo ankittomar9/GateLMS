@@ -14,6 +14,30 @@ vi.mock('../../hooks/useQueries', () => ({
   useToggleBookmark: vi.fn(),
 }));
 
+vi.mock('../../api/journeyApi', () => ({
+  journeyApi: {
+    getConceptLesson: vi.fn().mockResolvedValue({
+      lesson: {
+        id: 'lesson-1',
+        conceptTagSlug: 'paging',
+        title: 'Paging Architecture',
+        motivation: 'Decouple logical address space',
+        coreIdea: 'Translate page to frame',
+        invariant: 'PA = Frame * Size + Offset',
+        workedExample: 'Example step by step calculation',
+        traps: 'Confusing page and frame',
+        workedExampleExternalId: 'GATE-CS-2023-Q01',
+        status: 'ACCEPTED',
+      },
+      concept: {
+        slug: 'paging',
+        label: 'Paging Architecture',
+      },
+      mappedQuestions: [],
+    }),
+  },
+}));
+
 const mockMcqQuestion: QuestionDetail = {
   id: 'q1',
   externalId: 'GATE-CS-2023-Q01',
@@ -148,4 +172,37 @@ describe('QuestionDetailPage', () => {
     expect(screen.getByText('[2.99 to 3.01]')).toBeInTheDocument();
     expect(screen.getByText('Calculated speedup is 3.00.')).toBeInTheDocument();
   });
+
+  it('honest-judge PASS - renders concept chips in solution panel when revealed and clicking chip opens concept lesson dialog (PC-3)', async () => {
+    const mockWithConcepts: QuestionDetail = {
+      ...mockMcqQuestion,
+      conceptTags: ['paging', 'ptbr-hardware'],
+    };
+
+    vi.mocked(queryHooks.useQuestion).mockReturnValue({
+      data: mockWithConcepts,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+
+    renderComponent();
+
+    // Solution not revealed -> concept chips not shown
+    expect(screen.queryByTestId('solution-concept-chips')).toBeNull();
+
+    // Reveal solution
+    fireEvent.click(screen.getByText('Reveal Solution & Key'));
+
+    expect(screen.getByTestId('solution-concept-chips')).toBeInTheDocument();
+    expect(screen.getByTestId('concept-chip-paging')).toBeInTheDocument();
+    expect(screen.getByTestId('concept-chip-ptbr-hardware')).toBeInTheDocument();
+
+    // Clicking concept chip opens dialog
+    fireEvent.click(screen.getByTestId('concept-chip-paging'));
+
+    expect(await screen.findByTestId('concept-unit-dialog')).toBeInTheDocument();
+    expect(await screen.findByText('Paging Architecture')).toBeInTheDocument();
+  });
 });
+

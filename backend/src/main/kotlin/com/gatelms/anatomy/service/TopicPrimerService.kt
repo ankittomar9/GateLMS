@@ -34,7 +34,8 @@ class TopicPrimerService(
     private val aiChatService: AiChatService,
     private val aiRateLimiter: AiRateLimiter,
     private val anatomyValidationService: AnatomyValidationService,
-    private val aiProperties: com.gatelms.ai.config.AiProperties
+    private val aiProperties: com.gatelms.ai.config.AiProperties,
+    private val topicGroundingSampler: TopicGroundingSampler = TopicGroundingSampler()
 ) {
     private val log = LoggerFactory.getLogger(TopicPrimerService::class.java)
 
@@ -84,10 +85,12 @@ class TopicPrimerService(
         // 2. Rate limit check (429)
         aiRateLimiter.checkPrimerGenerateLimit(userId)
 
-        // 3. Grounding: fetch sample of up to 10 questions
-        val sampleQuestions = questionRepository.findSampleQuestionsByTopic(topic.id, PageRequest.of(0, 10))
+        // 3. Grounding: stratified sample across (type x difficulty) up to 30 questions
+        val pool = questionRepository.findSampleQuestionsByTopic(topic.id, PageRequest.of(0, 100))
+        val sampleQuestions = topicGroundingSampler.stratifySample(pool, 30)
+        val conceptLabels = conceptTagRepository.findByTopicId(topic.id).map { it.label }
 
-        val prompt = buildTopicPrimerPrompt(topic, sampleQuestions)
+        val prompt = buildTopicPrimerPrompt(topic, sampleQuestions, conceptLabels)
         val chatRequest = AiChatRequest(
             messages = listOf(ChatMessageDto(role = "user", content = prompt)),
             provider = provider ?: "GEMINI",
@@ -203,17 +206,28 @@ class TopicPrimerService(
             }
     }
 
-    private fun buildTopicPrimerPrompt(topic: Topic, sampleQuestions: List<Question>): String {
+    internal fun buildTopicPrimerPrompt(
+        topic: Topic,
+        sampleQuestions: List<Question>,
+        conceptLabels: List<String> = emptyList()
+    ): String {
         return buildString {
-            appendLine("You are an expert computer science professor designing a foundational Theory Primer for GATE CSE preparation.")
+            appendLine("You are an expert computer science professor designing a foundational Topic Orientation and Theory Primer for GATE CSE preparation.")
             appendLine("Topic: ${topic.name} (id: ${topic.id})")
             appendLine("Subject: ${topic.subject?.name ?: "Unknown"}")
             topic.bookChapterRef?.let { appendLine("Standard Reference: $it") }
 
+            if (conceptLabels.isNotEmpty()) {
+                appendLine("\nTopic Canonical Concept Taxonomies:")
+                conceptLabels.forEach { label ->
+                    appendLine("- $label")
+                }
+            }
+
             if (sampleQuestions.isNotEmpty()) {
-                appendLine("\nGrounding Questions from actual GATE examination pool (${sampleQuestions.size} samples):")
+                appendLine("\nGrounding Questions from actual GATE examination pool (${sampleQuestions.size} stratified samples):")
                 sampleQuestions.forEachIndexed { idx, q ->
-                    appendLine("${idx + 1}. [${q.year} ${q.type}] ${q.statement.take(200)}")
+                    appendLine(topicGroundingSampler.formatQuestionSnippet(idx + 1, q, 1500))
                 }
             }
 

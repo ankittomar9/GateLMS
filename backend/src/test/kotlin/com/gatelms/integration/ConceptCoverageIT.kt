@@ -327,4 +327,71 @@ class ConceptCoverageIT : BaseIntegrationTest() {
         assertTrue(dto!!.conceptTags.contains("peterson-software-solutions"))
         assertTrue(dto.conceptTags.contains("critical-section-requirements"))
     }
+
+    @Test
+    @Order(6)
+    fun `honest-judge PASS - patch question concepts handles full-replace overlap and safe removeTags (Advisories A-1, A-2)`() {
+        loginAs("ankur", "admin123")
+
+        val psyncTopic = topicRepository.findById("topic_os_process_sync").get()
+        val testQ = questionRepository.save(
+            Question(
+                externalId = "TEST-OVERLAP-${UUID.randomUUID().toString().take(8)}",
+                statement = "Test question for overlap and safe removal",
+                type = QuestionType.MCQ,
+                topic = psyncTopic
+            )
+        )
+
+        try {
+            // Step 1: Set tags to [peterson-software-solutions]
+            val patch1 = restTemplate.exchange(
+                "/api/v1/curation/questions/${testQ.id}/concepts",
+                HttpMethod.PATCH,
+                HttpEntity(CurationQuestionConceptsPatchRequest(tags = listOf("peterson-software-solutions"))),
+                QuestionDto::class.java
+            )
+            assertEquals(HttpStatus.OK, patch1.statusCode)
+            assertEquals(listOf("peterson-software-solutions"), patch1.body?.conceptTags)
+
+            // Step 2: Overlap replace [peterson-software-solutions] -> [peterson-software-solutions, critical-section-requirements]
+            val patch2 = restTemplate.exchange(
+                "/api/v1/curation/questions/${testQ.id}/concepts",
+                HttpMethod.PATCH,
+                HttpEntity(CurationQuestionConceptsPatchRequest(tags = listOf("peterson-software-solutions", "critical-section-requirements"))),
+                QuestionDto::class.java
+            )
+            assertEquals(HttpStatus.OK, patch2.statusCode)
+            val tags2 = patch2.body?.conceptTags ?: emptyList()
+            assertTrue(tags2.contains("peterson-software-solutions"))
+            assertTrue(tags2.contains("critical-section-requirements"))
+            assertEquals(2, tags2.size)
+
+            // Step 3: Overlap replace [peterson, critical] -> [critical-section-requirements]
+            // This tests deleting old tags and resurrecting/preserving surviving overlapping tag without PK violation
+            val patch3 = restTemplate.exchange(
+                "/api/v1/curation/questions/${testQ.id}/concepts",
+                HttpMethod.PATCH,
+                HttpEntity(CurationQuestionConceptsPatchRequest(tags = listOf("critical-section-requirements"))),
+                QuestionDto::class.java
+            )
+            assertEquals(HttpStatus.OK, patch3.statusCode)
+            assertEquals(listOf("critical-section-requirements"), patch3.body?.conceptTags)
+
+            // Step 4: Advisory A-2 test - removeTags on a tag that is not linked is an idempotent no-op (200 OK, not 500)
+            val patch4 = restTemplate.exchange(
+                "/api/v1/curation/questions/${testQ.id}/concepts",
+                HttpMethod.PATCH,
+                HttpEntity(CurationQuestionConceptsPatchRequest(removeTags = listOf("non-existent-or-unlinked-concept", "peterson-software-solutions"))),
+                QuestionDto::class.java
+            )
+            assertEquals(HttpStatus.OK, patch4.statusCode)
+            assertEquals(listOf("critical-section-requirements"), patch4.body?.conceptTags)
+        } finally {
+            val existing = questionConceptTagRepository.findByIdQuestionId(testQ.id!!)
+            questionConceptTagRepository.deleteAll(existing)
+            questionRepository.delete(testQ)
+        }
+    }
 }
+

@@ -24,6 +24,7 @@ import { journeyApi } from '../api/journeyApi';
 import { TopicPrimerResponse, TopicPrimer } from '../types/journey';
 import { MathText } from '../components/MathText';
 import { ConceptUnitDialog } from '../components/ConceptUnitDialog';
+import { TopicConceptsTab } from '../components/TopicConceptsTab';
 import { useQuestions } from '../hooks/useQueries';
 import { useAuth } from '../context/AuthContext';
 
@@ -33,7 +34,7 @@ export const TopicPage: React.FC = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
 
-  const [activeTab, setActiveTab] = useState<'theory' | 'questions' | 'notebook'>('theory');
+  const [activeTab, setActiveTab] = useState<'theory' | 'concepts' | 'questions' | 'notebook'>('theory');
   const [primerData, setPrimerData] = useState<TopicPrimerResponse | null>(null);
   const [loadingPrimer, setLoadingPrimer] = useState<boolean>(true);
   const [generatingPrimer, setGeneratingPrimer] = useState<boolean>(false);
@@ -203,7 +204,7 @@ export const TopicPage: React.FC = () => {
           </h1>
         </div>
 
-        {/* 3 Stepper Tabs (Freely Switchable - PC-1) */}
+        {/* 4 Stepper Tabs (Freely Switchable - PC-5) */}
         <div className="flex border-b border-ds-border gap-2" role="tablist">
           <button
             onClick={() => setActiveTab('theory')}
@@ -217,10 +218,25 @@ export const TopicPage: React.FC = () => {
             data-testid="tab-theory"
           >
             <BookOpen className="w-3.5 h-3.5 text-ds-accent" />
-            <span>1. Theory Primer</span>
+            <span>1. Topic Orientation</span>
             {primer && (
               <span className="w-2 h-2 rounded-full bg-ds-success" />
             )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('concepts')}
+            role="tab"
+            aria-selected={activeTab === 'concepts'}
+            className={`px-4 py-2.5 text-xs font-semibold font-mono border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === 'concepts'
+                ? 'border-ds-accent text-ds-primary bg-ds-surface-hover'
+                : 'border-transparent text-ds-muted hover:text-ds-primary hover:bg-ds-surface'
+            }`}
+            data-testid="tab-concepts"
+          >
+            <Layers className="w-3.5 h-3.5 text-ds-accent" />
+            <span>2. Concepts</span>
           </button>
 
           <button
@@ -235,7 +251,7 @@ export const TopicPage: React.FC = () => {
             data-testid="tab-questions"
           >
             <FileQuestion className="w-3.5 h-3.5 text-ds-info" />
-            <span>2. Practice Questions</span>
+            <span>3. Practice Questions</span>
             <span className="text-[11px] text-ds-muted">({questions.length})</span>
           </button>
 
@@ -251,7 +267,7 @@ export const TopicPage: React.FC = () => {
             data-testid="tab-notebook"
           >
             <BookMarked className="w-3.5 h-3.5 text-ds-warning" />
-            <span>3. Solved Notebook</span>
+            <span>4. Solved Notebook</span>
             <span className="text-[11px] text-ds-muted">({solvedQuestions.length})</span>
           </button>
         </div>
@@ -534,7 +550,10 @@ export const TopicPage: React.FC = () => {
                         {primerData.conceptSlugs.map((slug) => (
                           <button
                             key={slug}
-                            onClick={() => setSelectedConceptSlug(slug)}
+                            onClick={() => {
+                              setSelectedConceptSlug(slug);
+                              setActiveTab('concepts');
+                            }}
                             className="px-3 py-1.5 rounded-ds bg-ds-surface-raised hover:bg-ds-surface-hover border border-ds-border text-xs font-mono text-ds-primary flex items-center gap-1.5 transition-colors"
                             data-testid={`concept-chip-${slug}`}
                           >
@@ -589,7 +608,17 @@ export const TopicPage: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: QUESTIONS */}
+      {/* TAB 2: CONCEPTS & LESSONS */}
+      {activeTab === 'concepts' && topicId && (
+        <TopicConceptsTab
+          topicId={topicId}
+          isAdmin={isAdmin}
+          selectedSlug={selectedConceptSlug}
+          onSelectSlug={(slug) => setSelectedConceptSlug(slug)}
+        />
+      )}
+
+      {/* TAB 3: QUESTIONS */}
       {activeTab === 'questions' && (
         <div className="space-y-4" data-testid="questions-tab-content">
           <div className="flex items-center justify-between text-xs font-mono text-ds-muted pb-2 border-b border-ds-border">
@@ -684,8 +713,8 @@ export const TopicPage: React.FC = () => {
         </div>
       )}
 
-      {/* Concept Unit Dialog Modal */}
-      {selectedConceptSlug && (
+      {/* Concept Unit Dialog Modal (only when outside concepts tab) */}
+      {selectedConceptSlug && activeTab !== 'concepts' && (
         <ConceptUnitDialog
           slug={selectedConceptSlug}
           onClose={() => setSelectedConceptSlug(null)}

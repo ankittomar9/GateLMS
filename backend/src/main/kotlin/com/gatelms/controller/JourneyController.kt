@@ -20,7 +20,8 @@ class JourneyController(
     private val journeyService: JourneyService,
     private val topicPrimerService: TopicPrimerService,
     private val currentUserProvider: CurrentUserProvider,
-    private val conceptCoverageService: ConceptCoverageService
+    private val conceptCoverageService: ConceptCoverageService,
+    private val conceptLessonService: com.gatelms.anatomy.service.ConceptLessonService
 ) {
     @GetMapping("/journey/overview")
     fun getOverview(): ResponseEntity<List<JourneyOverviewSubjectDto>> {
@@ -119,4 +120,47 @@ class JourneyController(
     ): ResponseEntity<QuestionDto> {
         return ResponseEntity.ok(conceptCoverageService.patchQuestionConcepts(questionId, req))
     }
+
+    @GetMapping("/journey/concepts/{slug}/lesson")
+    fun getConceptLesson(@PathVariable slug: String): ResponseEntity<ConceptLessonResponseDto> {
+        return ResponseEntity.ok(conceptLessonService.getLesson(slug))
+    }
+
+    @PostMapping("/journey/concepts/{slug}/lesson/generate")
+    fun generateConceptLesson(
+        @PathVariable slug: String,
+        @RequestParam(required = false) provider: String?,
+        @RequestParam(required = false) model: String?,
+        @RequestParam(defaultValue = "false") force: Boolean,
+        @RequestHeader(value = "X-Api-Key", required = false) authHeaderKey: String?
+    ): ResponseEntity<ConceptLessonResponseDto> {
+        val userId = currentUserProvider.getCurrentUserId()
+        val res = conceptLessonService.generateOrGetCached(slug, userId, provider, model, authHeaderKey, force)
+        return ResponseEntity.ok(res)
+    }
+
+    @GetMapping("/curation/lessons")
+    @PreAuthorize("hasRole('ADMIN')")
+    fun getCurationLessons(
+        @PageableDefault(size = 20) pageable: Pageable
+    ): ResponseEntity<Page<ConceptLessonDto>> {
+        return ResponseEntity.ok(conceptLessonService.getCurationLessons(pageable))
+    }
+
+    @PutMapping("/curation/concepts/{slug}/lesson")
+    @PreAuthorize("hasRole('ADMIN')")
+    fun updateConceptLesson(
+        @PathVariable slug: String,
+        @RequestBody req: CurationLessonUpdateRequest
+    ): ResponseEntity<ConceptLessonDto> {
+        return ResponseEntity.ok(conceptLessonService.updateLesson(slug, req))
+    }
+
+    @DeleteMapping("/curation/concepts/{slug}/lesson")
+    @PreAuthorize("hasRole('ADMIN')")
+    fun deleteConceptLesson(@PathVariable slug: String): ResponseEntity<Map<String, String>> {
+        conceptLessonService.deleteLesson(slug)
+        return ResponseEntity.ok(mapOf("status" to "deleted", "slug" to slug))
+    }
 }
+

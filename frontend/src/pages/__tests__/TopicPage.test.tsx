@@ -24,6 +24,20 @@ vi.mock('../../api/journeyApi', () => ({
     generateTopicPrimer: vi.fn(),
     updateTopicPrimer: vi.fn(),
     deleteTopicPrimer: vi.fn(),
+    getTopicConcepts: vi.fn().mockResolvedValue({
+      summary: { conceptsTotal: 10, conceptsWithMaterial: 10, conceptsExplained: 1 },
+      concepts: [
+        {
+          slug: 'paging',
+          label: 'Paging Architecture',
+          mappedQuestionCount: 2,
+          uniqueStatementCount: 2,
+          lessonStatus: 'ACCEPTED',
+          coverage: 'EXPLAINED',
+        },
+      ],
+    }),
+    getConceptLesson: vi.fn(),
   },
 }));
 
@@ -138,7 +152,7 @@ describe('TopicPage', () => {
     expect(screen.getByText('tlb-hit-ratio')).toBeInTheDocument();
   });
 
-  it('switches between Theory, Questions, and Notebook tabs (PC-2)', async () => {
+  it('switches between Orientation, Concepts, Questions, and Notebook tabs freely (PC-5)', async () => {
     vi.mocked(journeyApi.getTopicPrimer).mockResolvedValue(mockPrimerResponse);
 
     render(
@@ -150,6 +164,11 @@ describe('TopicPage', () => {
     await waitFor(() => {
       expect(screen.getByTestId('topic-page')).toBeInTheDocument();
     });
+
+    // Switch to Concepts tab (PC-5)
+    const conceptsTab = screen.getByTestId('tab-concepts');
+    fireEvent.click(conceptsTab);
+    expect(await screen.findByTestId('concepts-tab-content')).toBeInTheDocument();
 
     // Switch to Practice Questions
     const questionsTab = screen.getByTestId('tab-questions');
