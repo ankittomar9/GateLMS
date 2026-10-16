@@ -133,6 +133,7 @@ class ConceptCoverageService(
         if (req.tags != null) {
             val existing = questionConceptTagRepository.findByIdQuestionId(questionId)
             questionConceptTagRepository.deleteAll(existing)
+            questionConceptTagRepository.flush()
             for (slug in req.tags) {
                 val tag = conceptTagRepository.findById(slug).orElseThrow {
                     ResponseStatusException(HttpStatus.BAD_REQUEST, "Concept tag '$slug' not found")
@@ -148,7 +149,10 @@ class ConceptCoverageService(
         } else {
             if (req.removeTags.isNotEmpty()) {
                 for (slug in req.removeTags) {
-                    questionConceptTagRepository.deleteById(QuestionConceptTagId(questionId, slug))
+                    val linkId = QuestionConceptTagId(questionId, slug)
+                    if (questionConceptTagRepository.existsById(linkId)) {
+                        questionConceptTagRepository.deleteById(linkId)
+                    }
                 }
             }
             if (req.addTags.isNotEmpty()) {

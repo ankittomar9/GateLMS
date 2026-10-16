@@ -14,7 +14,8 @@ import {
   Layers,
   HelpCircle,
   FileQuestion,
-  Sparkles
+  Sparkles,
+  BookOpen
 } from 'lucide-react';
 import { 
   useQuestion, 
@@ -655,6 +656,27 @@ export const QuestionDetailPage: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Tested Concepts (PC-3) */}
+            {q.conceptTags && q.conceptTags.length > 0 && (
+              <div className="pt-2 border-t border-ds-border/60 flex flex-wrap items-center gap-2" data-testid="solution-concept-chips">
+                <span className="text-xs font-mono font-semibold text-ds-muted uppercase tracking-wider">
+                  Tested Concepts:
+                </span>
+                {q.conceptTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setActiveConceptSlug(tag)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-ds text-xs font-mono font-medium bg-ds-accent-soft hover:bg-ds-accent/20 text-ds-accent border border-ds-accent/30 transition-colors"
+                    data-testid={`concept-chip-${tag}`}
+                  >
+                    <BookOpen className="w-3 h-3" />
+                    <span>{tag}</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Explanation with MathText */}
             {q.explanation ? (

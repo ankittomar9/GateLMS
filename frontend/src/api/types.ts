@@ -59,6 +59,7 @@ export interface QuestionSummary {
   curationStatus?: CurationStatus;
   curationNote?: string | null;
   difficulty?: QuestionDifficulty | null;
+  conceptTags?: string[];
   version: number;
 }
 
@@ -87,6 +88,7 @@ export interface QuestionDetail {
   curationStatus?: CurationStatus;
   curationNote?: string | null;
   difficulty?: QuestionDifficulty | null;
+  conceptTags?: string[];
   version: number;
 }
 

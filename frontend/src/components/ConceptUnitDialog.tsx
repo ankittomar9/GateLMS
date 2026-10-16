@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, BookOpen, Sparkles, CheckCircle2, AlertTriangle, HelpCircle, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import { X, BookOpen, Sparkles, CheckCircle2, AlertTriangle, HelpCircle, ArrowRight, Loader2, RefreshCw, FileQuestion } from 'lucide-react';
+import { journeyApi } from '../api/journeyApi';
 import { anatomyApi, ConceptUnitDto } from '../api/anatomyApi';
+import { ConceptLessonResponse, ConceptLesson, ConceptMappedQuestionItem } from '../types/journey';
 import { MathText } from './MathText';
 
 interface ConceptUnitDialogProps {
@@ -11,7 +13,8 @@ interface ConceptUnitDialogProps {
 export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onClose }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [generating, setGenerating] = useState<boolean>(false);
-  const [unit, setUnit] = useState<ConceptUnitDto | null>(null);
+  const [lessonData, setLessonData] = useState<ConceptLessonResponse | null>(null);
+  const [legacyUnit, setLegacyUnit] = useState<ConceptUnitDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revealedCards, setRevealedCards] = useState<Record<string, boolean>>({});
 
@@ -20,19 +23,31 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
     setLoading(true);
     setError(null);
     setRevealedCards({});
+    setLessonData(null);
+    setLegacyUnit(null);
 
-    anatomyApi.getConceptUnit(slug)
+    // Try journeyApi first (WP2 canonical concept lessons)
+    journeyApi.getConceptLesson(slug)
       .then((data) => {
-        setUnit(data);
+        setLessonData(data);
         setLoading(false);
       })
-      .catch((err: any) => {
-        if (err.status === 404) {
-          setUnit(null);
-        } else {
-          setError(err.message || 'Failed to load concept unit');
-        }
-        setLoading(false);
+      .catch((journeyErr: any) => {
+        // Fallback to legacy anatomyApi if not found in journey concept tags
+        anatomyApi.getConceptUnit(slug)
+          .then((legacy) => {
+            setLegacyUnit(legacy);
+            setLoading(false);
+          })
+          .catch((legacyErr: any) => {
+            if (journeyErr.status === 404 || legacyErr.status === 404) {
+              setLessonData(null);
+              setLegacyUnit(null);
+            } else {
+              setError(journeyErr.message || legacyErr.message || 'Failed to load concept lesson');
+            }
+            setLoading(false);
+          });
       });
   }, [slug]);
 
@@ -41,13 +56,18 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
     setGenerating(true);
     setError(null);
     try {
-      const generated = await anatomyApi.generateConceptUnit(slug);
-      setUnit(generated);
+      const generated = await journeyApi.generateConceptLesson(slug);
+      setLessonData(generated);
     } catch (err: any) {
-      if (err.status === 409) {
-        setError('Cannot generate concept unit: No questions in the bank have been tagged with this concept yet.');
-      } else {
-        setError(err.message || 'Failed to generate concept unit');
+      try {
+        const legacy = await anatomyApi.generateConceptUnit(slug);
+        setLegacyUnit(legacy);
+      } catch (legacyErr: any) {
+        if (err.status === 409 || legacyErr.status === 409) {
+          setError('Cannot generate concept lesson: No questions in the bank have been tagged with this concept yet.');
+        } else {
+          setError(err.message || legacyErr.message || 'Failed to generate concept lesson');
+        }
       }
     } finally {
       setGenerating(false);
@@ -60,8 +80,24 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
 
   if (!slug) return null;
 
+  const lesson = lessonData?.lesson;
+  const concept = lessonData?.concept;
+  const mappedQuestions = lessonData?.mappedQuestions || [];
+
+  const title = lesson?.title || legacyUnit?.title || concept?.label || slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const status = lesson?.status || legacyUnit?.status;
+  const motivation = lesson?.motivation || legacyUnit?.motivation;
+  const coreIdea = lesson?.coreIdea || legacyUnit?.coreIdea;
+  const invariant = lesson?.invariant || legacyUnit?.invariant;
+  const workedExample = lesson?.workedExample || legacyUnit?.workedExample;
+  const traps = lesson?.traps || legacyUnit?.traps;
+  const workedExampleExternalId = lesson?.workedExampleExternalId;
+  const cards = legacyUnit?.cards || [];
+
+  const hasContent = Boolean(lesson || legacyUnit);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" data-testid="concept-unit-dialog">
       <div 
         className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#121316] border border-[#2a2d34] rounded-2xl shadow-2xl overflow-hidden text-neutral-200"
         onClick={(e) => e.stopPropagation()}
@@ -75,15 +111,15 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold text-white tracking-tight">
-                  {unit ? unit.title : slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                  {title}
                 </h2>
-                {unit && (
+                {status && (
                   <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                    unit.status === 'ACCEPTED'
+                    status === 'ACCEPTED'
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                       : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                   }`}>
-                    {unit.status === 'ACCEPTED' ? 'CURATED' : 'AI-GENERATED — UNREVIEWED'}
+                    {status === 'ACCEPTED' ? 'CURATED' : 'AI-GENERATED — UNREVIEWED'}
                   </span>
                 )}
               </div>
@@ -93,6 +129,7 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+            data-testid="close-concept-dialog-btn"
           >
             <X className="w-5 h-5" />
           </button>
@@ -103,7 +140,7 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
           {loading && (
             <div className="flex flex-col items-center justify-center py-16 text-neutral-400 space-y-3">
               <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
-              <p className="text-sm font-medium">Retrieving Concept Unit...</p>
+              <p className="text-sm font-medium">Retrieving Concept Lesson...</p>
             </div>
           )}
 
@@ -111,108 +148,168 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
             <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium">Error loading concept</p>
+                <p className="font-medium">Error loading concept lesson</p>
                 <p className="text-xs text-rose-400/80 mt-1">{error}</p>
               </div>
             </div>
           )}
 
-          {!loading && !unit && !error && (
+          {!loading && !hasContent && !error && (
             <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
               <div className="p-3 bg-neutral-800/80 rounded-2xl border border-neutral-700 text-neutral-400">
                 <HelpCircle className="w-8 h-8 text-neutral-400" />
               </div>
               <div className="max-w-md">
-                <h3 className="text-base font-semibold text-white">Concept Unit Not Yet Compiled</h3>
+                <h3 className="text-base font-semibold text-white">Concept Lesson Not Yet Compiled</h3>
                 <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">
-                  No canonical teaching unit has been compiled for <code className="text-neutral-300 font-mono">{slug}</code> yet. Compile on-demand by synthesizing tagged questions' dossiers.
+                  No canonical teaching lesson has been synthesized for <code className="text-neutral-300 font-mono">{slug}</code> yet. Synthesize on-demand using authentic questions from the bank.
                 </p>
               </div>
               <button
                 onClick={handleGenerate}
                 disabled={generating}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium shadow-lg shadow-indigo-600/20 disabled:opacity-50 transition-all"
+                data-testid="compile-concept-lesson-btn"
               >
                 {generating ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Synthesizing Unit...
+                    <span>Synthesizing Lesson...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    Compile Concept Unit
+                    <span>Compile Concept Lesson</span>
                   </>
                 )}
               </button>
             </div>
           )}
 
-          {!loading && unit && (
+          {!loading && hasContent && (
             <>
               {/* Motivation & Core Idea */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-[#181a20] border border-[#242730]">
-                  <h4 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" /> 1. Motivation
-                  </h4>
-                  <div className="text-xs text-neutral-300 leading-relaxed">
-                    <MathText content={unit.motivation} />
+                {motivation && (
+                  <div className="p-4 rounded-xl bg-[#181a20] border border-[#242730]">
+                    <h4 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" /> 1. Motivation
+                    </h4>
+                    <div className="text-xs text-neutral-300 leading-relaxed">
+                      <MathText content={motivation} />
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div className="p-4 rounded-xl bg-[#181a20] border border-[#242730]">
-                  <h4 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> 2. Core Idea & Mechanism
-                  </h4>
-                  <div className="text-xs text-neutral-300 leading-relaxed">
-                    <MathText content={unit.coreIdea} />
+                {coreIdea && (
+                  <div className="p-4 rounded-xl bg-[#181a20] border border-[#242730]">
+                    <h4 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> 2. Core Idea & Mechanism
+                    </h4>
+                    <div className="text-xs text-neutral-300 leading-relaxed">
+                      <MathText content={coreIdea} />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Invariant Rule */}
-              {unit.invariant && (
+              {invariant && (
                 <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
                   <h4 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1.5">
                     3. Fundamental Invariant
                   </h4>
                   <div className="text-sm font-medium text-amber-200">
-                    <MathText content={unit.invariant} />
+                    <MathText content={invariant} />
                   </div>
                 </div>
               )}
 
-              {/* Worked Example (Mandatory PC-1) */}
-              <div className="p-5 rounded-xl bg-[#181a20] border border-[#242730]">
-                <h4 className="text-xs font-semibold text-sky-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <ArrowRight className="w-3.5 h-3.5" /> 4. Canonical Worked Example (Step-by-Step)
-                </h4>
-                <div className="text-xs text-neutral-300 leading-relaxed whitespace-pre-wrap font-sans bg-[#131417] p-4 rounded-lg border border-[#202227]">
-                  <MathText content={unit.workedExample} />
+              {/* Worked Example (citing externalId if present) */}
+              {workedExample && (
+                <div className="p-5 rounded-xl bg-[#181a20] border border-[#242730] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-semibold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <ArrowRight className="w-3.5 h-3.5" /> 4. Canonical Worked Example (Step-by-Step)
+                    </h4>
+                    {workedExampleExternalId && (
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-neutral-800 border border-neutral-700 text-neutral-300">
+                        Source: <strong className="text-white">{workedExampleExternalId}</strong>
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-neutral-300 leading-relaxed whitespace-pre-wrap font-sans bg-[#131417] p-4 rounded-lg border border-[#202227]">
+                    <MathText content={workedExample} />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Distractor Traps */}
-              {unit.traps && (
+              {traps && (
                 <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20">
                   <h4 className="text-xs font-semibold text-rose-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5" /> 5. Common Pitfalls & Traps
                   </h4>
                   <div className="text-xs text-neutral-300 leading-relaxed">
-                    <MathText content={unit.traps} />
+                    <MathText content={traps} />
+                  </div>
+                </div>
+              )}
+
+              {/* Practice These Questions Rail (Mapped questions) */}
+              {mappedQuestions.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <h4 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileQuestion className="w-3.5 h-3.5" /> 6. Practice These Questions ({mappedQuestions.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {mappedQuestions.map((q) => (
+                      <div
+                        key={q.id}
+                        className="p-3 rounded-xl bg-[#181a20] border border-[#242730] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-semibold text-white">
+                              {q.externalId}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-neutral-800 border border-neutral-700 text-neutral-300">
+                              {q.type}
+                            </span>
+                            {q.difficulty && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                                {q.difficulty}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-neutral-400 mt-1 line-clamp-1">
+                            {q.statement}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            onClose();
+                            window.location.href = `/questions/${q.id}`;
+                          }}
+                          className="self-start sm:self-center shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 text-xs font-medium transition-colors"
+                        >
+                          <span>Solve</span>
+                          <ArrowRight className="w-3 h-3 text-indigo-400" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
               {/* Active Recall Self-Check Cards */}
-              {unit.cards && unit.cards.length > 0 && (
+              {cards.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <RefreshCw className="w-3.5 h-3.5" /> 6. Active Recall Cards ({unit.cards.length})
+                    <RefreshCw className="w-3.5 h-3.5" /> Active Recall Cards ({cards.length})
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {unit.cards.map((card, idx) => {
+                    {cards.map((card, idx) => {
                       const isRevealed = !!revealedCards[card.id];
                       return (
                         <div
@@ -246,14 +343,6 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
                       );
                     })}
                   </div>
-                </div>
-              )}
-
-              {/* Deep Link Reference */}
-              {unit.deepLinkRef && (
-                <div className="px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between text-xs">
-                  <span className="text-neutral-400">Standard Reference:</span>
-                  <span className="font-mono text-indigo-300 font-medium">{unit.deepLinkRef}</span>
                 </div>
               )}
             </>

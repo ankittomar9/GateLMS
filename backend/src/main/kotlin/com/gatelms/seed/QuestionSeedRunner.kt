@@ -344,11 +344,11 @@ class QuestionSeedRunner(
         val totalUnique = topicStatements.values.sumOf { it.size }
         val totalPatterns = topicPatterns.values.flatMap { it }.toSet().size
 
-        // Log template saturation warnings if unique:pattern ratio < 3:1
+        // Log template saturation warnings if unique:pattern ratio > 3:1
         topicStatsMap.forEach { (topic, stats) ->
-            if (stats.distinctPatterns > 0 && stats.uniqueStatements.toDouble() / stats.distinctPatterns < 3.0) {
+            if (stats.distinctPatterns > 0 && stats.uniqueStatements.toDouble() / stats.distinctPatterns > 3.0) {
                 logger.warn(
-                    "[TEMPLATE-SATURATION-WARN] topic='{}': unique:pattern ratio ({}:{}) < 3:1 in file {}",
+                    "[TEMPLATE-SATURATION-WARN] topic='{}': unique:pattern ratio ({}:{}) > 3:1 in file {}",
                     topic, stats.uniqueStatements, stats.distinctPatterns, filePath
                 )
             }

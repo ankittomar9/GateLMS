@@ -7,6 +7,10 @@ import {
   TopicPrimer,
   SubjectNotebookResponse,
   SimilarQuestionsResponse,
+  TopicConceptCoverageResponse,
+  ConceptLessonResponse,
+  ConceptLesson,
+  CurationLessonUpdateRequest,
 } from '../types/journey';
 import { PageResponse } from './anatomyApi';
 
@@ -104,6 +108,56 @@ export const journeyApi = {
   ): Promise<SimilarQuestionsResponse> => {
     return request<SimilarQuestionsResponse>(`/questions/${questionId}/similar`, {
       params: { limit: String(limit) },
+    });
+  },
+
+  getTopicConcepts: async (topicId: string): Promise<TopicConceptCoverageResponse> => {
+    return request<TopicConceptCoverageResponse>(`/journey/topics/${topicId}/concepts`);
+  },
+
+  getConceptLesson: async (slug: string): Promise<ConceptLessonResponse> => {
+    return request<ConceptLessonResponse>(`/journey/concepts/${slug}/lesson`);
+  },
+
+  generateConceptLesson: async (
+    slug: string,
+    options?: { provider?: string; model?: string; apiKey?: string; force?: boolean }
+  ): Promise<ConceptLessonResponse> => {
+    const headers: Record<string, string> = {};
+    if (options?.apiKey) {
+      headers['x-api-key'] = options.apiKey;
+    }
+    const params: Record<string, string> = {};
+    if (options?.provider) params.provider = options.provider;
+    if (options?.model) params.model = options.model;
+    if (options?.force) params.force = 'true';
+
+    return request<ConceptLessonResponse>(`/journey/concepts/${slug}/lesson/generate`, {
+      method: 'POST',
+      headers,
+      params,
+    });
+  },
+
+  updateConceptLesson: async (
+    slug: string,
+    req: CurationLessonUpdateRequest
+  ): Promise<ConceptLesson> => {
+    return request<ConceptLesson>(`/curation/concepts/${slug}/lesson`, {
+      method: 'PUT',
+      body: JSON.stringify(req),
+    });
+  },
+
+  deleteConceptLesson: async (slug: string): Promise<{ status: string; slug: string }> => {
+    return request<{ status: string; slug: string }>(`/curation/concepts/${slug}/lesson`, {
+      method: 'DELETE',
+    });
+  },
+
+  getCurationLessons: async (page = 0, size = 20): Promise<PageResponse<ConceptLesson>> => {
+    return request<PageResponse<ConceptLesson>>('/curation/lessons', {
+      params: { page, size },
     });
   },
 };
