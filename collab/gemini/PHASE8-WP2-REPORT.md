@@ -4,7 +4,7 @@
 - **Executor:** Gemini Antigravity (OmniRush retired)
 - **Base Commit:** `cea8ea6` (WP1 audit pass on master)
 - **Branch:** `phase8/wp2-lessons-ui` (`e5838dd`)
-- **Merge Commit:** (to be recorded post-merge)
+- **Merge Commit:** `d45a8a8` (merged to master with `--no-ff`)
 - **Audit Regime:** Post-merge audit (≤24 h per SPEC §8.2; probation ended with 2/2 gates cleared)
 - **Date:** 2026-10-17
 
