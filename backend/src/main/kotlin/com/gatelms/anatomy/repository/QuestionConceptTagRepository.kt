@@ -19,6 +19,9 @@ interface QuestionConceptTagRepository : JpaRepository<QuestionConceptTag, Quest
     @Query("SELECT qct.id.conceptTagSlug FROM QuestionConceptTag qct WHERE qct.id.questionId = :questionId")
     fun findSlugsByQuestionId(@Param("questionId") questionId: UUID): List<String>
 
+    @Query("SELECT qct.id.questionId, qct.id.conceptTagSlug FROM QuestionConceptTag qct WHERE qct.id.questionId IN :questionIds")
+    fun findSlugPairsByQuestionIds(@Param("questionIds") questionIds: Collection<UUID>): List<Array<Any>>
+
     @Query("""
         SELECT qct.id.questionId, count(qct), q.year, q.createdAt, q.statement
         FROM QuestionConceptTag qct
@@ -44,5 +47,11 @@ interface QuestionConceptTagRepository : JpaRepository<QuestionConceptTag, Quest
           AND q.curationStatus <> 'REJECTED'
     """)
     fun findTaggedQuestionInfos(@Param("slugs") slugs: Collection<String>): List<Array<Any>>
+}
+
+fun QuestionConceptTagRepository.findSlugsGroupedByQuestionIds(questionIds: Collection<UUID>): Map<UUID, List<String>> {
+    if (questionIds.isEmpty()) return emptyMap()
+    val pairs = this.findSlugPairsByQuestionIds(questionIds)
+    return pairs.groupBy({ it[0] as UUID }, { it[1] as String })
 }
 

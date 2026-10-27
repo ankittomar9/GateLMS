@@ -142,7 +142,7 @@ class ConceptService(
         // 5. Generate and validate
         var payload: UnitGenerationPayload? = null
         var parseError: String? = null
-        val resolvedModel = model ?: "gemini-3.8-flash"
+        val resolvedModel = model ?: "gemini-3.5-flash"
 
         try {
             val response = aiChatService.chat(chatRequest, authHeaderKey)

@@ -94,7 +94,7 @@ class AnatomyGenerationService(
         var rawResponse = ""
         var payload: AnatomyJsonPayload? = null
         var parseError: String? = null
-        val resolvedModel = model ?: "gemini-3.8-flash"
+        val resolvedModel = model ?: "gemini-3.5-flash"
 
         try {
             val response1 = aiChatService.chat(chatRequest, authHeaderKey)
