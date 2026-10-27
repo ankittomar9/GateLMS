@@ -2,9 +2,9 @@
 
 - **Author:** Z.ai (Architect & Quality Auditor)
 - **Date:** 2026-10-22 (code facts re-verified at `origin/master = f4fd445`)
-- **Status:** PREPARED — **dispatch-ready, NOT self-activating.** Activates when the operator
-  resolves scoping decision **D-1** (`FOLLOW-UP-REGISTER-SCOPING.md` §6) and hands this order to
-  the executor. No work should begin before that dispatch.
+- **Status:** EXECUTED & AUDITED — dispatched by operator (D-1 approved) 2026-10-27; executor
+  commit `82ead23`, merged `--no-ff` as `6733496`; post-merge audit **PASS**:
+  `collab/z/FOLLOWUP-P1-FIXUP-AUDIT.md`.
 - **Executor:** Gemini Antigravity (assumed per D-6; 3 consecutive clean Phase 8 packages)
 - **Provenance:** closes the carried advisory set S-1-A-1 → WP2-A-1 (force-authz),
   WP1-A-3 / WP2-A-4 / WP3-A-2 (N+1 tag fetches), WP2-A-2 + WP2-A-3 (ride-alongs).
