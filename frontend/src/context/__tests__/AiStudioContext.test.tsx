@@ -36,7 +36,7 @@ const ContextConsumer: React.FC = () => {
       <button data-testid="btn-set-width-max" onClick={() => setWidth(1000)}>
         Set 1000
       </button>
-      <button data-testid="btn-set-gemini" onClick={() => setSelectedProvider('GEMINI')}>
+      <button data-testid="btn-set-gemini" onClick={() => setSelectedProvider('GEMINI', 'gemini-3.8-flash')}>
         Set Gemini
       </button>
       <button

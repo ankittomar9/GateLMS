@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.gatelms.ai.config.AiProperties
 import com.gatelms.ai.dto.TranscriptionResponse
 import com.gatelms.ai.exception.*
+import com.gatelms.ai.registry.ProviderRegistry
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -21,12 +23,25 @@ import java.net.URI
 import kotlin.math.sqrt
 
 @Service
-class WhisperTranscriptionService(
+class WhisperTranscriptionService @Autowired constructor(
     private val aiProperties: AiProperties,
+    private val providerRegistry: ProviderRegistry,
     private val objectMapper: ObjectMapper,
     restClientBuilder: RestClient.Builder
 ) {
     private val log = LoggerFactory.getLogger(WhisperTranscriptionService::class.java)
+
+    // Secondary constructor for existing test suites
+    constructor(
+        aiProperties: AiProperties,
+        objectMapper: ObjectMapper,
+        restClientBuilder: RestClient.Builder
+    ) : this(
+        aiProperties,
+        ProviderRegistry(aiProperties),
+        objectMapper,
+        restClientBuilder
+    )
 
     // STT RestClient with 90s read timeout (AM-3)
     private val requestFactory = SimpleClientHttpRequestFactory().apply {
@@ -201,7 +216,7 @@ class WhisperTranscriptionService(
         val effectiveProvider = resolveEffectiveProvider(providerOverride, groqKey, openAiKey)
 
         // AM-5: Model allowlist validation
-        if (!customModel.isNullOrBlank() && !aiProperties.allowlist.isModelAllowed(effectiveProvider, customModel)) {
+        if (!customModel.isNullOrBlank() && !providerRegistry.isModelAllowed(effectiveProvider, customModel)) {
             throw AiValidationException("Model '$customModel' is not allowed for provider '$effectiveProvider'")
         }
 
@@ -275,8 +290,8 @@ class WhisperTranscriptionService(
 
     private fun resolveGroqApiKey(customKey: String?): String? {
         if (!customKey.isNullOrBlank()) return customKey.trim()
-        val propKey = aiProperties.providers.groq.apiKey
-        if (propKey.isNotBlank()) return propKey.trim()
+        val propKey = providerRegistry.find("groq")?.apiKey
+        if (!propKey.isNullOrBlank()) return propKey.trim()
         val envKey = System.getenv("GROQ_API_KEY")
         if (!envKey.isNullOrBlank()) return envKey.trim()
         return null
@@ -284,8 +299,8 @@ class WhisperTranscriptionService(
 
     private fun resolveOpenAiApiKey(customKey: String?): String? {
         if (!customKey.isNullOrBlank()) return customKey.trim()
-        val propKey = aiProperties.providers.openai.apiKey
-        if (propKey.isNotBlank()) return propKey.trim()
+        val propKey = providerRegistry.find("openai")?.apiKey
+        if (!propKey.isNullOrBlank()) return propKey.trim()
         val envKey = System.getenv("OPENAI_API_KEY")
         if (!envKey.isNullOrBlank()) return envKey.trim()
         return null
@@ -307,8 +322,8 @@ class WhisperTranscriptionService(
         }
 
         val model = if (!customModel.isNullOrBlank()) customModel else {
-            val cfgModel = aiProperties.providers.groq.sttModel
-            if (cfgModel.isNotBlank()) cfgModel else DEFAULT_WHISPER_MODEL
+            val cfgModel = providerRegistry.find("groq")?.sttModel
+            if (!cfgModel.isNullOrBlank()) cfgModel else DEFAULT_WHISPER_MODEL
         }
 
         val body: MultiValueMap<String, Any> = LinkedMultiValueMap()

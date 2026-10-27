@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.gatelms.ai.dto.AiChatRequest
 import com.gatelms.ai.dto.ChatMessageDto
+import com.gatelms.ai.registry.ProviderRegistry
 import com.gatelms.ai.security.AiRateLimiter
 import com.gatelms.ai.service.AiChatService
 import com.gatelms.anatomy.dto.*
@@ -37,7 +38,8 @@ class ConceptLessonService(
     private val aiChatService: AiChatService,
     private val aiRateLimiter: AiRateLimiter,
     private val aiProperties: com.gatelms.ai.config.AiProperties,
-    private val topicGroundingSampler: TopicGroundingSampler = TopicGroundingSampler()
+    private val topicGroundingSampler: TopicGroundingSampler = TopicGroundingSampler(),
+    private val providerRegistry: ProviderRegistry = ProviderRegistry(aiProperties)
 ) {
     private val log = LoggerFactory.getLogger(ConceptLessonService::class.java)
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
@@ -130,17 +132,18 @@ class ConceptLessonService(
         }
 
         val prompt = buildConceptLessonPrompt(tag, sampleQuestions, topicPrimerCoreIdea)
+        val effectiveProvider = providerRegistry.resolveStudyProvider(provider)
         val chatRequest = AiChatRequest(
             messages = listOf(ChatMessageDto(role = "user", content = prompt)),
-            provider = provider ?: "GEMINI",
+            provider = effectiveProvider,
             model = model,
             mode = "study"
         )
 
         // 4. Generate with 1 internal retry (max 2 attempts)
-        val resolvedModel = model ?: aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-3.5-flash" }
         var payload: ConceptLessonPayload? = null
         var parseError: String? = null
+        var lastUsedModel: String? = null
         var attempts = 0
         val maxAttempts = 2
 
@@ -148,6 +151,7 @@ class ConceptLessonService(
             attempts++
             try {
                 val response = aiChatService.chat(chatRequest, authHeaderKey)
+                lastUsedModel = response.model
                 payload = parseAndValidateLessonPayload(response.reply, validExternalIds)
                 parseError = null
             } catch (e: Exception) {
@@ -178,7 +182,7 @@ class ConceptLessonService(
         unit.traps = payload.traps
         unit.status = ConceptUnitStatus.DRAFT
         unit.parseError = null
-        unit.generatorModel = resolvedModel
+        unit.generatorModel = lastUsedModel
 
         val saved = conceptUnitRepository.save(unit)
         val mappedQuestionItems = getMappedQuestionItems(tag.slug)

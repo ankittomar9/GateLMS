@@ -1,95 +1,110 @@
 package com.gatelms.ai.config
 
+import com.gatelms.ai.registry.ProviderKind
+import com.gatelms.ai.registry.ProviderSpec
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.context.annotation.Configuration
 
 @Configuration
 @ConfigurationProperties(prefix = "app.ai")
 class AiProperties {
+    var defaults: DefaultsConfig = DefaultsConfig()
     var providers: ProvidersConfig = ProvidersConfig()
     var whisper: WhisperConfig = WhisperConfig()
     var http: HttpConfig = HttpConfig()
     var quota: QuotaConfig = QuotaConfig()
-    var allowlist: AllowlistConfig = AllowlistConfig()
 
-    class ProvidersConfig {
-        var groq: ProviderConfig = ProviderConfig(
-            apiKey = "",
-            defaultModel = "llama-3.3-70b-versatile",
-            sttModel = "whisper-large-v3-turbo",
-            endpoint = "https://api.groq.com/openai/v1"
-        )
-        var gemini: ProviderConfig = ProviderConfig(
-            apiKey = "",
-            defaultModel = "gemini-3.5-flash",
-            endpoint = "https://generativelanguage.googleapis.com/v1beta/models"
-        )
-        var openai: ProviderConfig = ProviderConfig(
-            apiKey = "",
-            defaultModel = "gpt-4o-mini",
-            endpoint = "https://api.openai.com/v1"
-        )
-        var ollama: OllamaConfig = OllamaConfig()
+    class DefaultsConfig {
+        var studyProvider: String = "GEMINI"
     }
 
-    class ProviderConfig(
-        var apiKey: String = "",
-        var defaultModel: String = "",
-        var sttModel: String = "",
-        var endpoint: String = ""
-    )
+    class ProvidersConfig {
+        var entries: LinkedHashMap<String, ProviderSpec> = defaultEntries()
 
-    class OllamaConfig(
-        var endpoint: String = "http://localhost:11434",
-        var defaultModel: String = "llama3"
-    )
+        val groq: ProviderSpec get() = entries.getOrPut("groq") { defaultGroqSpec() }
+        val gemini: ProviderSpec get() = entries.getOrPut("gemini") { defaultGeminiSpec() }
+        val openai: ProviderSpec get() = entries.getOrPut("openai") { defaultOpenAiSpec() }
+        val ollama: ProviderSpec get() = entries.getOrPut("ollama") { defaultOllamaSpec() }
 
-    class WhisperConfig(
-        var localEndpoint: String = "http://localhost:8178/inference",
-        var sttProvider: String = "auto" // auto, groq, local, openai
-    )
+        companion object {
+            fun defaultGroqSpec() = ProviderSpec(
+                kind = ProviderKind.OPENAI_COMPATIBLE,
+                label = "Groq (Llama 3.3 70B)",
+                endpoint = "https://api.groq.com/openai/v1",
+                apiKey = "",
+                envKeyNames = listOf("GROQ_API_KEY"),
+                envDefaultModelNames = listOf("GROQ_DEFAULT_MODEL"),
+                defaultModel = "llama-3.3-70b-versatile",
+                sttModel = "whisper-large-v3-turbo",
+                modelAllowlist = listOf("llama-3.3-70b-versatile", "llama3-70b-8192", "llama-3.1-8b-instant", "whisper-large-v3-turbo"),
+                modelPrefixes = listOf("llama", "whisper", "mixtral")
+            )
 
-    class HttpConfig(
-        var connectTimeoutMs: Long = 3000,
-        var chatReadTimeoutMs: Long = 60000,
-        var sttReadTimeoutMs: Long = 90000,
-        var statusReadTimeoutMs: Long = 2000,
-        var maxRetries: Int = 1
-    )
+            fun defaultGeminiSpec() = ProviderSpec(
+                kind = ProviderKind.GEMINI,
+                label = "Google Gemini Flash",
+                endpoint = "https://generativelanguage.googleapis.com/v1beta/models",
+                apiKey = "",
+                envKeyNames = listOf("GEMINI_API_KEY", "GEMINI_KEY", "GOOGLE_API_KEY", "AI_STUDIO_API_KEY"),
+                envDefaultModelNames = listOf("GEMINI_DEFAULT_MODEL"),
+                defaultModel = "gemini-3.5-flash",
+                fallbackModel = "gemini-3.5-flash",
+                modelAllowlist = listOf("gemini-3.8-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-flash"),
+                modelPrefixes = listOf("gemini")
+            )
 
-    class QuotaConfig(
-        var chatPerHour: Int = 20,
-        var transcribePer10min: Int = 10,
-        var statusPerHour: Int = 60,
-        var anatomyGeneratePerHour: Int = 30,
-        var conceptGeneratePerHour: Int = 10,
-        var primerGeneratePerHour: Int = 10
-    )
+            fun defaultOpenAiSpec() = ProviderSpec(
+                kind = ProviderKind.OPENAI_COMPATIBLE,
+                label = "OpenAI",
+                endpoint = "https://api.openai.com/v1",
+                apiKey = "",
+                envKeyNames = listOf("OPENAI_API_KEY"),
+                envDefaultModelNames = listOf("OPENAI_DEFAULT_MODEL"),
+                defaultModel = "gpt-4o-mini",
+                modelAllowlist = listOf("gpt-4o-mini", "gpt-4o", "whisper-1"),
+                modelPrefixes = listOf("gpt", "o", "whisper")
+            )
 
-    class AllowlistConfig {
-        var groq: List<String> = listOf("llama-3.3-70b-versatile", "llama3-70b-8192", "llama-3.1-8b-instant", "whisper-large-v3-turbo")
-        var gemini: List<String> = listOf("gemini-3.8-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-flash")
-        var openai: List<String> = listOf("gpt-4o-mini", "gpt-4o", "whisper-1")
-        var ollama: List<String> = listOf("llama3.2", "llama3", "mistral", "gemma2")
-        var local: List<String> = listOf("ggml-large-v3-turbo-q5_0.bin", "ggml-base.en.bin", "whisper.cpp-large-v3-turbo")
+            fun defaultOllamaSpec() = ProviderSpec(
+                kind = ProviderKind.OLLAMA,
+                label = "Ollama (local)",
+                endpoint = "http://localhost:11434",
+                envDefaultModelNames = listOf("OLLAMA_DEFAULT_MODEL"),
+                defaultModel = "llama3",
+                modelAllowlist = listOf("llama3.2", "llama3", "mistral", "gemma2"),
+                allowAnyModel = true,
+                requireKey = false,
+                maxRetriesOverride = 0
+            )
 
-        fun isModelAllowed(provider: String, model: String): Boolean {
-            val trimmedModel = model.trim()
-            if (trimmedModel.isBlank()) return false
-            val upperProvider = provider.uppercase()
-            return when (upperProvider) {
-                "GEMINI" -> {
-                    // Model agnostic: allow any model starting with "gemini" or present in the allowlist
-                    trimmedModel.startsWith("gemini", ignoreCase = true) ||
-                            gemini.isEmpty() ||
-                            gemini.any { it.equals(trimmedModel, ignoreCase = true) }
-                }
-                "GROQ" -> groq.isEmpty() || groq.any { it.equals(trimmedModel, ignoreCase = true) } || trimmedModel.startsWith("llama", ignoreCase = true) || trimmedModel.startsWith("whisper", ignoreCase = true) || trimmedModel.startsWith("mixtral", ignoreCase = true)
-                "OPENAI" -> openai.isEmpty() || openai.any { it.equals(trimmedModel, ignoreCase = true) } || trimmedModel.startsWith("gpt", ignoreCase = true) || trimmedModel.startsWith("o", ignoreCase = true)
-                "OLLAMA" -> true // Allow any pulled Ollama model
-                "LOCAL", "WHISPER_LOCAL" -> local.isEmpty() || local.any { it.equals(trimmedModel, ignoreCase = true) } || trimmedModel.contains("whisper", ignoreCase = true) || trimmedModel.endsWith(".bin")
-                else -> true
-            }
+            fun defaultEntries(): LinkedHashMap<String, ProviderSpec> = linkedMapOf(
+                "groq" to defaultGroqSpec(),
+                "gemini" to defaultGeminiSpec(),
+                "openai" to defaultOpenAiSpec(),
+                "ollama" to defaultOllamaSpec()
+            )
         }
+    }
+
+    class WhisperConfig {
+        var localEndpoint: String = "http://localhost:8178/inference"
+        var sttProvider: String = "auto"
+    }
+
+    class HttpConfig {
+        var connectTimeoutMs: Long = 3000
+        var chatReadTimeoutMs: Long = 60000
+        var sttReadTimeoutMs: Long = 90000
+        var statusReadTimeoutMs: Long = 2000
+        var maxRetries: Int = 1
+    }
+
+    class QuotaConfig {
+        var chatPerHour: Int = 20
+        var transcribePer10min: Int = 10
+        var statusPerHour: Int = 60
+        var anatomyGeneratePerHour: Int = 30
+        var conceptGeneratePerHour: Int = 10
+        var primerGeneratePerHour: Int = 10
     }
 }

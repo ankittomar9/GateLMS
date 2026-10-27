@@ -51,6 +51,7 @@ export interface ProviderStatus {
   state: 'READY' | 'NOT_CONFIGURED' | 'UNREACHABLE' | 'ERROR';
   model?: string;
   reason?: string;
+  label?: string;
 }
 
 export const aiApi = {

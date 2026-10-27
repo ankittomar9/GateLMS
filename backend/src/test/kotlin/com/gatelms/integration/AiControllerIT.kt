@@ -168,4 +168,19 @@ class AiControllerIT : BaseIntegrationTest() {
         assertNotNull(resp.headers.getFirst("Retry-After"))
         assertTrue(resp.body!!.detail!!.contains("quota exceeded"))
     }
+
+    @Test
+    fun `10 POST chat with unknown provider returns 400 Bad Request listing valid providers (BC-1, G6)`() {
+        loginAs("ankur", "admin123")
+        val req = AiChatRequest(
+            messages = listOf(ChatMessageDto(role = "user", content = "Hello")),
+            provider = "GORK"
+        )
+        val resp = restTemplate.postForEntity("/api/v1/ai/chat", req, ProblemDetail::class.java)
+        assertEquals(HttpStatus.BAD_REQUEST, resp.statusCode)
+        val detail = resp.body!!.detail!!
+        assertTrue(detail.contains("Unknown AI provider 'GORK'"))
+        assertTrue(detail.contains("GROQ"))
+        assertTrue(detail.contains("GEMINI"))
+    }
 }

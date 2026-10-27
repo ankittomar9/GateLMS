@@ -50,5 +50,6 @@ data class ProviderStatusDto(
     val configured: Boolean,
     val state: String, // "READY", "NOT_CONFIGURED", "UNREACHABLE", "ERROR"
     val model: String? = null,
-    val reason: String? = null
+    val reason: String? = null,
+    val label: String? = null
 )

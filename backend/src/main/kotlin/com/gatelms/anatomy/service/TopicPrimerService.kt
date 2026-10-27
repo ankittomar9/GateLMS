@@ -2,6 +2,7 @@ package com.gatelms.anatomy.service
 
 import com.gatelms.ai.dto.AiChatRequest
 import com.gatelms.ai.dto.ChatMessageDto
+import com.gatelms.ai.registry.ProviderRegistry
 import com.gatelms.ai.security.AiRateLimiter
 import com.gatelms.ai.service.AiChatService
 import com.gatelms.anatomy.entity.TopicPrimer
@@ -35,7 +36,8 @@ class TopicPrimerService(
     private val aiRateLimiter: AiRateLimiter,
     private val anatomyValidationService: AnatomyValidationService,
     private val aiProperties: com.gatelms.ai.config.AiProperties,
-    private val topicGroundingSampler: TopicGroundingSampler = TopicGroundingSampler()
+    private val topicGroundingSampler: TopicGroundingSampler = TopicGroundingSampler(),
+    private val providerRegistry: ProviderRegistry = ProviderRegistry(aiProperties)
 ) {
     private val log = LoggerFactory.getLogger(TopicPrimerService::class.java)
 
@@ -91,9 +93,10 @@ class TopicPrimerService(
         val conceptLabels = conceptTagRepository.findByTopicId(topic.id).map { it.label }
 
         val prompt = buildTopicPrimerPrompt(topic, sampleQuestions, conceptLabels)
+        val effectiveProvider = providerRegistry.resolveStudyProvider(provider)
         val chatRequest = AiChatRequest(
             messages = listOf(ChatMessageDto(role = "user", content = prompt)),
-            provider = provider ?: "GEMINI",
+            provider = effectiveProvider,
             model = model,
             mode = "study"
         )
@@ -101,7 +104,7 @@ class TopicPrimerService(
         // 4. Generate with 1 internal retry
         var payload: TopicPrimerPayload? = null
         var parseError: String? = null
-        val resolvedModel = model ?: aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-3.5-flash" }
+        var lastUsedModel: String? = null
         var attempts = 0
         val maxAttempts = 2
 
@@ -109,6 +112,7 @@ class TopicPrimerService(
             attempts++
             try {
                 val response = aiChatService.chat(chatRequest, authHeaderKey)
+                lastUsedModel = response.model
                 payload = anatomyValidationService.parseAndValidatePrimer(response.reply)
                 parseError = null
             } catch (e: Exception) {
@@ -137,7 +141,7 @@ class TopicPrimerService(
         primer.traps = payload.traps
         primer.status = TopicPrimerStatus.DRAFT
         primer.parseError = null
-        primer.generatorModel = resolvedModel
+        primer.generatorModel = lastUsedModel
 
         val saved = topicPrimerRepository.save(primer)
         val conceptSlugs = conceptTagRepository.findByTopicId(topic.id).map { it.slug }
@@ -244,7 +248,7 @@ Generate a complete, rigorous Topic Primer matching this JSON schema:
 Important Rules:
 1. 'worked_example' must be detailed and >= 150 words with clear numbered steps. A shallow summary will be rejected.
 2. Anti-fabrication (AF-1): Never cite student population statistics, exam pass rates, or claim that a percentage/majority of students make a particular mistake (e.g., do NOT write '70% of students fail this' or 'majority of candidates get confused'). Focus purely on the scientific formulas, mathematical derivations, protocols, and technical distractor logic.
-3. KaTeX is supported for mathematical notation (\${'$'}math\${'$'}).
+3. KaTeX is supported for mathematical notation (${'$'}{'$'}math${'$'}{'$'}).
 4. Return ONLY valid JSON.
             """.trimIndent())
         }

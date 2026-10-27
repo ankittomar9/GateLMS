@@ -10,7 +10,7 @@ interface AiStudioContextValue {
   activeQuestion: QuestionContext | null;
   registerActiveQuestion: (question: QuestionContext | null) => void;
   selectedProvider: string;
-  setSelectedProvider: (provider: string) => void;
+  setSelectedProvider: (provider: string, defaultModel?: string) => void;
   selectedModel: string;
   setSelectedModel: (model: string) => void;
   byokKeys: Record<string, string>;
@@ -31,13 +31,6 @@ const STORAGE_KEY_BYOK = 'gatelms_byok_keys';
 const DEFAULT_WIDTH = 420;
 const MIN_WIDTH = 340;
 const MAX_WIDTH = 800;
-
-const DEFAULT_PROVIDER_MODELS: Record<string, string> = {
-  GROQ: 'llama-3.3-70b-versatile',
-  GEMINI: 'gemini-3.8-flash',
-  OPENAI: 'gpt-4o-mini',
-  OLLAMA: 'llama3',
-};
 
 const AiStudioContext = createContext<AiStudioContextValue | undefined>(undefined);
 
@@ -75,12 +68,12 @@ export const AiStudioProvider: React.FC<{ children: ReactNode }> = ({ children }
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY_MODEL);
       if (saved && (saved === 'gemini-2.0-flash' || saved === 'gemini-2.5-flash')) {
-        localStorage.setItem(STORAGE_KEY_MODEL, 'gemini-3.8-flash');
-        return 'gemini-3.8-flash';
+        localStorage.setItem(STORAGE_KEY_MODEL, 'gemini-3.5-flash');
+        return 'gemini-3.5-flash';
       }
       if (saved) return saved;
     }
-    return DEFAULT_PROVIDER_MODELS['GROQ'];
+    return 'llama-3.3-70b-versatile';
   });
 
   const [byokKeys, setByokKeys] = useState<Record<string, string>>(() => {
@@ -126,15 +119,16 @@ export const AiStudioProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, []);
 
-  const setSelectedProvider = useCallback((provider: string) => {
+  const setSelectedProvider = useCallback((provider: string, defaultModel?: string) => {
     setSelectedProviderState(provider);
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY_PROVIDER, provider);
     }
-    const defaultModel = DEFAULT_PROVIDER_MODELS[provider] || '';
-    setSelectedModelState(defaultModel);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_MODEL, defaultModel);
+    if (defaultModel !== undefined) {
+      setSelectedModelState(defaultModel);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY_MODEL, defaultModel);
+      }
     }
   }, []);
 

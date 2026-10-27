@@ -2,78 +2,72 @@ package com.gatelms.ai.service
 
 import com.gatelms.ai.config.AiProperties
 import com.gatelms.ai.dto.ProviderStatusDto
+import com.gatelms.ai.registry.ProviderKind
+import com.gatelms.ai.registry.ProviderRegistry
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.net.HttpURLConnection
 import java.net.URI
 
 @Service
-class AiStatusService(
+class AiStatusService @Autowired constructor(
     private val aiProperties: AiProperties,
+    private val providerRegistry: ProviderRegistry,
     private val whisperTranscriptionService: WhisperTranscriptionService
 ) {
     private var lastOllamaCheckTime = 0L
     private var lastOllamaStatus = false
     private val ollamaCacheTtlMs = 30000L // AM-18 / §3.5 30s TTL
 
-    fun getProvidersStatus(byokKey: String?, targetProvider: String?): List<ProviderStatusDto> {
+    // Convenience constructor for tests
+    constructor(aiProperties: AiProperties, providerRegistry: ProviderRegistry) : this(
+        aiProperties,
+        providerRegistry,
+        WhisperTranscriptionService(aiProperties, com.fasterxml.jackson.databind.ObjectMapper(), org.springframework.web.client.RestClient.builder())
+    )
+
+    fun getProvidersStatus(byokKey: String? = null, targetProvider: String? = null): List<ProviderStatusDto> {
         val result = mutableListOf<ProviderStatusDto>()
 
-        // 1. GROQ
-        val groqKey = byokKey?.takeIf { targetProvider.equals("GROQ", ignoreCase = true) }
-            ?: aiProperties.providers.groq.apiKey.ifBlank { System.getenv("GROQ_API_KEY") }
-        val groqConfigured = !groqKey.isNullOrBlank()
-        result.add(
-            ProviderStatusDto(
-                provider = "GROQ",
-                configured = groqConfigured,
-                state = if (groqConfigured) "READY" else "NOT_CONFIGURED",
-                model = aiProperties.providers.groq.defaultModel.ifBlank { "llama-3.3-70b-versatile" },
-                reason = if (groqConfigured) null else "Configure GROQ_API_KEY or provide BYOK key"
-            )
-        )
-
-        // 2. GEMINI
-        val geminiKey = byokKey?.takeIf { targetProvider.equals("GEMINI", ignoreCase = true) }
-            ?: aiProperties.providers.gemini.apiKey.ifBlank {
-                System.getenv("GEMINI_API_KEY") ?: System.getenv("GEMINI_KEY") ?: System.getenv("GOOGLE_API_KEY") ?: System.getenv("AI_STUDIO_API_KEY")
+        for ((id, spec) in aiProperties.providers.entries) {
+            val upperId = id.uppercase()
+            val effectiveKey = if (byokKey != null && targetProvider?.trim()?.equals(upperId, ignoreCase = true) == true) {
+                byokKey.trim()
+            } else {
+                try {
+                    providerRegistry.resolveApiKey(id, null)
+                } catch (_: Exception) {
+                    ""
+                }
             }
-        val geminiConfigured = !geminiKey.isNullOrBlank()
-        result.add(
-            ProviderStatusDto(
-                provider = "GEMINI",
-                configured = geminiConfigured,
-                state = if (geminiConfigured) "READY" else "NOT_CONFIGURED",
-                model = System.getenv("GEMINI_DEFAULT_MODEL")?.takeIf { it.isNotBlank() }
-                    ?: aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-3.8-flash" },
-                reason = if (geminiConfigured) null else "Configure GEMINI_API_KEY or provide BYOK key"
-            )
-        )
 
-        // 3. OPENAI
-        val openAiKey = byokKey?.takeIf { targetProvider.equals("OPENAI", ignoreCase = true) }
-            ?: aiProperties.providers.openai.apiKey.ifBlank { System.getenv("OPENAI_API_KEY") }
-        val openAiConfigured = !openAiKey.isNullOrBlank()
-        result.add(
-            ProviderStatusDto(
-                provider = "OPENAI",
-                configured = openAiConfigured,
-                state = if (openAiConfigured) "READY" else "NOT_CONFIGURED",
-                model = aiProperties.providers.openai.defaultModel.ifBlank { "gpt-4o-mini" },
-                reason = if (openAiConfigured) null else "Configure OPENAI_API_KEY or provide BYOK key"
-            )
-        )
+            val configured = if (!spec.requireKey) true else effectiveKey.isNotBlank()
+            val defaultModel = providerRegistry.resolveModel(id, null)
 
-        // 4. OLLAMA
-        val ollamaRunning = isOllamaRunning()
-        result.add(
-            ProviderStatusDto(
-                provider = "OLLAMA",
-                configured = true,
-                state = if (ollamaRunning) "READY" else "UNREACHABLE",
-                model = aiProperties.providers.ollama.defaultModel.ifBlank { "llama3" },
-                reason = if (ollamaRunning) null else "Local Ollama not reachable at ${aiProperties.providers.ollama.endpoint}"
+            val (state, reason) = when {
+                spec.kind == ProviderKind.OLLAMA -> {
+                    val running = isOllamaRunning(spec.endpoint)
+                    if (running) "READY" to null
+                    else "UNREACHABLE" to "Local Ollama not reachable at ${spec.endpoint.ifBlank { "http://localhost:11434" }}"
+                }
+                configured -> "READY" to null
+                else -> {
+                    val keyEnv = spec.envKeyNames.firstOrNull() ?: "${upperId}_API_KEY"
+                    "NOT_CONFIGURED" to "Configure $keyEnv or provide BYOK key"
+                }
+            }
+
+            result.add(
+                ProviderStatusDto(
+                    provider = upperId,
+                    configured = configured,
+                    state = state,
+                    model = defaultModel,
+                    reason = reason,
+                    label = spec.label ?: upperId
+                )
             )
-        )
+        }
 
         // 5. LOCAL WHISPER SIDECAR
         val whisperSidecarRunning = whisperTranscriptionService.isWhisperSidecarRunning()
@@ -83,20 +77,21 @@ class AiStatusService(
                 configured = true,
                 state = if (whisperSidecarRunning) "READY" else "UNREACHABLE",
                 model = "whisper-large-v3-turbo",
-                reason = if (whisperSidecarRunning) null else "Whisper.cpp sidecar not reachable on :8178"
+                reason = if (whisperSidecarRunning) null else "Whisper.cpp sidecar not reachable on :8178",
+                label = "Whisper.cpp (Local Sidecar)"
             )
         )
 
         return result
     }
 
-    private fun isOllamaRunning(): Boolean {
+    private fun isOllamaRunning(configuredEndpoint: String?): Boolean {
         val now = System.currentTimeMillis()
         if (now - lastOllamaCheckTime < ollamaCacheTtlMs) {
             return lastOllamaStatus
         }
         return try {
-            val endpoint = aiProperties.providers.ollama.endpoint.ifBlank { "http://localhost:11434" }.removeSuffix("/")
+            val endpoint = configuredEndpoint?.ifBlank { "http://localhost:11434" }?.removeSuffix("/") ?: "http://localhost:11434"
             val url = "$endpoint/api/tags"
             val conn = URI.create(url).toURL().openConnection() as HttpURLConnection
             conn.requestMethod = "GET"

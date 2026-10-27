@@ -74,23 +74,57 @@ app:
     morning-cron: ${APP_NOTIFICATIONS_MORNING_CRON:0 0 8 * * *}
     evening-cron: ${APP_NOTIFICATIONS_EVENING_CRON:0 0 20 * * *}
   ai:
+    defaults:
+      study-provider: ${STUDY_PROVIDER:GEMINI}   # primer/lesson/anatomy/concepts generation default
+    # Adding a provider: add an entry under entries.<id> (kind: OPENAI_COMPATIBLE | GEMINI | OLLAMA)
+    # Example:
+    #   entries.glm:
+    #     kind: OPENAI_COMPATIBLE
+    #     label: "GLM (Zhipu)"
+    #     endpoint: https://open.bigmodel.cn/api/paas/v4
+    #     api-key: ${GLM_API_KEY:}
+    #     default-model: glm-4.7
+    #     model-prefixes: [glm]
     providers:
-      groq:
-        api-key: ${GROQ_API_KEY:}
-        default-model: ${GROQ_DEFAULT_MODEL:llama-3.3-70b-versatile}
-        stt-model: ${GROQ_STT_MODEL:whisper-large-v3-turbo}
-        endpoint: https://api.groq.com/openai/v1
-      gemini:
-        api-key: ${GEMINI_API_KEY:}
-        default-model: ${GEMINI_DEFAULT_MODEL:gemini-3.5-flash}
-        endpoint: https://generativelanguage.googleapis.com/v1beta/models
-      openai:
-        api-key: ${OPENAI_API_KEY:}
-        default-model: ${OPENAI_DEFAULT_MODEL:gpt-4o-mini}
-        endpoint: https://api.openai.com/v1
-      ollama:
-        endpoint: ${OLLAMA_ENDPOINT:http://localhost:11434}
-        default-model: ${OLLAMA_DEFAULT_MODEL:llama3}
+      entries:
+        groq:
+          kind: OPENAI_COMPATIBLE
+          label: "Groq (Llama 3.3 70B)"
+          endpoint: https://api.groq.com/openai/v1
+          api-key: ${GROQ_API_KEY:}
+          env-key-names: [GROQ_API_KEY]
+          env-default-model-names: [GROQ_DEFAULT_MODEL]
+          default-model: ${GROQ_DEFAULT_MODEL:llama-3.3-70b-versatile}
+          stt-model: ${GROQ_STT_MODEL:whisper-large-v3-turbo}
+          model-prefixes: [llama, whisper, mixtral]
+        gemini:
+          kind: GEMINI
+          label: "Google Gemini Flash"
+          endpoint: https://generativelanguage.googleapis.com/v1beta/models
+          api-key: ${GEMINI_API_KEY:}
+          env-key-names: [GEMINI_API_KEY, GEMINI_KEY, GOOGLE_API_KEY, AI_STUDIO_API_KEY]
+          env-default-model-names: [GEMINI_DEFAULT_MODEL]
+          default-model: ${GEMINI_DEFAULT_MODEL:gemini-3.5-flash}
+          fallback-model: gemini-3.5-flash
+          model-prefixes: [gemini]
+        openai:
+          kind: OPENAI_COMPATIBLE
+          label: "OpenAI"
+          endpoint: https://api.openai.com/v1
+          api-key: ${OPENAI_API_KEY:}
+          env-key-names: [OPENAI_API_KEY]
+          env-default-model-names: [OPENAI_DEFAULT_MODEL]
+          default-model: ${OPENAI_DEFAULT_MODEL:gpt-4o-mini}
+          model-prefixes: [gpt, o, whisper]
+        ollama:
+          kind: OLLAMA
+          label: "Ollama (local)"
+          endpoint: ${OLLAMA_ENDPOINT:http://localhost:11434}
+          env-default-model-names: [OLLAMA_DEFAULT_MODEL]
+          default-model: ${OLLAMA_DEFAULT_MODEL:llama3}
+          allow-any-model: true
+          require-key: false
+          max-retries-override: 0
     whisper:
       local-endpoint: ${WHISPER_ENDPOINT:http://localhost:8178/inference}
       stt-provider: ${STT_PROVIDER:auto}
@@ -104,4 +138,3 @@ app:
       chat-per-hour: 20
       transcribe-per-10min: 10
       status-per-hour: 60
-
