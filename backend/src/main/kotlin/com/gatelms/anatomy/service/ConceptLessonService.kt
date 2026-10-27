@@ -138,7 +138,7 @@ class ConceptLessonService(
         )
 
         // 4. Generate with 1 internal retry (max 2 attempts)
-        val resolvedModel = model ?: aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-3.8-flash" }
+        val resolvedModel = model ?: aiProperties.providers.gemini.defaultModel.ifBlank { "gemini-3.5-flash" }
         var payload: ConceptLessonPayload? = null
         var parseError: String? = null
         var attempts = 0

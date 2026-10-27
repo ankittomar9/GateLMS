@@ -4,12 +4,14 @@ import com.gatelms.anatomy.dto.*
 import com.gatelms.anatomy.service.ConceptCoverageService
 import com.gatelms.anatomy.service.TopicPrimerService
 import com.gatelms.dto.*
+import com.gatelms.entity.UserRole
 import com.gatelms.security.CurrentUserProvider
 import com.gatelms.service.JourneyService
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 import java.util.UUID
@@ -46,6 +48,9 @@ class JourneyController(
         @RequestParam(defaultValue = "false") force: Boolean,
         @RequestHeader(value = "X-Api-Key", required = false) authHeaderKey: String?
     ): ResponseEntity<TopicPrimerResponseDto> {
+        if (force && currentUserProvider.getCurrentUser().role != UserRole.ADMIN) {
+            throw AccessDeniedException("force=true requires ADMIN")
+        }
         val userId = currentUserProvider.getCurrentUserId()
         val res = topicPrimerService.generateOrGetCached(topicId, userId, provider, model, authHeaderKey, force)
         return ResponseEntity.ok(res)
@@ -134,6 +139,9 @@ class JourneyController(
         @RequestParam(defaultValue = "false") force: Boolean,
         @RequestHeader(value = "X-Api-Key", required = false) authHeaderKey: String?
     ): ResponseEntity<ConceptLessonResponseDto> {
+        if (force && currentUserProvider.getCurrentUser().role != UserRole.ADMIN) {
+            throw AccessDeniedException("force=true requires ADMIN")
+        }
         val userId = currentUserProvider.getCurrentUserId()
         val res = conceptLessonService.generateOrGetCached(slug, userId, provider, model, authHeaderKey, force)
         return ResponseEntity.ok(res)

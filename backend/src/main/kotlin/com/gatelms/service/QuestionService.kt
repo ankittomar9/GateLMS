@@ -424,10 +424,8 @@ class QuestionService(
         )
     }
 
-    private fun Question.toDto(progress: QuestionProgress? = null, conceptTags: List<String> = emptyList()): QuestionDto {
-        val resolvedTags = if (conceptTags.isNotEmpty()) conceptTags else {
-            questionConceptTagRepository?.findSlugsByQuestionId(id!!) ?: emptyList()
-        }
+    private fun Question.toDto(progress: QuestionProgress? = null, conceptTags: List<String>? = null): QuestionDto {
+        val resolvedTags = conceptTags ?: (questionConceptTagRepository?.findSlugsByQuestionId(id!!) ?: emptyList())
         return QuestionDto(
             id = id!!,
             externalId = externalId,

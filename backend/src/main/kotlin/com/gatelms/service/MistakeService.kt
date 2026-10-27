@@ -1,5 +1,7 @@
 package com.gatelms.service
 
+import com.gatelms.anatomy.repository.findSlugsGroupedByQuestionIds
+
 import com.gatelms.dto.MistakeCreateRequest
 import com.gatelms.dto.MistakeDto
 import com.gatelms.dto.MistakeReviewRequest
@@ -98,7 +100,9 @@ class MistakeService(
             now = now,
             pageable = pageable
         )
-        return page.map { it.toDto() }
+        val questionIds = page.content.mapNotNull { it.question?.id }
+        val tagMap = questionConceptTagRepository?.findSlugsGroupedByQuestionIds(questionIds) ?: emptyMap()
+        return page.map { it.toDto(tagMap[it.question?.id] ?: emptyList()) }
     }
 
     @Transactional
@@ -173,7 +177,7 @@ class MistakeService(
         }
     }
 
-    private fun MistakeLog.toDto(): MistakeDto = MistakeDto(
+    private fun MistakeLog.toDto(conceptTags: List<String>? = null): MistakeDto = MistakeDto(
         id = id,
         questionId = question?.id ?: UUID.randomUUID(),
         questionExternalId = question?.externalId,
@@ -186,7 +190,7 @@ class MistakeService(
         reviewCount = reviewCount,
         nextReviewAt = nextReviewAt,
         resolved = resolved,
-        conceptTags = question?.id?.let { questionConceptTagRepository?.findSlugsByQuestionId(it) } ?: emptyList(),
+        conceptTags = conceptTags ?: (question?.id?.let { questionConceptTagRepository?.findSlugsByQuestionId(it) } ?: emptyList()),
         topicId = question?.topic?.id
     )
 }

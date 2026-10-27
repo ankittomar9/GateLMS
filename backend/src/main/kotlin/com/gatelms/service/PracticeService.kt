@@ -1,5 +1,7 @@
 package com.gatelms.service
 
+import com.gatelms.anatomy.repository.findSlugsGroupedByQuestionIds
+
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.gatelms.anatomy.service.CardSchedulingService
 import com.gatelms.dto.*
@@ -131,6 +133,9 @@ class PracticeService(
             attemptAnswerRepository.save(ans)
         }
 
+        val qIds = selectedQuestions.mapNotNull { it.id }
+        val tagMap = questionConceptTagRepository?.findSlugsGroupedByQuestionIds(qIds) ?: emptyMap()
+
         val safeQuestionDtos = selectedQuestions.map { q ->
             PracticeQuestionDto(
                 id = q.id ?: UUID.randomUUID(),
@@ -142,7 +147,7 @@ class PracticeService(
                 topicId = q.topic?.id,
                 subjectId = q.subject?.id,
                 year = q.year,
-                conceptTags = getConceptTagsForQuestion(q.id)
+                conceptTags = tagMap[q.id] ?: emptyList()
             )
         }
 
@@ -187,6 +192,9 @@ class PracticeService(
             attemptAnswerRepository.save(ans)
         }
 
+        val qIds = questions.mapNotNull { it.id }
+        val tagMap = questionConceptTagRepository?.findSlugsGroupedByQuestionIds(qIds) ?: emptyMap()
+
         val safeQuestionDtos = questions.map { q ->
             PracticeQuestionDto(
                 id = q.id ?: UUID.randomUUID(),
@@ -198,7 +206,7 @@ class PracticeService(
                 topicId = q.topic?.id,
                 subjectId = q.subject?.id,
                 year = q.year,
-                conceptTags = getConceptTagsForQuestion(q.id)
+                conceptTags = tagMap[q.id] ?: emptyList()
             )
         }
 

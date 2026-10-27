@@ -1,5 +1,7 @@
 package com.gatelms.service
 
+import com.gatelms.anatomy.repository.findSlugsGroupedByQuestionIds
+
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.gatelms.anatomy.service.CardSchedulingService
@@ -551,6 +553,9 @@ class MockTestService(
         var totalTimeSpent = 0
         var totalMaxMarks = 0.0
 
+        val qUuids = frozenIds.mapNotNull { runCatching { UUID.fromString(it) }.getOrNull() }
+        val tagMap = questionConceptTagRepository?.findSlugsGroupedByQuestionIds(qUuids) ?: emptyMap()
+
         for (qidStr in frozenIds) {
             val qid = UUID.fromString(qidStr)
             val question = questionRepository.findById(qid).orElse(null) ?: continue
@@ -585,7 +590,7 @@ class MockTestService(
                     state = answer?.state?.name ?: AttemptAnswerState.NOT_VISITED.name,
                     timeSpentSeconds = answer?.timeSpentSeconds ?: 0,
                     explanation = question.explanation,
-                    conceptTags = question.id?.let { questionConceptTagRepository?.findSlugsByQuestionId(it) } ?: emptyList()
+                    conceptTags = tagMap[question.id] ?: emptyList()
                 )
             )
         }
