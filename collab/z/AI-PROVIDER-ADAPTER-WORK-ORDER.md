@@ -2,9 +2,11 @@
 
 - **Author:** Z.ai (Architect & Quality Auditor)
 - **Date:** 2026-10-28 (all code facts audited at `origin/master = ed9f061`, tree clean)
-- **Status:** PREPARED — activates only on operator dispatch. **Recommended sequencing: run the
-  Phase 8 §10 DoD closure first** (it pins test-count receipts to pre-adapter `ed9f061`; this
-  package touches backend test files and would contaminate those numbers if merged first).
+- **Status:** EXECUTED & AUDITED — dispatched by operator 2026-10-28; executor commit `aba1b74`,
+  merged `--no-ff` as `37f0237` (branch `ai/provider-adapter-1` retained). Post-merge audit:
+  **CONDITIONAL PASS (condition C1 open — one-line primer-prompt revert + optional
+  `ForceAuthzIT` receipt)** — `collab/z/AI-PROVIDER-ADAPTER-AUDIT.md`. §10 reconciliation deltas
+  for the operator are in the audit §5.
 - **Executor:** Gemini Antigravity (per D-6; 4 consecutive clean packages)
 - **Provenance:** operator directive 2026-10-28 — "make the AI layer model-agnostic: providers
   and model versions will change; plugging a new key should just work, no repeated file edits."
