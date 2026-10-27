@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.gatelms.ai.dto.AiChatRequest
 import com.gatelms.ai.dto.ChatMessageDto
+import com.gatelms.ai.registry.ProviderRegistry
 import com.gatelms.ai.security.AiRateLimiter
 import com.gatelms.ai.service.AiChatService
 import com.gatelms.anatomy.dto.ConceptUnitDto
@@ -61,7 +62,8 @@ class ConceptService(
     private val currentUserProvider: CurrentUserProvider,
     private val aiChatService: AiChatService,
     private val aiRateLimiter: AiRateLimiter,
-    private val anatomyValidationService: AnatomyValidationService
+    private val anatomyValidationService: AnatomyValidationService,
+    private val providerRegistry: ProviderRegistry = ProviderRegistry(com.gatelms.ai.config.AiProperties())
 ) {
     private val log = LoggerFactory.getLogger(ConceptService::class.java)
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
@@ -132,9 +134,10 @@ class ConceptService(
         val anatomies = questionIds.mapNotNull { questionAnatomyRepository.findByQuestionId(it).orElse(null) }
 
         val prompt = buildConceptUnitPrompt(conceptTag, questions, anatomies)
+        val effectiveProvider = providerRegistry.resolveStudyProvider(provider)
         val chatRequest = AiChatRequest(
             messages = listOf(ChatMessageDto(role = "user", content = prompt)),
-            provider = provider ?: "GEMINI",
+            provider = effectiveProvider,
             model = model,
             mode = "study"
         )
@@ -142,10 +145,11 @@ class ConceptService(
         // 5. Generate and validate
         var payload: UnitGenerationPayload? = null
         var parseError: String? = null
-        val resolvedModel = model ?: "gemini-3.5-flash"
+        var lastUsedModel: String? = null
 
         try {
             val response = aiChatService.chat(chatRequest, authHeaderKey)
+            lastUsedModel = response.model
             val jsonText = anatomyValidationService.extractJson(response.reply)
             val parsed = objectMapper.readValue(jsonText, UnitGenerationPayload::class.java)
 
@@ -173,7 +177,7 @@ class ConceptService(
             unit.deepLinkRef = payload.deepLinkRef
             unit.status = ConceptUnitStatus.DRAFT
             unit.parseError = null
-            unit.generatorModel = resolvedModel
+            unit.generatorModel = lastUsedModel
 
             val savedUnit = conceptUnitRepository.save(unit)
 

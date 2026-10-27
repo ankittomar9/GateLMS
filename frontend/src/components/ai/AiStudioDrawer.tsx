@@ -22,14 +22,14 @@ import {
 } from 'lucide-react';
 import { useAiStudio } from '../../context/AiStudioContext';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
-import { aiApi, ChatMessage } from '../../api/aiApi';
+import { aiApi, ChatMessage, ProviderStatus } from '../../api/aiApi';
 import { MathText } from '../MathText';
 
-const PROVIDER_OPTIONS = [
-  { id: 'GROQ', label: 'Groq (Llama 3.3 70B)', defaultModel: 'llama-3.3-70b-versatile', speed: '~180ms' },
-  { id: 'GEMINI', label: 'Google Gemini 3.8 Flash', defaultModel: 'gemini-3.8-flash', speed: '~350ms' },
-  { id: 'OPENAI', label: 'OpenAI (GPT-4o Mini)', defaultModel: 'gpt-4o-mini', speed: '~450ms' },
-  { id: 'OLLAMA', label: 'Local Ollama (Llama 3)', defaultModel: 'llama3', speed: 'Offline' },
+const FALLBACK_PROVIDER_OPTIONS = [
+  { id: 'GROQ', label: 'Groq (Llama 3.3 70B)', defaultModel: 'llama-3.3-70b-versatile' },
+  { id: 'GEMINI', label: 'Google Gemini Flash', defaultModel: 'gemini-3.5-flash' },
+  { id: 'OPENAI', label: 'OpenAI', defaultModel: 'gpt-4o-mini' },
+  { id: 'OLLAMA', label: 'Local Ollama (Llama 3)', defaultModel: 'llama3' },
 ];
 
 export const AiStudioDrawer: React.FC = () => {
@@ -58,6 +58,23 @@ export const AiStudioDrawer: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [statusProviders, setStatusProviders] = useState<ProviderStatus[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      aiApi.getProvidersStatus().then((statuses) => {
+        setStatusProviders(statuses.filter((s) => s.provider !== 'WHISPER_LOCAL'));
+      }).catch(() => {});
+    }
+  }, [isOpen]);
+
+  const providerOptions = statusProviders.length > 0
+    ? statusProviders.map((s) => ({
+        id: s.provider,
+        label: s.label || s.provider,
+        defaultModel: s.model || ''
+      }))
+    : FALLBACK_PROVIDER_OPTIONS;
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     return typeof window !== 'undefined' ? window.innerWidth < 768 : false;
   });
@@ -260,11 +277,15 @@ export const AiStudioDrawer: React.FC = () => {
           {/* Provider Selector Dropdown */}
           <select
             value={selectedProvider}
-            onChange={(e) => setSelectedProvider(e.target.value)}
+            onChange={(e) => {
+              const p = e.target.value;
+              const def = providerOptions.find((opt) => opt.id === p)?.defaultModel || '';
+              setSelectedProvider(p, def);
+            }}
             className="text-[11px] font-medium bg-ds-surface-input border border-ds-border rounded-ds px-2 py-1 text-ds-primary focus:outline-none focus:border-ds-accent cursor-pointer"
             aria-label="Select AI Provider"
           >
-            {PROVIDER_OPTIONS.map((opt) => (
+            {providerOptions.map((opt) => (
               <option key={opt.id} value={opt.id}>
                 {opt.label}
               </option>
@@ -366,7 +387,7 @@ export const AiStudioDrawer: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    const def = PROVIDER_OPTIONS.find((p) => p.id === selectedProvider)?.defaultModel || '';
+                    const def = providerOptions.find((p) => p.id === selectedProvider)?.defaultModel || '';
                     setSelectedModel(def);
                   }}
                   className="text-[10px] text-ds-accent hover:underline"
@@ -376,7 +397,7 @@ export const AiStudioDrawer: React.FC = () => {
               </div>
               <input
                 type="text"
-                placeholder={`e.g. ${PROVIDER_OPTIONS.find((p) => p.id === selectedProvider)?.defaultModel}`}
+                placeholder={`e.g. ${providerOptions.find((p) => p.id === selectedProvider)?.defaultModel}`}
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
                 className="w-full bg-ds-surface-input border border-ds-border rounded-ds px-2.5 py-1 text-xs text-ds-primary placeholder:text-ds-muted focus:outline-none focus:border-ds-accent font-mono"

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.gatelms.ai.dto.AiChatRequest
 import com.gatelms.ai.dto.ChatMessageDto
+import com.gatelms.ai.registry.ProviderRegistry
 import com.gatelms.ai.security.AiRateLimiter
 import com.gatelms.ai.service.AiChatService
 import com.gatelms.anatomy.dto.*
@@ -34,7 +35,8 @@ class AnatomyGenerationService(
     private val anatomyValidationService: AnatomyValidationService,
     private val aiChatService: AiChatService,
     private val aiRateLimiter: AiRateLimiter,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val providerRegistry: ProviderRegistry = ProviderRegistry(com.gatelms.ai.config.AiProperties())
 ) {
     private val log = LoggerFactory.getLogger(AnatomyGenerationService::class.java)
 
@@ -83,9 +85,10 @@ class AnatomyGenerationService(
         val systemPrompt = buildSystemPrompt()
         val userPrompt = buildUserPrompt(question)
 
+        val effectiveProvider = providerRegistry.resolveStudyProvider(provider)
         val chatRequest = AiChatRequest(
             messages = listOf(ChatMessageDto(role = "user", content = userPrompt)),
-            provider = provider ?: "GEMINI",
+            provider = effectiveProvider,
             model = model,
             mode = "study"
         )
@@ -94,10 +97,11 @@ class AnatomyGenerationService(
         var rawResponse = ""
         var payload: AnatomyJsonPayload? = null
         var parseError: String? = null
-        val resolvedModel = model ?: "gemini-3.5-flash"
+        var lastUsedModel: String? = null
 
         try {
             val response1 = aiChatService.chat(chatRequest, authHeaderKey)
+            lastUsedModel = response1.model
             rawResponse = response1.reply
             payload = anatomyValidationService.parseAndValidate(rawResponse)
         } catch (e1: Exception) {
@@ -106,11 +110,12 @@ class AnatomyGenerationService(
                 val retryPrompt = "$userPrompt\n\n[CORRECTION REQUIRED]: Your previous output failed validation with: ${e1.message}. Output strictly valid JSON without any markdown formatting or student-population stats."
                 val retryRequest = AiChatRequest(
                     messages = listOf(ChatMessageDto(role = "user", content = retryPrompt)),
-                    provider = provider ?: "GEMINI",
+                    provider = effectiveProvider,
                     model = model,
                     mode = "study"
                 )
                 val response2 = aiChatService.chat(retryRequest, authHeaderKey)
+                lastUsedModel = response2.model
                 rawResponse = response2.reply
                 payload = anatomyValidationService.parseAndValidate(rawResponse)
             } catch (e2: Exception) {
@@ -133,7 +138,7 @@ class AnatomyGenerationService(
             anatomy.groundingRefsJson = "[]"
             anatomy.status = AnatomyStatus.DRAFT
             anatomy.parseError = null
-            anatomy.generatorModel = resolvedModel
+            anatomy.generatorModel = lastUsedModel
             anatomy.updatedAt = Instant.now()
 
             val saved = questionAnatomyRepository.save(anatomy)
@@ -152,7 +157,7 @@ class AnatomyGenerationService(
             anatomy.groundingRefsJson = "[]"
             anatomy.status = AnatomyStatus.DRAFT
             anatomy.parseError = parseError
-            anatomy.generatorModel = resolvedModel
+            anatomy.generatorModel = lastUsedModel
             anatomy.updatedAt = Instant.now()
 
             val saved = questionAnatomyRepository.save(anatomy)
