@@ -2,9 +2,13 @@
 
 - **Author:** Z.ai (Architect & Quality Auditor)
 - **Date:** 2026-10-30 (all code facts verified at `origin/master = 0f7e024`, tree clean, local == remote)
-- **Status:** PREPARED — activates on operator dispatch. **Recommended sequencing: AFTER the §10 DoD
-  run** (this package adds frontend tests → the vitest DoD baseline shifts; §9 records the delta
-  either way, D-3 precedent).
+- **Status:** EXECUTED & AUDITED — dispatched by operator 2026-10-30; executor commit `12a009c`,
+  merged `--no-ff` as `461564d` (branch `ai/studio-ux-1` retained). Post-merge audit:
+  **CONDITIONAL PASS (conditions C1..C4 open, combined ≤45 min — hooks order + node-prop leak in
+  RichMarkdownText; FAB pulse dead-wired; build receipt not reproducible from committed code
+  (prescribed React.lazy split absent); BYOK trim freeze breach)** —
+  `collab/z/AI-STUDIO-UX-AUDIT.md`. Functional core verified: rich Markdown + KaTeX secure and
+  test-pinned; presets/floating/FAB as prescribed; vitest 55/299 + unit 167/0/0/1 receipts exact.
 - **Executor:** Gemini Antigravity
 - **Provenance:** operator directive 2026-10-30 — Antigravity feasibility analysis + 4 screenshots
   (raw-markdown wall on a GATE question page; executor fixup-1 report; Notion FAB; Notion
