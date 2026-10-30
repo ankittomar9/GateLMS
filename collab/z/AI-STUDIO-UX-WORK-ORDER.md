@@ -2,13 +2,15 @@
 
 - **Author:** Z.ai (Architect & Quality Auditor)
 - **Date:** 2026-10-30 (all code facts verified at `origin/master = 0f7e024`, tree clean, local == remote)
-- **Status:** EXECUTED & AUDITED — dispatched by operator 2026-10-30; executor commit `12a009c`,
+- **Status:** EXECUTED, AUDITED & CLOSED — dispatched by operator 2026-10-30; executor commit `12a009c`,
   merged `--no-ff` as `461564d` (branch `ai/studio-ux-1` retained). Post-merge audit:
-  **CONDITIONAL PASS (conditions C1..C4 open, combined ≤45 min — hooks order + node-prop leak in
-  RichMarkdownText; FAB pulse dead-wired; build receipt not reproducible from committed code
-  (prescribed React.lazy split absent); BYOK trim freeze breach)** —
-  `collab/z/AI-STUDIO-UX-AUDIT.md`. Functional core verified: rich Markdown + KaTeX secure and
-  test-pinned; presets/floating/FAB as prescribed; vitest 55/299 + unit 167/0/0/1 receipts exact.
+  CONDITIONAL PASS with conditions C1..C4 (`collab/z/AI-STUDIO-UX-AUDIT.md`); all four discharged
+  by fixup-1 (`72e860e`, `--no-ff` merge `15ee8c9`, branch `ai/studio-ux-fixup-1` retained),
+  audit-verified in `collab/z/AI-STUDIO-UX-FIXUP-1-AUDIT.md` → **final PASS, package closed
+  2026-10-30**. Functional core verified: rich Markdown + KaTeX secure and
+  test-pinned; presets/floating/FAB as prescribed; vitest 55/299 + unit 167/0/0/1 receipts exact;
+  two-chunk build layout (index 1,627.99 kB + lazy RichMarkdownText 184.22 kB) reproduced
+  hash-exact.
 - **Executor:** Gemini Antigravity
 - **Provenance:** operator directive 2026-10-30 — Antigravity feasibility analysis + 4 screenshots
   (raw-markdown wall on a GATE question page; executor fixup-1 report; Notion FAB; Notion

@@ -7,12 +7,14 @@
 - **Executor:** Gemini Antigravity — branch `ai/studio-ux-1`, commit `12a009c`, merged `--no-ff` as
   `461564d` (parents `b58f5ec` + `12a009c`), branch pushed and retained. Report:
   `collab/gemini/AI-STUDIO-UX-REPORT.md` (7th consecutive executor package).
-- **Verdict:** **CONDITIONAL PASS — conditions C1..C4 open** (combined ≤45 min executor fixup).
-  The functional core delivers the work order faithfully: rich Markdown + KaTeX rendering is
+- **Verdict:** **final PASS (2026-10-30)** — the original CONDITIONAL PASS below was superseded when
+  fixup-1 (`72e860e`, `--no-ff` merge `15ee8c9`) discharged C1..C4, audit-verified in
+  `collab/z/AI-STUDIO-UX-FIXUP-1-AUDIT.md`; §7 carries the discharge record. The functional core
+  delivers the work order faithfully: rich Markdown + KaTeX rendering is
   real, secure, and well-tested; presets/floating/FAB work as prescribed; both test receipts
-  reproduce exactly. But the **build receipt is not reproducible from the committed code** (F-3),
-  one advertised feature is **dead-wired in production** (F-2), one latent React defect (F-1), and
-  one freeze-list breach (F-4).
+  reproduce exactly. The original four conditions — **build receipt not reproducible from the
+  committed code** (F-3), one advertised feature **dead-wired in production** (F-2), one latent
+  React defect (F-1), and one freeze-list breach (F-4) — are all closed.
 
 ---
 
@@ -158,3 +160,29 @@ Fixup receipt expectations: vitest **55 files / (299 + N)** with arithmetic show
 modifies/adds 1 test), unit unchanged 167/0/0/1, build clean with the RichMarkdownText chunk
 visible and main chunk correspondingly reduced. On evidence, Z.ai flips this verdict to final
 PASS.
+
+---
+
+## 7. Fixup-1 discharge record (2026-10-30, `15ee8c9`)
+
+All four binding conditions were discharged by executor fixup `72e860e` (`--no-ff` merge
+`15ee8c9`, branch `ai/studio-ux-fixup-1` pushed and retained) and verified line- and byte-level
+in `collab/z/AI-STUDIO-UX-FIXUP-1-AUDIT.md`:
+
+- **C1 ✓** — `useMemo` moved unconditionally above the early return (empty-content short-circuit
+  now inside the memo); `a` mapper strips `node`; full component-map sweep leaves zero leak
+  surface (only `a`/`code` spread props, both destructure `node`).
+- **C2 ✓** — `isLoading`/`setIsLoading` lifted into the context (strictly additive); drawer
+  consumes the context pair with `finally` covering success/error/abort; FAB computes
+  `propIsLoading ?? contextLoading` so the prop-less `Layout.tsx` mount has a real production
+  path; Test 6 drives the pulse through the context.
+- **C3 ✓** — module-top-level `React.lazy` + `<Suspense>` plain-text fallback shipped; the build
+  receipt now reproduces hash-exact (`RichMarkdownText-xpflyPcI.js` 184.22 kB +
+  `index-CAIuIPmS.js` 1,627.99 kB; main chunk −184.73 kB).
+- **C4 ✓** — `key.trim()` restored verbatim in `setByokKey`.
+
+Receipts re-reproduced in the audit sandbox: vitest **55/299**, unit **167/0/0/1**, build clean
+(two chunks). Freeze list and G3 security gate hold across the full range `b58f5ec..15ee8c9`.
+One LOW documentation finding (F-6: the fixup report's `git diff --check`-clean claim vs 2
+trailing-space lines inside its own pasted Maven log). **Verdict flips to final PASS; the
+AI-STUDIO-UX package is closed.**
