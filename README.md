@@ -65,3 +65,13 @@ Once configured:
 - Study features (Topic Primers, Concept Lessons, Anatomy breakdowns) can be switched to the new provider by setting `STUDY_PROVIDER=GLM` (or setting `app.ai.defaults.study-provider: GLM`).
 
 > **Note on New Protocols**: Providers that do not adhere to the OpenAI chat completions wire protocol or Google Gemini protocol require adding a new `ChatTransport` implementation in `backend/src/main/kotlin/com/gatelms/ai/transport/` and registering its enum case in `ProviderKind`.
+
+---
+
+### AI Studio Panel (Rich Formatting, Resizing & Windowing)
+
+The in-portal AI Studio sidecar (`⌘J` / `Ctrl+J`) supports:
+- **Rich Markdown & KaTeX**: Assistant responses render formatted headings, nested numbered and bulleted lists, bold highlights, fenced code blocks with copy-to-clipboard buttons, GFM comparison tables, blockquotes, and inline/display LaTeX formulas (`$...$`, `$$...$$`).
+- **Width Presets & Resize Handle**: Easily switch between **Compact (420px)**, **Wide (650px)**, **Half (50vw)**, and **Full Width**. The drag handle (`12px` hitbox with visual grip) supports smooth manual dragging and double-click toggling between 420px and 650px.
+- **Detachable Floating Window**: Click the Detach icon (`Pin` / `PinOff`) to undock AI Studio from the right rail into a movable, floating window modal (`z-[60]`). The floating window can be dragged anywhere via its header bar and resized via its bottom-right corner grip. Window coordinates and width are persisted across sessions in `localStorage`.
+- **Persistent Floating Action Button (FAB)**: A floating action button (`Sparkles` icon) appears at the bottom-right of all authenticated pages while AI Studio is closed, providing instant one-click access anywhere in the portal.

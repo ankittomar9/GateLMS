@@ -1,29 +1,28 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { 
-  Sparkles, 
-  X, 
-  Trash2, 
-  Send, 
-  Mic, 
-  Square, 
-  Settings, 
-  Copy, 
-  Check, 
-  Lightbulb, 
-  BookOpen, 
-  AlertTriangle, 
-  Cpu, 
-  Maximize2, 
-  Minimize2,
-  ChevronRight,
+import {
+  Sparkles,
+  X,
+  Trash2,
+  Send,
+  Mic,
+  Square,
+  Settings,
+  Copy,
+  Check,
+  Lightbulb,
+  BookOpen,
+  AlertTriangle,
   Loader2,
   KeyRound,
-  ShieldAlert
+  ShieldAlert,
+  Pin,
+  PinOff
 } from 'lucide-react';
-import { useAiStudio } from '../../context/AiStudioContext';
+import { useAiStudio, getMaxWidth, MIN_WIDTH } from '../../context/AiStudioContext';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { aiApi, ChatMessage, ProviderStatus } from '../../api/aiApi';
-import { MathText } from '../MathText';
+
+import { RichMarkdownText } from './RichMarkdownText';
 
 const FALLBACK_PROVIDER_OPTIONS = [
   { id: 'GROQ', label: 'Groq (Llama 3.3 70B)', defaultModel: 'llama-3.3-70b-versatile' },
@@ -38,6 +37,10 @@ export const AiStudioDrawer: React.FC = () => {
     setIsOpen,
     width,
     setWidth,
+    windowMode,
+    toggleWindowMode,
+    windowRect,
+    setWindowRect,
     activeQuestion,
     selectedProvider,
     setSelectedProvider,
@@ -57,8 +60,12 @@ export const AiStudioDrawer: React.FC = () => {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isFloatingDragging, setIsFloatingDragging] = useState(false);
+  const [isFloatingResizing, setIsFloatingResizing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [statusProviders, setStatusProviders] = useState<ProviderStatus[]>([]);
+
+  const floatingDragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   useEffect(() => {
     if (isOpen) {
@@ -133,13 +140,13 @@ export const AiStudioDrawer: React.FC = () => {
     },
   });
 
-  // Drag-to-resize sidecar drawer
+  // Drag-to-resize docked sidecar drawer
   useEffect(() => {
-    if (!isDragging || isMobile) return;
+    if (!isDragging || isMobile || windowMode !== 'docked') return;
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = window.innerWidth - e.clientX;
-      setWidth(newWidth);
+      setWidth(newWidth, getMaxWidth());
     };
 
     const handleMouseUp = () => {
@@ -152,7 +159,59 @@ export const AiStudioDrawer: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, isMobile, setWidth]);
+  }, [isDragging, isMobile, windowMode, setWidth]);
+
+  // Drag-to-move floating window
+  useEffect(() => {
+    if (!isFloatingDragging || isMobile || windowMode !== 'floating') return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newX = e.clientX - floatingDragOffsetRef.current.x;
+      const newY = e.clientY - floatingDragOffsetRef.current.y;
+      setWindowRect({
+        ...windowRect,
+        x: newX,
+        y: newY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsFloatingDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isFloatingDragging, isMobile, windowMode, windowRect, setWindowRect]);
+
+  // Drag-to-resize floating window (bottom-right corner)
+  useEffect(() => {
+    if (!isFloatingResizing || isMobile || windowMode !== 'floating') return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newW = e.clientX - windowRect.x;
+      const newH = e.clientY - windowRect.y;
+      setWindowRect({
+        ...windowRect,
+        width: newW,
+        height: newH,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsFloatingResizing(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isFloatingResizing, isMobile, windowMode, windowRect, setWindowRect]);
 
   // Auto-scroll on new message
   useEffect(() => {
@@ -231,31 +290,90 @@ export const AiStudioDrawer: React.FC = () => {
     clearMessages();
   };
 
+  const handleHeaderMouseDown = (e: React.MouseEvent) => {
+    if (isMobile || windowMode !== 'floating') return;
+    if ((e.target as HTMLElement).closest('button, select, input, a, textarea')) return;
+
+    setIsFloatingDragging(true);
+    floatingDragOffsetRef.current = {
+      x: e.clientX - windowRect.x,
+      y: e.clientY - windowRect.y,
+    };
+  };
+
+  const handleCornerMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsFloatingResizing(true);
+  };
+
+  const applyPreset = (targetWidth: number) => {
+    const maxW = getMaxWidth();
+    const clampedW = Math.max(MIN_WIDTH, Math.min(maxW, targetWidth));
+    setWidth(clampedW, maxW);
+    if (windowMode === 'floating') {
+      setWindowRect({
+        ...windowRect,
+        width: clampedW,
+      });
+    }
+  };
+
   if (!isOpen) return null;
 
   const isLiveAttempt = Boolean(activeQuestion?.isLiveAttempt);
+  const isFloating = !isMobile && windowMode === 'floating';
+
+  const containerStyle: React.CSSProperties = isMobile
+    ? { width: '100%' }
+    : isFloating
+    ? {
+        left: `${windowRect.x}px`,
+        top: `${windowRect.y}px`,
+        width: `${windowRect.width}px`,
+        height: `${windowRect.height}px`,
+      }
+    : {
+        width: `${width}px`,
+      };
+
+  const containerClass = isFloating
+    ? 'fixed z-[60] bg-ds-surface rounded-ds border border-ds-border shadow-2xl flex flex-col overflow-hidden select-none'
+    : 'fixed right-0 top-0 bottom-0 z-40 bg-ds-surface border-l border-ds-border shadow-2xl flex flex-col transition-all duration-75 select-none';
 
   return (
     <div
       role="complementary"
       aria-label="AI Studio"
-      style={{ width: isMobile ? '100%' : `${width}px` }}
+      style={containerStyle}
       data-testid="ai-studio-drawer"
-      className="fixed right-0 top-0 bottom-0 z-40 bg-ds-surface border-l border-ds-border shadow-2xl flex flex-col transition-all duration-75 select-none"
+      className={containerClass}
     >
-      {/* 1. Left border drag handle for resizing (disabled on mobile) */}
-      {!isMobile && (
+      {/* 1. Left border drag handle for resizing (docked mode only, disabled on mobile) */}
+      {!isMobile && !isFloating && (
         <div
+          data-testid="ai-studio-resize-handle"
           onMouseDown={() => setIsDragging(true)}
-          className={`absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-ds-accent/60 transition-colors z-50 ${
-            isDragging ? 'bg-ds-accent' : 'bg-transparent'
+          onDoubleClick={() => {
+            const next = width === 420 ? 650 : 420;
+            setWidth(next, getMaxWidth());
+          }}
+          className={`absolute left-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-ds-accent/30 transition-colors z-50 group flex items-center justify-center ${
+            isDragging ? 'bg-ds-accent/40' : 'bg-transparent'
           }`}
           title="Drag to resize AI Studio"
-        />
+          aria-label="Drag to resize AI Studio"
+        >
+          <div className="w-0.5 h-6 bg-ds-border group-hover:bg-ds-accent transition-colors rounded-full" />
+        </div>
       )}
 
       {/* 2. Top Header Bar */}
-      <div className="h-14 px-4 border-b border-ds-border flex items-center justify-between bg-ds-surface shrink-0">
+      <div
+        onMouseDown={handleHeaderMouseDown}
+        className={`h-14 px-3 border-b border-ds-border flex items-center justify-between bg-ds-surface shrink-0 ${
+          isFloating ? 'cursor-move' : ''
+        }`}
+      >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-ds-accent/10 border border-ds-accent/30 flex items-center justify-center text-ds-accent">
             <Sparkles className="w-4 h-4" />
@@ -270,8 +388,70 @@ export const AiStudioDrawer: React.FC = () => {
           </div>
         </div>
 
-        {/* Model Picker & Action Buttons */}
-        <div className="flex items-center gap-1.5">
+        {/* Action Controls: Presets, Provider, Dock/Detach, Settings, Close */}
+        <div className="flex items-center gap-1">
+          {/* Width Presets (Compact, Wide, Half, Full) */}
+          {!isMobile && (
+            <div className="flex items-center gap-0.5 p-0.5 bg-ds-surface-input border border-ds-border rounded-ds text-[10px]">
+              <button
+                type="button"
+                onClick={() => applyPreset(420)}
+                aria-pressed={width === 420}
+                title="Compact width (420px)"
+                aria-label="Compact width (420px)"
+                className={`px-1.5 py-0.5 rounded transition-colors ${
+                  width === 420
+                    ? 'bg-ds-accent text-ds-accent-contrast font-bold'
+                    : 'text-ds-muted hover:text-ds-primary hover:bg-ds-surface-raised'
+                }`}
+              >
+                420
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPreset(650)}
+                aria-pressed={width === 650}
+                title="Wide width (650px)"
+                aria-label="Wide width (650px)"
+                className={`px-1.5 py-0.5 rounded transition-colors ${
+                  width === 650
+                    ? 'bg-ds-accent text-ds-accent-contrast font-bold'
+                    : 'text-ds-muted hover:text-ds-primary hover:bg-ds-surface-raised'
+                }`}
+              >
+                650
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPreset(Math.round(window.innerWidth * 0.5))}
+                aria-pressed={width === Math.round(window.innerWidth * 0.5)}
+                title="Half screen (50%)"
+                aria-label="Half screen (50%)"
+                className={`px-1.5 py-0.5 rounded transition-colors ${
+                  width === Math.round(window.innerWidth * 0.5)
+                    ? 'bg-ds-accent text-ds-accent-contrast font-bold'
+                    : 'text-ds-muted hover:text-ds-primary hover:bg-ds-surface-raised'
+                }`}
+              >
+                Half
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPreset(Math.max(MIN_WIDTH, window.innerWidth - 24))}
+                aria-pressed={width >= window.innerWidth - 32}
+                title="Full width"
+                aria-label="Full width"
+                className={`px-1.5 py-0.5 rounded transition-colors ${
+                  width >= window.innerWidth - 32
+                    ? 'bg-ds-accent text-ds-accent-contrast font-bold'
+                    : 'text-ds-muted hover:text-ds-primary hover:bg-ds-surface-raised'
+                }`}
+              >
+                Full
+              </button>
+            </div>
+          )}
+
           {/* Provider Selector Dropdown */}
           <select
             value={selectedProvider}
@@ -280,7 +460,7 @@ export const AiStudioDrawer: React.FC = () => {
               const def = providerOptions.find((opt) => opt.id === p)?.defaultModel || '';
               setSelectedProvider(p, def);
             }}
-            className="text-[11px] font-medium bg-ds-surface-input border border-ds-border rounded-ds px-2 py-1 text-ds-primary focus:outline-none focus:border-ds-accent cursor-pointer"
+            className="text-[11px] font-medium bg-ds-surface-input border border-ds-border rounded-ds px-1.5 py-1 text-ds-primary focus:outline-none focus:border-ds-accent cursor-pointer max-w-[110px] truncate"
             aria-label="Select AI Provider"
           >
             {providerOptions.map((opt) => (
@@ -289,6 +469,27 @@ export const AiStudioDrawer: React.FC = () => {
               </option>
             ))}
           </select>
+
+          {/* Dock / Detach Floating Window Toggle (disabled on mobile) */}
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={toggleWindowMode}
+              className={`p-1.5 rounded-ds border transition-colors ${
+                windowMode === 'floating'
+                  ? 'bg-ds-accent text-ds-accent-contrast border-ds-accent'
+                  : 'text-ds-muted hover:text-ds-primary border-ds-border hover:bg-ds-surface-raised'
+              }`}
+              title={windowMode === 'floating' ? 'Dock to right side' : 'Detach to floating window'}
+              aria-label={windowMode === 'floating' ? 'Dock to right side' : 'Detach to floating window'}
+            >
+              {windowMode === 'floating' ? (
+                <PinOff className="w-3.5 h-3.5" />
+              ) : (
+                <Pin className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
 
           {/* Settings / BYOK Modal Button */}
           <button
@@ -320,7 +521,7 @@ export const AiStudioDrawer: React.FC = () => {
           <button
             type="button"
             onClick={handleClose}
-            className="p-1.5 text-ds-muted hover:text-ds-primary rounded-ds border border-ds-border hover:bg-ds-surface-raised transition-colors ml-1"
+            className="p-1.5 text-ds-muted hover:text-ds-primary rounded-ds border border-ds-border hover:bg-ds-surface-raised transition-colors"
             title="Close AI Studio (Ctrl+J)"
             aria-label="Close AI Studio"
           >
@@ -492,8 +693,8 @@ export const AiStudioDrawer: React.FC = () => {
       )}
 
       {/* 5. Chat History Feed */}
-      <div 
-        aria-live="polite" 
+      <div
+        aria-live="polite"
         className="flex-1 p-4 overflow-y-auto space-y-4 select-text"
       >
         {messages.map((msg, index) => {
@@ -513,9 +714,7 @@ export const AiStudioDrawer: React.FC = () => {
                 {isUser ? (
                   <p className="whitespace-pre-wrap">{msg.content}</p>
                 ) : (
-                  <div className="prose prose-xs dark:prose-invert max-w-none">
-                    <MathText content={msg.content} />
-                  </div>
+                  <RichMarkdownText content={msg.content} />
                 )}
               </div>
 
@@ -598,40 +797,50 @@ export const AiStudioDrawer: React.FC = () => {
       )}
 
       {isTranscribing && (
-        <div className="px-4 py-2 bg-ds-accent-soft border-t border-ds-accent/30 flex items-center gap-2 text-xs text-ds-accent font-medium shrink-0">
+        <div className="px-4 py-2 bg-ds-accent/10 border-t border-ds-accent/20 flex items-center gap-2 text-xs text-ds-accent shrink-0">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          <span>Whisper neural transcription in progress (~180ms)...</span>
+          <span>Transcribing voice note via Whisper...</span>
         </div>
       )}
 
-      {/* 7. Input Textarea & Send Bar */}
+      {audioError && (
+        <div className="px-4 py-1.5 bg-red-500/10 border-t border-red-500/20 text-[11px] text-red-500 flex items-center justify-between shrink-0">
+          <span>{audioError}</span>
+        </div>
+      )}
+
+      {/* 7. Input Toolbar & Action Bar */}
       <div className="p-3 border-t border-ds-border bg-ds-surface shrink-0 space-y-2">
-        <div className="relative flex items-end bg-ds-surface-input border border-ds-border rounded-lg focus-within:border-ds-accent transition-all">
+        <div className="relative">
           <textarea
             ref={textareaRef}
-            rows={2}
+            rows={3}
+            placeholder={
+              isLiveAttempt
+                ? 'Ask for conceptual hints without revealing the answer...'
+                : 'Ask question, explain approach, or dictate...'
+            }
             value={inputPrompt}
             onChange={(e) => setInputPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isRecording ? 'Listening to speech...' : 'Ask question, explain approach, or dictate...'}
-            disabled={isRecording}
-            className="w-full bg-transparent px-3 py-2 text-xs text-ds-primary placeholder:text-ds-muted resize-none focus:outline-none leading-relaxed"
-            aria-label="Ask AI Studio question"
+            disabled={isLoading || isRecording}
+            className="w-full resize-none bg-ds-surface-input border border-ds-border rounded-ds p-2.5 text-xs text-ds-primary placeholder:text-ds-muted focus:outline-none focus:border-ds-accent font-sans leading-relaxed disabled:opacity-60"
+            aria-label="AI Prompt Input"
           />
 
-          <div className="flex items-center gap-1 p-1.5">
-            {/* Whisper Microphone Recording Button */}
+          <div className="absolute right-2 bottom-2.5 flex items-center gap-1.5">
+            {/* Mic / Dictation Button */}
             <button
               type="button"
+              disabled={isLoading}
               onClick={isRecording ? stopRecording : startRecording}
-              disabled={isTranscribing}
-              title={isRecording ? 'Stop Recording' : 'Dictate with Whisper Speech-to-Text'}
-              aria-label={isRecording ? 'Stop Recording' : 'Dictate with Whisper'}
-              className={`p-1.5 rounded-md transition-all ${
+              className={`p-1.5 rounded-md border transition-all ${
                 isRecording
-                  ? 'bg-red-500 text-white animate-pulse motion-reduce:animate-none'
-                  : 'text-ds-muted hover:text-ds-primary hover:bg-ds-surface-raised'
+                  ? 'bg-red-500 text-white border-red-600 animate-pulse'
+                  : 'text-ds-muted hover:text-ds-primary border-ds-border hover:bg-ds-surface-raised'
               }`}
+              title={isRecording ? 'Stop Recording' : 'Dictate Prompt (Voice)'}
+              aria-label={isRecording ? 'Stop Recording' : 'Start Voice Dictation'}
             >
               <Mic className="w-4 h-4" />
             </button>
@@ -662,13 +871,37 @@ export const AiStudioDrawer: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-[10px] text-ds-muted font-mono">
-          <span>
-            Provider: <strong className="text-ds-primary">{selectedProvider}</strong>
-          </span>
-          <span>Shift+Enter for newline</span>
+        {/* Input Footer: Shortcuts & Active Model info */}
+        <div className="flex items-center justify-between text-[10px] text-ds-muted pt-0.5">
+          <div className="flex items-center gap-1 font-mono">
+            <span>Provider:</span>
+            <span className="font-semibold text-ds-primary">{selectedProvider}</span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <kbd className="px-1 py-0.2 rounded bg-ds-surface-raised border border-ds-border text-[9px]">
+              Shift+Enter for newline
+            </kbd>
+          </div>
         </div>
       </div>
+
+      {/* Floating window bottom-right corner resize handle */}
+      {isFloating && (
+        <div
+          data-testid="ai-studio-floating-resize-handle"
+          onMouseDown={handleCornerMouseDown}
+          className="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize z-50 flex items-end justify-end p-0.5 text-ds-muted hover:text-ds-accent"
+          title="Drag to resize window"
+          aria-label="Resize window"
+        >
+          <svg width="8" height="8" viewBox="0 0 8 8" className="fill-current opacity-70">
+            <path d="M7 1L1 7M7 4L4 7M7 7L7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 };
+
+export default AiStudioDrawer;

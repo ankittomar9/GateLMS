@@ -6,6 +6,7 @@ import { RightSidebar } from './RightSidebar';
 import { OfflineBanner } from './pwa/OfflineBanner';
 import { UpdateToast } from './pwa/UpdateToast';
 import { AiStudioDrawer } from './ai/AiStudioDrawer';
+import { AiStudioFab } from './ai/AiStudioFab';
 
 export const Layout: React.FC = () => {
   return (
@@ -29,6 +30,9 @@ export const Layout: React.FC = () => {
 
       {/* 4. In-Portal AI Studio Sidecar (Collapsible, Stretchable, Resizable) */}
       <AiStudioDrawer />
+
+      {/* 5. Persistent AI Studio FAB (Visible while studio is closed, AD-2 / BC-4) */}
+      <AiStudioFab />
     </div>
   );
 };
