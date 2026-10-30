@@ -51,13 +51,14 @@ const CodeBlock: React.FC<{ language?: string; code: string }> = ({ language, co
 };
 
 export const RichMarkdownText: React.FC<RichMarkdownTextProps> = React.memo(({ content, className = '' }) => {
-  if (!content) return null;
-
   // Normalize single-line display math $$...$$ on its own line so remarkMath parses it as display math
   const processedContent = React.useMemo(() => {
+    if (!content) return '';
     const normalized = content.replace(/\r\n/g, '\n');
     return normalized.replace(/(^|\n)[ \t]*\$\$([^\n]+?)\$\$[ \t]*($|\n)/g, '$1\n\n$$\n$2\n$$\n\n$3');
   }, [content]);
+
+  if (!content) return null;
 
   return (
     <div className={`rich-markdown text-xs leading-relaxed text-ds-primary ${className}`}>
@@ -173,7 +174,7 @@ export const RichMarkdownText: React.FC<RichMarkdownTextProps> = React.memo(({ c
               {children}
             </td>
           ),
-          a: ({ href, children, ...props }) => (
+          a: ({ node, href, children, ...props }) => (
             <a
               href={href}
               target="_blank"
