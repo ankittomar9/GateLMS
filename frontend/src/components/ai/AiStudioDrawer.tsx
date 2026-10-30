@@ -22,7 +22,7 @@ import { useAiStudio, getMaxWidth, MIN_WIDTH } from '../../context/AiStudioConte
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { aiApi, ChatMessage, ProviderStatus } from '../../api/aiApi';
 
-import { RichMarkdownText } from './RichMarkdownText';
+const RichMarkdownText = React.lazy(() => import('./RichMarkdownText'));
 
 const FALLBACK_PROVIDER_OPTIONS = [
   { id: 'GROQ', label: 'Groq (Llama 3.3 70B)', defaultModel: 'llama-3.3-70b-versatile' },
@@ -51,12 +51,13 @@ export const AiStudioDrawer: React.FC = () => {
     messages,
     addMessage,
     clearMessages,
+    isLoading,
+    setIsLoading,
     pendingPrompt,
     clearPendingPrompt,
   } = useAiStudio();
 
   const [inputPrompt, setInputPrompt] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -714,7 +715,9 @@ export const AiStudioDrawer: React.FC = () => {
                 {isUser ? (
                   <p className="whitespace-pre-wrap">{msg.content}</p>
                 ) : (
-                  <RichMarkdownText content={msg.content} />
+                  <React.Suspense fallback={<p className="whitespace-pre-wrap">{msg.content}</p>}>
+                    <RichMarkdownText content={msg.content} />
+                  </React.Suspense>
                 )}
               </div>
 

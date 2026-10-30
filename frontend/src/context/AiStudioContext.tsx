@@ -30,6 +30,8 @@ interface AiStudioContextValue {
   messages: ChatMessage[];
   addMessage: (message: ChatMessage) => void;
   clearMessages: () => void;
+  isLoading: boolean;
+  setIsLoading: (loading: boolean) => void;
   pendingPrompt: { text: string; mode?: 'HINT' | 'EXPLANATION' | 'GENERAL' } | null;
   triggerPrompt: (text: string, mode?: 'HINT' | 'EXPLANATION' | 'GENERAL') => void;
   clearPendingPrompt: () => void;
@@ -169,6 +171,8 @@ export const AiStudioProvider: React.FC<{ children: ReactNode }> = ({ children }
     },
   ]);
 
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const setIsOpen = useCallback((open: boolean) => {
     setIsOpenState(open);
     if (typeof window !== 'undefined') {
@@ -242,7 +246,7 @@ export const AiStudioProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const setByokKey = useCallback((provider: string, key: string) => {
     setByokKeys((prev) => {
-      const next = { ...prev, [provider]: key };
+      const next = { ...prev, [provider]: key.trim() };
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(STORAGE_KEY_BYOK, JSON.stringify(next));
       }
@@ -344,6 +348,8 @@ export const AiStudioProvider: React.FC<{ children: ReactNode }> = ({ children }
         messages,
         addMessage,
         clearMessages,
+        isLoading,
+        setIsLoading,
         pendingPrompt,
         triggerPrompt,
         clearPendingPrompt,
@@ -379,6 +385,8 @@ export const useAiStudio = (): AiStudioContextValue => {
       messages: [],
       addMessage: () => {},
       clearMessages: () => {},
+      isLoading: false,
+      setIsLoading: () => {},
       pendingPrompt: null,
       triggerPrompt: () => {},
       clearPendingPrompt: () => {},

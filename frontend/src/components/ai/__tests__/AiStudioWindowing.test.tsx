@@ -178,7 +178,19 @@ describe('AiStudio Windowing, Resizing & FAB Suite', () => {
   });
 
   it('G6 FAB: shows in-flight pulse indicator when generation is active in background while closed', () => {
-    render(<AiStudioProvider><AiStudioFab isLoading={true} /></AiStudioProvider>);
+    const ContextPulseTester = () => {
+      const { setIsLoading } = useAiStudio();
+      React.useEffect(() => {
+        setIsLoading(true);
+      }, [setIsLoading]);
+      return <AiStudioFab />;
+    };
+
+    render(
+      <AiStudioProvider>
+        <ContextPulseTester />
+      </AiStudioProvider>
+    );
 
     expect(screen.getByTestId('ai-studio-fab')).toBeDefined();
     expect(screen.getByTestId('ai-studio-fab-pulse')).toBeDefined();

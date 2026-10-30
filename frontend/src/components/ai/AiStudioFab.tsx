@@ -2,8 +2,9 @@ import React from 'react';
 import { Sparkles } from 'lucide-react';
 import { useAiStudio } from '../../context/AiStudioContext';
 
-export const AiStudioFab: React.FC<{ isLoading?: boolean }> = ({ isLoading = false }) => {
-  const { isOpen, setIsOpen } = useAiStudio();
+export const AiStudioFab: React.FC<{ isLoading?: boolean }> = ({ isLoading: propIsLoading }) => {
+  const { isOpen, setIsOpen, isLoading: contextLoading } = useAiStudio();
+  const isLoading = propIsLoading ?? contextLoading;
 
   if (isOpen) return null;
 
