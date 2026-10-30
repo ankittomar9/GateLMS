@@ -2,11 +2,16 @@
 
 - **Author:** Z.ai (Architect & Quality Auditor)
 - **Date:** 2026-10-28 (all code facts audited at `origin/master = ed9f061`, tree clean)
-- **Status:** EXECUTED & AUDITED — dispatched by operator 2026-10-28; executor commit `aba1b74`,
+- **Status:** EXECUTED, AUDITED & CLOSED — dispatched by operator 2026-10-28; executor commit `aba1b74`,
   merged `--no-ff` as `37f0237` (branch `ai/provider-adapter-1` retained). Post-merge audit:
-  **CONDITIONAL PASS (condition C1 open — one-line primer-prompt revert + optional
-  `ForceAuthzIT` receipt)** — `collab/z/AI-PROVIDER-ADAPTER-AUDIT.md`. §10 reconciliation deltas
-  for the operator are in the audit §5.
+  **CONDITIONAL PASS (condition C1 — one-line primer-prompt revert + optional `ForceAuthzIT`
+  receipt)** — `collab/z/AI-PROVIDER-ADAPTER-AUDIT.md`. **C1 + N-2 discharged 2026-10-30 on
+  `ai/provider-adapter-fixup-1`** (executor commit `62cf4e5`, merged `--no-ff` as `efb8188`; two
+  operator-directed ride-alongs: 5-minute chat read timeout, drawer background generation + Stop
+  button) — fixup audit **PASS** (receipts reproduced 167/0/0/1 + 53/289 + build clean; vitest
+  receipt corrected 288→289; `ForceAuthzIT` 3/0/0/0 closes the P1 deferred item):
+  `collab/z/AI-PROVIDER-ADAPTER-FIXUP-1-AUDIT.md`. Package verdict: **final PASS**. §10 DoD
+  baselines for the operator: unit 167/0/0/1, vitest 53 files / 289 tests, build clean.
 - **Executor:** Gemini Antigravity (per D-6; 4 consecutive clean packages)
 - **Provenance:** operator directive 2026-10-28 — "make the AI layer model-agnostic: providers
   and model versions will change; plugging a new key should just work, no repeated file edits."

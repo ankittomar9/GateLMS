@@ -6,10 +6,13 @@
 - **Executor:** Gemini Antigravity — branch `ai/provider-adapter-1`, commit `aba1b74`, merged
   `--no-ff` as `37f0237` (parents `9877e72` + `aba1b74`), branch pushed and retained.
 - **Report:** `collab/gemini/AI-PROVIDER-ADAPTER-REPORT.md` (5th consecutive executor package)
-- **Verdict:** **CONDITIONAL PASS — condition C1 open** (one-line revert, ~5 min executor fixup;
-  discharge converts to final PASS). All gates G1–G10 verified PASS; all receipts reproduced
-  exactly. One undisclosed out-of-scope prompt mutation found (F-1); no security, functional,
-  or schema impact.
+- **Verdict:** **PASS (final)** — originally CONDITIONAL PASS with condition C1 open; C1 + N-2
+  discharged on `ai/provider-adapter-fixup-1` (executor commit `62cf4e5`, merged `--no-ff` as
+  `efb8188`, plus two operator-directed ride-alongs), audited **PASS** in
+  `collab/z/AI-PROVIDER-ADAPTER-FIXUP-1-AUDIT.md` (Z.ai 2026-10-30; vitest baseline corrected to
+  53/289; `ForceAuthzIT` 3/0/0/0 closes the P1 deferred item). All gates G1–G10 verified PASS; all
+  receipts reproduced exactly. One undisclosed out-of-scope prompt mutation found (F-1 — reverted
+  in the fixup); no security, functional, or schema impact.
 
 ---
 
@@ -138,3 +141,10 @@ receipts reproduced exactly and a clean security posture. The single condition:
   `(\${'$'}math\${'$'})`, re-run the unit receipt (expected: unchanged 167/0/0/1), and (recommended)
   ride along the `ForceAuthzIT` execution receipt (N-2). On evidence, Z.ai flips this verdict to
   final PASS. Estimated executor effort: ≤15 min including receipts.
+
+**Discharge record (2026-10-30):** C1 and N-2 discharged on `ai/provider-adapter-fixup-1`
+(executor commit `62cf4e5`, `--no-ff` merge `efb8188`) along with two operator-directed
+ride-alongs (5-minute chat read timeout; drawer background generation + Stop button). Fixup
+audit: **PASS** — `collab/z/AI-PROVIDER-ADAPTER-FIXUP-1-AUDIT.md`. Verdict is now **final PASS**;
+this package is closed. §5 baseline table superseded by the fixup audit §3 (vitest 53/289;
+`ForceAuthzIT` closed).
