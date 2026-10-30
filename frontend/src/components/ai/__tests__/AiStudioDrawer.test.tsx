@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AiStudioProvider, useAiStudio } from '../../../context/AiStudioContext';
 import { AiStudioDrawer } from '../AiStudioDrawer';
+import { aiApi } from '../../../api/aiApi';
 
 const TestWrapper: React.FC<{
   initialOpen?: boolean;
@@ -131,5 +132,32 @@ describe('AiStudioDrawer Component', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('ai-studio-drawer')).toBeNull();
     });
+  });
+
+  it('8 closing drawer does not abort in-flight background generation', async () => {
+    let capturedSignal: AbortSignal | undefined;
+    vi.spyOn(aiApi, 'chat').mockImplementation(async (_req, _key, signal) => {
+      capturedSignal = signal;
+      return new Promise((resolve) => setTimeout(() => resolve({ reply: 'Done', provider: 'GROQ', model: 'llama3', latencyMs: 100 }), 500));
+    });
+
+    const user = userEvent.setup();
+    render(<TestWrapper initialOpen={true} />);
+
+    const input = screen.getByPlaceholderText(/Ask question, explain approach/i);
+    await user.type(input, 'Tell me about semaphores');
+
+    const sendBtn = screen.getByRole('button', { name: /Send message/i });
+    await user.click(sendBtn);
+
+    expect(capturedSignal).toBeDefined();
+    expect(capturedSignal?.aborted).toBe(false);
+
+    // Close drawer via close button
+    const closeBtn = screen.getByRole('button', { name: /Close AI Studio/i });
+    await user.click(closeBtn);
+
+    // Assert signal is still NOT aborted — generation continues in background
+    expect(capturedSignal?.aborted).toBe(false);
   });
 });
