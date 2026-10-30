@@ -248,7 +248,7 @@ Generate a complete, rigorous Topic Primer matching this JSON schema:
 Important Rules:
 1. 'worked_example' must be detailed and >= 150 words with clear numbered steps. A shallow summary will be rejected.
 2. Anti-fabrication (AF-1): Never cite student population statistics, exam pass rates, or claim that a percentage/majority of students make a particular mistake (e.g., do NOT write '70% of students fail this' or 'majority of candidates get confused'). Focus purely on the scientific formulas, mathematical derivations, protocols, and technical distractor logic.
-3. KaTeX is supported for mathematical notation (${'$'}{'$'}math${'$'}{'$'}).
+3. KaTeX is supported for mathematical notation (\${'$'}math\${'$'}).
 4. Return ONLY valid JSON.
             """.trimIndent())
         }

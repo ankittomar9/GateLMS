@@ -103,7 +103,6 @@ export const AiStudioDrawer: React.FC = () => {
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        abortControllerRef.current?.abort();
         setIsOpen(false);
       }
     };
@@ -157,7 +156,7 @@ export const AiStudioDrawer: React.FC = () => {
 
   // Auto-scroll on new message
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
   const handleSendPrompt = async (promptOverride?: string, mode: 'HINT' | 'EXPLANATION' | 'GENERAL' = 'GENERAL') => {
@@ -224,7 +223,6 @@ export const AiStudioDrawer: React.FC = () => {
   };
 
   const handleClose = () => {
-    abortControllerRef.current?.abort();
     setIsOpen(false);
   };
 
@@ -638,17 +636,29 @@ export const AiStudioDrawer: React.FC = () => {
               <Mic className="w-4 h-4" />
             </button>
 
-            {/* Send Button */}
-            <button
-              type="button"
-              disabled={!inputPrompt.trim() || isLoading}
-              onClick={() => handleSendPrompt()}
-              className="p-1.5 rounded-md bg-ds-accent text-ds-accent-contrast disabled:opacity-40 hover:bg-ds-accent-hover transition-all"
-              title="Send message (Enter)"
-              aria-label="Send message"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+            {/* Send or Stop Button */}
+            {isLoading ? (
+              <button
+                type="button"
+                onClick={() => abortControllerRef.current?.abort()}
+                className="p-1.5 rounded-md bg-red-600/80 text-white hover:bg-red-500 transition-all"
+                title="Stop generation"
+                aria-label="Stop generation"
+              >
+                <Square className="w-4 h-4 fill-current" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={!inputPrompt.trim()}
+                onClick={() => handleSendPrompt()}
+                className="p-1.5 rounded-md bg-ds-accent text-ds-accent-contrast disabled:opacity-40 hover:bg-ds-accent-hover transition-all"
+                title="Send message (Enter)"
+                aria-label="Send message"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 

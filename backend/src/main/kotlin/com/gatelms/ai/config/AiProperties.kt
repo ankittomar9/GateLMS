@@ -93,7 +93,7 @@ class AiProperties {
 
     class HttpConfig {
         var connectTimeoutMs: Long = 3000
-        var chatReadTimeoutMs: Long = 60000
+        var chatReadTimeoutMs: Long = 300000
         var sttReadTimeoutMs: Long = 90000
         var statusReadTimeoutMs: Long = 2000
         var maxRetries: Int = 1
