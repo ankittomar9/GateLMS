@@ -31,6 +31,10 @@ class OpenAiCompatTransport(
         .requestFactory(requestFactory)
         .build()
 
+    init {
+        log.info("OpenAiCompatTransport initialized with connectTimeout={}ms, readTimeout={}ms", aiProperties.http.connectTimeoutMs, aiProperties.http.chatReadTimeoutMs)
+    }
+
     override fun chat(
         spec: ProviderSpec,
         systemInstruction: String,
@@ -60,6 +64,7 @@ class OpenAiCompatTransport(
         val requestSpec = restClient.post()
             .uri(endpoint)
             .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN)
             .body(requestPayload)
 
         if (!apiKey.isNullOrBlank()) {
@@ -68,7 +73,7 @@ class OpenAiCompatTransport(
 
         val rawResponse = requestSpec
             .retrieve()
-            .body(String::class.java) ?: "{}"
+            .body(ByteArray::class.java)?.let { String(it, Charsets.UTF_8) } ?: "{}"
 
         val root = objectMapper.readTree(rawResponse)
         val choices = root.path("choices")
