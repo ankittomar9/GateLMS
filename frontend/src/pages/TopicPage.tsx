@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  BookOpen, 
-  HelpCircle, 
-  CheckCircle2, 
-  Circle, 
-  Sparkles, 
-  AlertTriangle, 
-  FileQuestion, 
+import {
+  ArrowLeft,
+  BookOpen,
+  HelpCircle,
+  CheckCircle2,
+  Circle,
+  Sparkles,
+  AlertTriangle,
+  FileQuestion,
   BookMarked,
   Layers,
   ArrowRight,
@@ -25,6 +25,7 @@ import { TopicPrimerResponse, TopicPrimer } from '../types/journey';
 import { MathText } from '../components/MathText';
 import { ConceptUnitDialog } from '../components/ConceptUnitDialog';
 import { TopicConceptsTab } from '../components/TopicConceptsTab';
+import { TopicWorkbookTab } from '../components/TopicWorkbookTab';
 import { useQuestions } from '../hooks/useQueries';
 import { useAuth } from '../context/AuthContext';
 
@@ -40,8 +41,8 @@ export const TopicPage: React.FC = () => {
   const tabParam = searchParams.get('tab');
   const conceptParam = searchParams.get('concept');
 
-  const [activeTab, setActiveTab] = useState<'theory' | 'concepts' | 'questions' | 'notebook'>(
-    tabParam === 'concepts' || tabParam === 'questions' || tabParam === 'notebook' ? tabParam : 'theory'
+  const [activeTab, setActiveTab] = useState<'theory' | 'concepts' | 'questions' | 'notebook' | 'workbook'>(
+    tabParam === 'concepts' || tabParam === 'questions' || tabParam === 'notebook' || tabParam === 'workbook' ? tabParam : 'theory'
   );
   const [primerData, setPrimerData] = useState<TopicPrimerResponse | null>(null);
   const [loadingPrimer, setLoadingPrimer] = useState<boolean>(true);
@@ -75,7 +76,7 @@ export const TopicPage: React.FC = () => {
       if (concept) {
         setSelectedConceptSlug(concept);
       }
-    } else if (tab === 'questions' || tab === 'notebook' || tab === 'theory') {
+    } else if (tab === 'questions' || tab === 'notebook' || tab === 'theory' || tab === 'workbook') {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -291,6 +292,21 @@ export const TopicPage: React.FC = () => {
             <span>4. Solved Notebook</span>
             <span className="text-[11px] text-ds-muted">({solvedQuestions.length})</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('workbook')}
+            role="tab"
+            aria-selected={activeTab === 'workbook'}
+            className={`px-4 py-2.5 text-xs font-semibold font-mono border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === 'workbook'
+                ? 'border-ds-accent text-ds-primary bg-ds-surface-hover'
+                : 'border-transparent text-ds-muted hover:text-ds-primary hover:bg-ds-surface'
+            }`}
+            data-testid="tab-workbook"
+          >
+            <BookMarked className="w-3.5 h-3.5 text-ds-accent" />
+            <span>5. Reference Workbook</span>
+          </button>
         </div>
       </div>
 
@@ -307,7 +323,7 @@ export const TopicPage: React.FC = () => {
               <div className="flex flex-wrap items-center justify-between gap-3 bg-ds-surface border border-ds-border rounded-ds p-3 text-xs font-mono">
                 <div className="flex items-center gap-2">
                   {primer.status === 'DRAFT' ? (
-                    <span 
+                    <span
                       className="px-2 py-0.5 rounded bg-ds-warning/15 border border-ds-warning/30 text-ds-warning font-bold text-[11px]"
                       data-testid="draft-badge"
                     >
@@ -742,6 +758,20 @@ export const TopicPage: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* TAB 5: REFERENCE WORKBOOK */}
+      {activeTab === 'workbook' && (
+        <TopicWorkbookTab
+          topicId={topicId || ''}
+          topicName={primer?.topicName || questions[0]?.topicName || topicId || ''}
+          subjectId={questions[0]?.subjectId || ''}
+          subjectName={questions[0]?.subjectName || ''}
+          bookChapterRef={primerData?.bookChapterRef}
+          primer={primer || null}
+          questions={questions}
+          solvedQuestions={solvedQuestions}
+        />
       )}
 
       {/* Concept Unit Dialog Modal (only when outside concepts tab) */}

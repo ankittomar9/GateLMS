@@ -366,4 +366,28 @@ describe('TopicPage', () => {
     expect(screen.getByRole('button', { name: /retry synthesis now/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /discard failed draft/i })).toBeInTheDocument();
   });
+
+  it('registers 5th tab Reference Workbook and switches to it', async () => {
+    mockAuthRole('STUDENT');
+    vi.mocked(journeyApi.getTopicPrimer).mockResolvedValue(mockPrimerResponse);
+    vi.mocked(queryHooks.useQuestions).mockReturnValue({
+      data: { content: [], totalElements: 0, totalPages: 0 },
+      isLoading: false,
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <TopicPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tab-workbook')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('tab-workbook')).toHaveTextContent('5. Reference Workbook');
+    fireEvent.click(screen.getByTestId('tab-workbook'));
+    expect(screen.getByTestId('tab-workbook')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('workbook-tab-content')).toBeInTheDocument();
+  });
 });
