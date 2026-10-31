@@ -14,8 +14,13 @@ export const LayeredHints: React.FC<LayeredHintsProps> = ({
   mode = 'study',
   onPrerequisiteClick,
 }) => {
-  // Hard-hidden in mock/test modes (Binding spec §5.4)
-  if (mode !== 'study' || !anatomy) {
+  // Hard-hidden in mock/test modes or if anatomy is incomplete/errored (Binding spec §5.4)
+  if (
+    mode !== 'study' ||
+    !anatomy ||
+    anatomy.testedConcept === 'Generation parsing incomplete' ||
+    Boolean(anatomy.parseError)
+  ) {
     return null;
   }
 

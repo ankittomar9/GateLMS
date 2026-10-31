@@ -38,6 +38,7 @@ class AnatomyController(
     @PostMapping("/questions/{id}/anatomy/generate")
     fun generateAnatomy(
         @PathVariable id: UUID,
+        @RequestParam(defaultValue = "false") force: Boolean,
         @RequestBody(required = false) req: AnatomyGenerateRequest?,
         @RequestHeader(value = "x-api-key", required = false) authHeaderKey: String?
     ): ResponseEntity<QuestionAnatomyDto> {
@@ -47,7 +48,8 @@ class AnatomyController(
             userId = user.id,
             provider = req?.provider,
             model = req?.model,
-            authHeaderKey = authHeaderKey
+            authHeaderKey = authHeaderKey,
+            force = force
         )
         return ResponseEntity.ok(dto)
     }

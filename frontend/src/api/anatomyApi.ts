@@ -77,13 +77,14 @@ export const anatomyApi = {
 
   generateQuestionAnatomy: async (
     questionId: string,
-    options?: { provider?: string; model?: string; apiKey?: string }
+    options?: { provider?: string; model?: string; apiKey?: string; force?: boolean }
   ): Promise<QuestionAnatomyDto> => {
     const headers: Record<string, string> = {};
     if (options?.apiKey) {
       headers['x-api-key'] = options.apiKey;
     }
-    return request<QuestionAnatomyDto>(`/questions/${questionId}/anatomy/generate`, {
+    const query = options?.force ? '?force=true' : '';
+    return request<QuestionAnatomyDto>(`/questions/${questionId}/anatomy/generate${query}`, {
       method: 'POST',
       headers,
       body: JSON.stringify({

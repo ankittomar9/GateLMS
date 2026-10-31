@@ -11,7 +11,9 @@ import {
   AlertCircle,
   ExternalLink,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
 import { anatomyApi, QuestionAnatomyDto } from '../api/anatomyApi';
 import { MathText } from './MathText';
@@ -66,11 +68,11 @@ export const AnatomyPanel: React.FC<AnatomyPanelProps> = ({
       });
   }, [questionId, hasAttempted, isGatedByMode]);
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (force: boolean = false) => {
     setGenerating(true);
     setError(null);
     try {
-      const generated = await anatomyApi.generateQuestionAnatomy(questionId);
+      const generated = await anatomyApi.generateQuestionAnatomy(questionId, { force });
       setAnatomy(generated);
       setLocked(false);
     } catch (err: any) {
@@ -116,7 +118,7 @@ export const AnatomyPanel: React.FC<AnatomyPanelProps> = ({
             </p>
             {isAdmin && (
               <button
-                onClick={handleGenerate}
+                onClick={() => handleGenerate(true)}
                 disabled={generating}
                 className="mt-3 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-all"
               >
@@ -145,7 +147,7 @@ export const AnatomyPanel: React.FC<AnatomyPanelProps> = ({
           <p className="text-xs text-rose-400">{error}</p>
         )}
         <button
-          onClick={handleGenerate}
+          onClick={() => handleGenerate(false)}
           disabled={generating}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium shadow-lg shadow-indigo-600/20 disabled:opacity-50 transition-all"
         >
@@ -194,18 +196,61 @@ export const AnatomyPanel: React.FC<AnatomyPanelProps> = ({
               {anatomy.generatorModel}
             </span>
           )}
+          {isAdmin && (
+            <button
+              onClick={() => handleGenerate(true)}
+              disabled={generating}
+              title="Force regenerate anatomy dossier"
+              className="p-1 rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${generating ? 'animate-spin' : ''}`} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Section 1: What this tests */}
-      <div className="space-y-1.5">
-        <h4 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5" /> 1. What This Tests
-        </h4>
-        <div className="p-3.5 rounded-xl bg-[#191a20] border border-[#23262f] text-xs text-neutral-200 leading-relaxed font-medium">
-          <MathText content={anatomy.testedConcept} />
+      {/* Incomplete / Error Banner */}
+      {(anatomy.parseError || anatomy.testedConcept === 'Generation parsing incomplete') && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-xs space-y-3" data-testid="anatomy-error-banner">
+          <div className="flex items-center gap-2 text-amber-400 font-semibold">
+            <AlertTriangle className="w-4 h-4" />
+            <span>Anatomy Dossier Synthesis Incomplete or Provider Error</span>
+          </div>
+          <p className="text-neutral-400 text-xs leading-relaxed">
+            The previous AI generation attempt timed out or failed to parse. You can retry generating a complete examiner autopsy.
+          </p>
+          {anatomy.parseError && (
+            <div className="text-neutral-400 text-[11px] bg-black/40 p-2.5 rounded border border-neutral-800 font-mono overflow-x-auto whitespace-pre-wrap">
+              {anatomy.parseError}
+            </div>
+          )}
+          {error && (
+            <p className="text-xs text-rose-400 font-medium">{error}</p>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleGenerate(true)}
+              disabled={generating}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium shadow-md shadow-indigo-600/20 disabled:opacity-50 transition-all cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${generating ? 'animate-spin' : ''}`} />
+              <span>{generating ? 'Regenerating Dossier...' : 'Retry Generation'}</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Section 1: What this tests */}
+      {anatomy.testedConcept && anatomy.testedConcept !== 'Generation parsing incomplete' && (
+        <div className="space-y-1.5">
+          <h4 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" /> 1. What This Tests
+          </h4>
+          <div className="p-3.5 rounded-xl bg-[#191a20] border border-[#23262f] text-xs text-neutral-200 leading-relaxed font-medium">
+            <MathText content={anatomy.testedConcept} />
+          </div>
+        </div>
+      )}
 
       {/* Section 2: The Invariant Rule */}
       {anatomy.invariantRule && (

@@ -20,8 +20,10 @@ import com.gatelms.repository.QuestionRepository
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.server.ResponseStatusException
 import java.time.Instant
 import java.util.UUID
 
@@ -66,11 +68,14 @@ class AnatomyGenerationService(
         userId: UUID,
         provider: String? = null,
         model: String? = null,
-        authHeaderKey: String? = null
+        authHeaderKey: String? = null,
+        force: Boolean = false
     ): QuestionAnatomyDto {
-        // 1. Return cached if non-REJECTED exists
+        // 1. Return cached if non-REJECTED exists, has no parseError, is not incomplete, and not forced
         val existing = questionAnatomyRepository.findByQuestionId(questionId)
-        if (existing.isPresent && existing.get().status != AnatomyStatus.REJECTED) {
+        if (!force && existing.isPresent && existing.get().status != AnatomyStatus.REJECTED &&
+            existing.get().parseError == null && existing.get().testedConcept != "Generation parsing incomplete"
+        ) {
             return toDto(existing.get())
         }
 
@@ -124,45 +129,36 @@ class AnatomyGenerationService(
             }
         }
 
-        // 6. Persist QuestionAnatomy
+        // If generation failed or could not be parsed, DO NOT persist an incomplete/corrupted placeholder to the DB!
+        if (payload == null) {
+            throw ResponseStatusException(
+                HttpStatus.BAD_GATEWAY,
+                "Question anatomy generation failed: ${parseError ?: "AI service unavailable"}"
+            )
+        }
+
+        // 6. Persist QuestionAnatomy only when successfully validated
         val anatomy = existing.orElseGet {
             QuestionAnatomy(question = question)
         }
 
-        if (payload != null) {
-            anatomy.testedConcept = payload.testedConcept
-            anatomy.invariantRule = payload.invariantRule
-            anatomy.trapAnalysisJson = objectMapper.writeValueAsString(payload.trapAnalysis)
-            anatomy.prerequisitesJson = objectMapper.writeValueAsString(payload.prerequisites)
-            anatomy.similarPatternHint = payload.similarPatternHint
-            anatomy.groundingRefsJson = "[]"
-            anatomy.status = AnatomyStatus.DRAFT
-            anatomy.parseError = null
-            anatomy.generatorModel = lastUsedModel
-            anatomy.updatedAt = Instant.now()
+        anatomy.testedConcept = payload.testedConcept
+        anatomy.invariantRule = payload.invariantRule
+        anatomy.trapAnalysisJson = objectMapper.writeValueAsString(payload.trapAnalysis)
+        anatomy.prerequisitesJson = objectMapper.writeValueAsString(payload.prerequisites)
+        anatomy.similarPatternHint = payload.similarPatternHint
+        anatomy.groundingRefsJson = "[]"
+        anatomy.status = AnatomyStatus.DRAFT
+        anatomy.parseError = null
+        anatomy.generatorModel = lastUsedModel
+        anatomy.updatedAt = Instant.now()
 
-            val saved = questionAnatomyRepository.save(anatomy)
+        val saved = questionAnatomyRepository.save(anatomy)
 
-            // 7. Flywheel emission of concept tags
-            emitConceptTags(question, payload.conceptTags)
+        // 7. Flywheel emission of concept tags
+        emitConceptTags(question, payload.conceptTags)
 
-            return toDto(saved)
-        } else {
-            // Save as DRAFT with parse_error (never 500 per spec)
-            anatomy.testedConcept = "Generation parsing incomplete"
-            anatomy.invariantRule = null
-            anatomy.trapAnalysisJson = "[]"
-            anatomy.prerequisitesJson = "[]"
-            anatomy.similarPatternHint = null
-            anatomy.groundingRefsJson = "[]"
-            anatomy.status = AnatomyStatus.DRAFT
-            anatomy.parseError = parseError
-            anatomy.generatorModel = lastUsedModel
-            anatomy.updatedAt = Instant.now()
-
-            val saved = questionAnatomyRepository.save(anatomy)
-            return toDto(saved)
-        }
+        return toDto(saved)
     }
 
     private fun emitConceptTags(question: Question, tags: List<String>) {
