@@ -32,7 +32,8 @@ describe('PlannerPage Component Tests', () => {
   const mutateRegenerate = vi.fn();
   const mutateUpdateStatus = vi.fn();
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   const mockPlanSummary: StudyPlanSummaryDto = {
     id: 'plan-uuid-1',

@@ -10,6 +10,11 @@ vi.mock('../MathText', () => ({
   MathText: ({ content }: { content: string }) => <span>{content}</span>,
 }));
 
+vi.mock('../ai/RichMarkdownText', () => ({
+  RichMarkdownText: ({ content }: { content: string }) => <span>{content}</span>,
+  default: ({ content }: { content: string }) => <span>{content}</span>,
+}));
+
 vi.mock('../../api/journeyApi', () => ({
   journeyApi: {
     getTopicConcepts: vi.fn(),

@@ -51,17 +51,42 @@ const CodeBlock: React.FC<{ language?: string; code: string }> = ({ language, co
 };
 
 export const RichMarkdownText: React.FC<RichMarkdownTextProps> = React.memo(({ content, className = '' }) => {
-  // Normalize single-line display math $$...$$ on its own line so remarkMath parses it as display math
+  // Normalize single-line display math $$...$$ on its own line so remarkMath parses it as display math,
+  // expand inline code fences into fenced code blocks, and normalize bunched steps/lists onto separate lines.
   const processedContent = React.useMemo(() => {
     if (!content) return '';
-    const normalized = content.replace(/\r\n/g, '\n');
-    return normalized.replace(/(^|\n)[ \t]*\$\$([^\n]+?)\$\$[ \t]*($|\n)/g, '$1\n\n$$\n$2\n$$\n\n$3');
+    let normalized = content.replace(/\r\n/g, '\n');
+    normalized = normalized.replace(/(^|\n)[ \t]*\$\$([^\n]+?)\$\$[ \t]*($|\n)/g, '$1\n\n$$\n$2\n$$\n\n$3');
+
+    // 1. Any code fence not starting on a newline gets preceding newline
+    normalized = normalized.replace(/([^\n])[ \t]*```/g, '$1\n```');
+
+    // 2. Opening fence with code on same line: ```c #include -> ```c\n#include
+    normalized = normalized.replace(/(^|\n)```([a-zA-Z0-9_-]+)[ \t]+([^\n]+)/g, '$1```$2\n$3');
+
+    // 3. Closing fence with text on same line: ``` Step 1 -> ```\n\nStep 1
+    normalized = normalized.replace(/(^|\n)```[ \t]+([^\n]+)/g, '$1```\n\n$2');
+
+    // 4. Steps normalization: Step 1:, Step 2:, etc. when bunched on the same line
+    normalized = normalized.replace(/([.!?'")])[ \t]+(Step\s+\d+:)/g, '$1\n\n$2');
+
+    // 5. Numbered points normalization: 1. ..., 2. ... when bunched on the same line
+    normalized = normalized.replace(/([.!?'")])[ \t]+(\d+\.\s+[A-Z])/g, '$1\n\n$2');
+
+    // 6. Sub-bullet list normalization when bunched on the same line
+    normalized = normalized.replace(/:\s+-\s+/g, ':\n\n- ');
+    normalized = normalized.replace(/([.!?'")])[ \t]+-\s+/g, '$1\n- ');
+
+    // 7. Output label normalization when bunched on the same line
+    normalized = normalized.replace(/([.!?'")])[ \t]+(Output:)/g, '$1\n\n**$2**');
+
+    return normalized;
   }, [content]);
 
   if (!content) return null;
 
   return (
-    <div className={`rich-markdown text-xs leading-relaxed text-ds-primary ${className}`}>
+    <div className={`rich-markdown ${className || 'text-xs'} leading-relaxed text-ds-primary`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[
@@ -106,22 +131,22 @@ export const RichMarkdownText: React.FC<RichMarkdownTextProps> = React.memo(({ c
             </h6>
           ),
           p: ({ children }) => (
-            <p className="text-xs leading-relaxed text-ds-primary my-1.5">
+            <p className="leading-relaxed text-ds-primary my-1.5">
               {children}
             </p>
           ),
           ul: ({ children }) => (
-            <ul className="list-disc list-outside ml-4 my-1.5 space-y-1 text-xs text-ds-primary">
+            <ul className="list-disc list-outside ml-4 my-1.5 space-y-1 text-ds-primary">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal list-outside ml-4 my-1.5 space-y-1 text-xs text-ds-primary">
+            <ol className="list-decimal list-outside ml-4 my-1.5 space-y-1 text-ds-primary">
               {children}
             </ol>
           ),
           li: ({ children }) => (
-            <li className="text-xs leading-relaxed text-ds-primary">
+            <li className="leading-relaxed text-ds-primary">
               {children}
             </li>
           ),
@@ -197,7 +222,7 @@ export const RichMarkdownText: React.FC<RichMarkdownTextProps> = React.memo(({ c
 
             return (
               <code
-                className="px-1.5 py-0.5 rounded-ds text-[11px] bg-ds-surface-raised text-ds-primary font-mono border border-ds-border select-all"
+                className="px-1.5 py-0.5 rounded-ds text-[0.9em] bg-ds-surface-raised text-ds-primary font-mono border border-ds-border select-all"
                 {...props}
               >
                 {children}

@@ -164,4 +164,33 @@ SELECT * FROM questions;
     expect(copySpy).toHaveBeenCalledWith('SELECT * FROM questions;');
     expect(screen.getByText('Copied')).toBeDefined();
   });
+
+  it('G4 normalizes inline code fences, bunched steps, and numbered points into distinct blocks', () => {
+    const bunchedFixture = `Consider program allocated at base address 0x2000: \`\`\`c #include <stdio.h> int main() { return 0; } \`\`\` Step 1: Evaluate 'val1 = *p1++'. Postfix has higher precedence. Step 2: Evaluate 'val2'. Output: '10 20'. 1. First trap item: - sub-bullet one - sub-bullet two. 2. Second trap item.`;
+
+    const { container } = render(<RichMarkdownText content={bunchedFixture} className="text-sm" />);
+
+    // Assert container receives custom font-size class
+    const root = container.querySelector('.rich-markdown');
+    expect(root?.className).toContain('text-sm');
+
+    // Code block was split out of the line into a real code block element with language 'c'
+    expect(screen.getByText('c')).toBeDefined();
+    expect(screen.getByText(/int main\(\)/)).toBeDefined();
+
+    // Steps are separated into distinct paragraphs
+    expect(screen.getByText(/Step 1: Evaluate/)).toBeDefined();
+    expect(screen.getByText(/Step 2: Evaluate/)).toBeDefined();
+
+    // Output is bolded
+    expect(screen.getByText('Output:')).toBeDefined();
+
+    // Numbered traps and bullet points are split into real list elements
+    const orderedList = container.querySelector('ol');
+    expect(orderedList).not.toBeNull();
+    const unorderedList = container.querySelector('ul');
+    expect(unorderedList).not.toBeNull();
+    expect(screen.getByText(/sub-bullet one/)).toBeDefined();
+    expect(screen.getByText(/sub-bullet two/)).toBeDefined();
+  });
 });

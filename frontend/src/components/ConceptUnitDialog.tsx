@@ -5,6 +5,8 @@ import { anatomyApi, ConceptUnitDto } from '../api/anatomyApi';
 import { ConceptLessonResponse, ConceptLesson, ConceptMappedQuestionItem } from '../types/journey';
 import { MathText } from './MathText';
 
+const RichMarkdownText = React.lazy(() => import('./ai/RichMarkdownText'));
+
 interface ConceptUnitDialogProps {
   slug: string | null;
   onClose: () => void;
@@ -196,7 +198,9 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
                       <Sparkles className="w-3.5 h-3.5" /> 1. Motivation
                     </h4>
                     <div className="text-xs text-neutral-300 leading-relaxed">
-                      <MathText content={motivation} />
+                      <React.Suspense fallback={<MathText content={motivation} />}>
+                        <RichMarkdownText className="text-xs" content={motivation} />
+                      </React.Suspense>
                     </div>
                   </div>
                 )}
@@ -207,7 +211,9 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
                       <CheckCircle2 className="w-3.5 h-3.5" /> 2. Core Idea & Mechanism
                     </h4>
                     <div className="text-xs text-neutral-300 leading-relaxed">
-                      <MathText content={coreIdea} />
+                      <React.Suspense fallback={<MathText content={coreIdea} />}>
+                        <RichMarkdownText className="text-xs" content={coreIdea} />
+                      </React.Suspense>
                     </div>
                   </div>
                 )}
@@ -220,7 +226,9 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
                     3. Fundamental Invariant
                   </h4>
                   <div className="text-sm font-medium text-amber-200">
-                    <MathText content={invariant} />
+                    <React.Suspense fallback={<MathText content={invariant} />}>
+                      <RichMarkdownText className="text-xs font-mono" content={invariant} />
+                    </React.Suspense>
                   </div>
                 </div>
               )}
@@ -238,8 +246,10 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-neutral-300 leading-relaxed whitespace-pre-wrap font-sans bg-[#131417] p-4 rounded-lg border border-[#202227]">
-                    <MathText content={workedExample} />
+                  <div className="text-xs text-neutral-300 leading-relaxed font-sans bg-[#131417] p-4 rounded-lg border border-[#202227]">
+                    <React.Suspense fallback={<MathText content={workedExample} />}>
+                      <RichMarkdownText className="text-xs" content={workedExample} />
+                    </React.Suspense>
                   </div>
                 </div>
               )}
@@ -251,7 +261,9 @@ export const ConceptUnitDialog: React.FC<ConceptUnitDialogProps> = ({ slug, onCl
                     <AlertTriangle className="w-3.5 h-3.5" /> 5. Common Pitfalls & Traps
                   </h4>
                   <div className="text-xs text-neutral-300 leading-relaxed">
-                    <MathText content={traps} />
+                    <React.Suspense fallback={<MathText content={traps} />}>
+                      <RichMarkdownText className="text-xs" content={traps} />
+                    </React.Suspense>
                   </div>
                 </div>
               )}
