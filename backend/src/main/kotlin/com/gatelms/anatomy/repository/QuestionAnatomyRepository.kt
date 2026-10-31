@@ -20,6 +20,8 @@ interface QuestionAnatomyRepository : JpaRepository<QuestionAnatomy, UUID> {
         FROM QuestionAnatomy qa
         WHERE qa.question.id IN :questionIds
           AND qa.status <> com.gatelms.anatomy.entity.AnatomyStatus.REJECTED
+          AND qa.parseError IS NULL
+          AND qa.testedConcept <> 'Generation parsing incomplete'
     """)
     fun findQuestionIdsWithValidAnatomy(
         @org.springframework.data.repository.query.Param("questionIds") questionIds: Collection<UUID>

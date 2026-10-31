@@ -164,4 +164,35 @@ describe('AnatomyPanel Component', () => {
       expect(screen.getByText(/CURATED/i)).toBeInTheDocument();
     });
   });
+
+  it('honest-judge PASS - renders error banner with retry button on incomplete dossier and calls generate with force=true', async () => {
+    const incompleteDossier: QuestionAnatomyDto = {
+      ...mockDossier,
+      testedConcept: 'Generation parsing incomplete',
+      parseError: 'Malformed or unparseable JSON: Unexpected character (code 118)',
+    };
+    vi.mocked(anatomyApi.getQuestionAnatomy).mockResolvedValueOnce(incompleteDossier);
+    vi.mocked(anatomyApi.generateQuestionAnatomy).mockResolvedValueOnce(mockDossier);
+
+    render(
+      <AnatomyPanel
+        questionId="q1"
+        hasAttempted={true}
+        isAdmin={true}
+        mode="study"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('anatomy-error-banner')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Anatomy Dossier Synthesis Incomplete or Provider Error/i)).toBeInTheDocument();
+    expect(screen.getByText(/Malformed or unparseable JSON/i)).toBeInTheDocument();
+
+    const retryBtn = screen.getByRole('button', { name: /Retry Generation/i });
+    await userEvent.click(retryBtn);
+
+    expect(anatomyApi.generateQuestionAnatomy).toHaveBeenCalledWith('q1', { force: true });
+  });
 });
