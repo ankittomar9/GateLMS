@@ -30,6 +30,10 @@ class OllamaTransport(
         .requestFactory(requestFactory)
         .build()
 
+    init {
+        log.info("OllamaTransport initialized with connectTimeout={}ms, readTimeout={}ms", aiProperties.http.connectTimeoutMs, aiProperties.http.chatReadTimeoutMs)
+    }
+
     override fun chat(
         spec: ProviderSpec,
         systemInstruction: String,
@@ -58,9 +62,10 @@ class OllamaTransport(
             val rawResponse = restClient.post()
                 .uri(chatEndpoint)
                 .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN)
                 .body(requestPayload)
                 .retrieve()
-                .body(String::class.java) ?: "{}"
+                .body(ByteArray::class.java)?.let { String(it, Charsets.UTF_8) } ?: "{}"
 
             val root = objectMapper.readTree(rawResponse)
             root.path("message").path("content").asText("").trim()

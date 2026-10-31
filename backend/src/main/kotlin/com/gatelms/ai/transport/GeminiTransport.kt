@@ -30,6 +30,10 @@ class GeminiTransport(
         .requestFactory(requestFactory)
         .build()
 
+    init {
+        log.info("GeminiTransport initialized with connectTimeout={}ms, readTimeout={}ms", aiProperties.http.connectTimeoutMs, aiProperties.http.chatReadTimeoutMs)
+    }
+
     override fun chat(
         spec: ProviderSpec,
         systemInstruction: String,
@@ -68,6 +72,7 @@ class GeminiTransport(
         val requestSpec = restClient.post()
             .uri(url)
             .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN)
             .body(requestPayload)
 
         if (!apiKey.isNullOrBlank()) {
@@ -76,7 +81,7 @@ class GeminiTransport(
 
         val rawResponse = requestSpec
             .retrieve()
-            .body(String::class.java) ?: "{}"
+            .body(ByteArray::class.java)?.let { String(it, Charsets.UTF_8) } ?: "{}"
 
         val root = objectMapper.readTree(rawResponse)
         val candidates = root.path("candidates")
