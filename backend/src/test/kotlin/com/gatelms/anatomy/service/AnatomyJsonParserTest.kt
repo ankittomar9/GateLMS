@@ -169,4 +169,44 @@ class AnatomyJsonParserTest {
         }
         assertTrue(ex.message!!.contains("Malformed or unparseable JSON"))
     }
+
+    @Test
+    fun `parseAndValidate should tolerate unquoted field names and single quotes`() {
+        val relaxedJson = """
+            {
+              tested_concept: 'Asymptotic notation for algorithm analysis',
+              invariant_rule: 'Growth rate bounds hold for large n',
+              trap_analysis: [],
+              prerequisites: [],
+              concept_tags: ['asymptotic-notation'],
+              similar_pattern_hint: 'Watch for constant factor limits'
+            }
+        """.trimIndent()
+
+        val result = validator.parseAndValidate(relaxedJson)
+        assertEquals("Asymptotic notation for algorithm analysis", result.testedConcept)
+        assertEquals(listOf("asymptotic-notation"), result.conceptTags)
+    }
+
+    @Test
+    fun `parseAndValidate should repair unescaped LaTeX backslashes in anatomy payloads`() {
+        val latexJson = """
+            {
+              "tested_concept": "Time complexity ${'$'}T(n) \in \Theta(n \log n)${'$'} recurrence",
+              "invariant_rule": "For all ${'$'}n \ge n_0${'$'}, ${'$'}f(n) \le c \cdot g(n)${'$'} holds",
+              "trap_analysis": [],
+              "prerequisites": [],
+              "concept_tags": ["recurrence-relations"],
+              "similar_pattern_hint": "Check ${'$'}\log_b a${'$'} vs ${'$'}f(n)${'$'}"
+            }
+        """.trimIndent()
+
+        val result = validator.parseAndValidate(latexJson)
+        assertTrue(result.testedConcept.contains("\\in"))
+        assertTrue(result.testedConcept.contains("\\Theta"))
+        assertTrue(result.invariantRule!!.contains("\\ge"))
+        assertTrue(result.invariantRule!!.contains("\\le"))
+        assertTrue(result.invariantRule!!.contains("\\cdot"))
+        assertTrue(result.similarPatternHint!!.contains("\\log_b"))
+    }
 }

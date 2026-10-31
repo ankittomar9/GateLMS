@@ -105,4 +105,56 @@ class TopicPrimerValidationTest {
         }
         assertTrue(ex.message!!.contains("motivation must not be blank"))
     }
+
+    @Test
+    fun `parseAndValidatePrimer parses and preserves unescaped LaTeX backslashes without corruption`() {
+        // Raw JSON string as produced by an LLM with single-escaped LaTeX commands
+        val rawAiResponse = """
+            ```json
+            {
+              "motivation": "Asymptotic analysis characterizes growth as ${'$'}n \to \infty${'$'}. For functions ${'$'}f(n) \in \Theta(g(n))${'$'} where ${'$'}k \in \mathbb{N}${'$'}, it bounds asymptotic complexity.",
+              "core_idea": "Formal definition: ${'$'}\{f(n) : \exists c_1, c_2 > 0, n_0 \text{ s.t. } 0 \le c_1 g(n) \le f(n) \le c_2 g(n) \ \forall n \ge n_0\}${'$'}. Notice ${'$'}\frac{a}{b}${'$'} and ${'$'}\beta \neq 0${'$'}.",
+              "invariant": "For all ${'$'}n \ge n_0${'$'}, ${'$'}0 \le f(n) \le c \cdot g(n)${'$'}",
+              "worked_example": "Canonical Recurrence Walkthrough: Step 1: Consider the recurrence relation ${'$'}T(n) = 2T(n/2) + n${'$'}. Here we identify constants ${'$'}a = 2, b = 2${'$'}, and driving function ${'$'}f(n) = n${'$'}. Step 2: Compute the critical exponent ${'$'}\log_b a = \log_2 2 = 1${'$'}. Comparing the growth rate of the polynomial watershed against the driving function, we observe that ${'$'}f(n) = \Theta(n^{\log_b a}) = \Theta(n^1) = \Theta(n)${'$'}. Because both terms possess identical asymptotic growth orders, Master Theorem Case 2 directly applies without any modifications. Step 3: Conclude that the overall running time complexity evaluates precisely to ${'$'}T(n) = \Theta(n \log n)${'$'}. Step 4: Verification using substitution method. Assume by inductive hypothesis that ${'$'}T(k) \le c k \log k${'$'} holds for all smaller problem sizes ${'$'}k < n${'$'}. Substituting into recurrence yields ${'$'}T(n) = 2c(n/2)\log(n/2) + n = cn\log n - cn\log 2 + n${'$'}. For binary logarithm, ${'$'}\log 2 = 1${'$'}, leading directly to ${'$'}T(n) = cn\log n + (1-c)n${'$'}. Step 5: For any constant choice ${'$'}c \ge 1${'$'}, the trailing linear component satisfies ${'$'}(1-c)n \le 0${'$'}. Thus ${'$'}T(n) \le cn\log n${'$'}, completing the formal mathematical induction for all ${'$'}n \ge 1${'$'} rigorously without loss of generality and confirming tight asymptotic containment.",
+              "traps": "Confusing ${'$'}O${'$'} (upper bound) with ${'$'}\Theta${'$'} (tight bound). Writing ${'$'}f(n) = O(g(n))${'$'} is set membership ${'$'}f(n) \in O(g(n))${'$'}."
+            }
+            ```
+        """.trimIndent()
+
+        val parsed = validator.parseAndValidatePrimer(rawAiResponse)
+        assertNotNull(parsed)
+        // Verify motivation contains intact LaTeX commands (\to, \infty, \in, \Theta, \mathbb)
+        assertTrue(parsed.motivation.contains("\\to"))
+        assertTrue(parsed.motivation.contains("\\infty"))
+        assertTrue(parsed.motivation.contains("\\in"))
+        assertTrue(parsed.motivation.contains("\\Theta"))
+        assertTrue(parsed.motivation.contains("\\mathbb"))
+
+        // Verify coreIdea contains intact \frac, \le, \text, \forall, \ge, \beta, \neq (NOT transformed into \f formfeed or \t tab or \b backspace)
+        assertTrue(parsed.coreIdea.contains("\\frac{a}{b}"))
+        assertTrue(parsed.coreIdea.contains("\\le"))
+        assertTrue(parsed.coreIdea.contains("\\ge"))
+        assertTrue(parsed.coreIdea.contains("\\forall"))
+        assertTrue(parsed.coreIdea.contains("\\beta"))
+        assertTrue(parsed.coreIdea.contains("\\neq"))
+        assertFalse(parsed.coreIdea.contains("\u000c")) // No form feed
+        assertFalse(parsed.coreIdea.contains("\u0008")) // No backspace
+    }
+
+    @Test
+    fun `repairJsonEscapes correctly handles unicode vs latex and legitimate newlines`() {
+        val input = """{"text":"Newline:\nNext line. Valid unicode: \u00A0. Latex: \underbrace{x+y} and \to \infty and \neq 0 and \frac{1}{2} and \\alreadyEscaped."}"""
+        val repaired = AnatomyValidationService.repairJsonEscapes(input)
+
+        // Standard newline \n and valid \u00A0 preserved
+        assertTrue(repaired.contains("\\nNext line"))
+        assertTrue(repaired.contains("\\u00A0"))
+
+        // LaTeX commands escaped
+        assertTrue(repaired.contains("\\\\underbrace"))
+        assertTrue(repaired.contains("\\\\to"))
+        assertTrue(repaired.contains("\\\\neq"))
+        assertTrue(repaired.contains("\\\\frac"))
+        assertTrue(repaired.contains("\\\\alreadyEscaped"))
+    }
 }

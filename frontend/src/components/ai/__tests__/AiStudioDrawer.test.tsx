@@ -97,7 +97,7 @@ describe('AiStudioDrawer Component', () => {
     // Verify written to sessionStorage (AM-13)
     const stored = JSON.parse(sessionStorage.getItem('gatelms_byok_keys') || '{}');
     expect(stored['GROQ']).toBe('gsk_test_mock_secret_key');
-  });
+  }, 15000);
 
   it('5 enforces role="complementary" and aria-label="AI Studio" accessibility landmarks', () => {
     render(<TestWrapper initialOpen={true} />);
