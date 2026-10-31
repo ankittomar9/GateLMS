@@ -250,6 +250,7 @@ Important Rules:
 2. Anti-fabrication (AF-1): Never cite student population statistics, exam pass rates, or claim that a percentage/majority of students make a particular mistake (e.g., do NOT write '70% of students fail this' or 'majority of candidates get confused'). Focus purely on the scientific formulas, mathematical derivations, protocols, and technical distractor logic.
 3. KaTeX is supported for mathematical notation (\${'$'}math\${'$'}). When writing LaTeX commands in JSON, always escape backslashes (e.g. \\in, \\infty, \\le, \\ge, \\Theta, \\frac).
 4. Return ONLY valid JSON.
+5. Format with structured Markdown: place code in fenced blocks on their own lines (```c\n...code...\n```), and separate paragraphs and numbered steps with blank lines (\n\n) for clean rendering.
             """.trimIndent())
         }
     }

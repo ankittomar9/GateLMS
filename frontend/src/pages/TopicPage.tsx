@@ -28,6 +28,8 @@ import { TopicConceptsTab } from '../components/TopicConceptsTab';
 import { useQuestions } from '../hooks/useQueries';
 import { useAuth } from '../context/AuthContext';
 
+const RichMarkdownText = React.lazy(() => import('../components/ai/RichMarkdownText'));
+
 export const TopicPage: React.FC = () => {
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
@@ -506,7 +508,9 @@ export const TopicPage: React.FC = () => {
                       Motivation & Engineering Context
                     </div>
                     <div className="text-sm text-ds-primary leading-relaxed">
-                      <MathText content={primer.motivation} />
+                      <React.Suspense fallback={<MathText content={primer.motivation} />}>
+                        <RichMarkdownText className="text-sm" content={primer.motivation} />
+                      </React.Suspense>
                     </div>
                   </div>
 
@@ -516,7 +520,9 @@ export const TopicPage: React.FC = () => {
                       Core Idea & Definitions
                     </div>
                     <div className="text-sm text-ds-primary leading-relaxed">
-                      <MathText content={primer.coreIdea} />
+                      <React.Suspense fallback={<MathText content={primer.coreIdea} />}>
+                        <RichMarkdownText className="text-sm" content={primer.coreIdea} />
+                      </React.Suspense>
                     </div>
                   </div>
 
@@ -527,7 +533,9 @@ export const TopicPage: React.FC = () => {
                         Core Invariant
                       </div>
                       <div className="text-sm text-ds-primary font-mono leading-relaxed bg-ds-bg/50 p-3 rounded border border-ds-border">
-                        <MathText content={primer.invariant} />
+                        <React.Suspense fallback={<MathText content={primer.invariant} />}>
+                          <RichMarkdownText className="text-sm font-mono" content={primer.invariant} />
+                        </React.Suspense>
                       </div>
                     </div>
                   )}
@@ -541,7 +549,9 @@ export const TopicPage: React.FC = () => {
                       <span className="text-[11px] font-mono text-ds-muted">Step-by-Step Walkthrough</span>
                     </div>
                     <div className="text-sm text-ds-primary leading-relaxed space-y-2">
-                      <MathText content={primer.workedExample} />
+                      <React.Suspense fallback={<MathText content={primer.workedExample} />}>
+                        <RichMarkdownText className="text-sm" content={primer.workedExample} />
+                      </React.Suspense>
                     </div>
                   </div>
 
@@ -553,7 +563,9 @@ export const TopicPage: React.FC = () => {
                         <span>Examiner Traps & Common Distractors</span>
                       </div>
                       <div className="text-sm text-ds-secondary leading-relaxed">
-                        <MathText content={primer.traps} />
+                        <React.Suspense fallback={<MathText content={primer.traps} />}>
+                          <RichMarkdownText className="text-sm" content={primer.traps} />
+                        </React.Suspense>
                       </div>
                     </div>
                   )}

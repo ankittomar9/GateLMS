@@ -64,6 +64,11 @@ vi.mock('../../components/MathText', () => ({
   MathText: ({ content }: { content: string }) => <span>{content}</span>,
 }));
 
+vi.mock('../../components/ai/RichMarkdownText', () => ({
+  RichMarkdownText: ({ content }: { content: string }) => <span>{content}</span>,
+  default: ({ content }: { content: string }) => <span>{content}</span>,
+}));
+
 const mockPrimerResponse: TopicPrimerResponse = {
   primer: {
     id: 'primer-1',

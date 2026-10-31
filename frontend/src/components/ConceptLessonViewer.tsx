@@ -18,6 +18,8 @@ import { journeyApi } from '../api/journeyApi';
 import { ConceptLessonResponse } from '../types/journey';
 import { MathText } from './MathText';
 
+const RichMarkdownText = React.lazy(() => import('./ai/RichMarkdownText'));
+
 interface ConceptLessonViewerProps {
   slug: string;
   isAdmin: boolean;
@@ -467,7 +469,9 @@ export const ConceptLessonViewer: React.FC<ConceptLessonViewerProps> = ({
                 <span>1. Motivation</span>
               </h4>
               <div className="text-xs text-ds-secondary leading-relaxed" data-testid="lesson-motivation">
-                <MathText content={lesson.motivation} />
+                <React.Suspense fallback={<MathText content={lesson.motivation} />}>
+                  <RichMarkdownText className="text-xs" content={lesson.motivation} />
+                </React.Suspense>
               </div>
             </div>
 
@@ -477,7 +481,9 @@ export const ConceptLessonViewer: React.FC<ConceptLessonViewerProps> = ({
                 <span>2. Core Idea & Mechanism</span>
               </h4>
               <div className="text-xs text-ds-secondary leading-relaxed" data-testid="lesson-core-idea">
-                <MathText content={lesson.coreIdea} />
+                <React.Suspense fallback={<MathText content={lesson.coreIdea} />}>
+                  <RichMarkdownText className="text-xs" content={lesson.coreIdea} />
+                </React.Suspense>
               </div>
             </div>
           </div>
@@ -489,7 +495,9 @@ export const ConceptLessonViewer: React.FC<ConceptLessonViewerProps> = ({
                 3. Fundamental Invariant
               </h4>
               <div className="text-xs font-medium text-ds-primary" data-testid="lesson-invariant">
-                <MathText content={lesson.invariant} />
+                <React.Suspense fallback={<MathText content={lesson.invariant} />}>
+                  <RichMarkdownText className="text-xs font-mono" content={lesson.invariant} />
+                </React.Suspense>
               </div>
             </div>
           )}
@@ -512,10 +520,12 @@ export const ConceptLessonViewer: React.FC<ConceptLessonViewerProps> = ({
               )}
             </div>
             <div
-              className="text-xs text-ds-secondary leading-relaxed whitespace-pre-wrap font-sans bg-ds-surface-raised p-4 rounded-ds border border-ds-border"
+              className="text-xs text-ds-secondary leading-relaxed font-sans bg-ds-surface-raised p-4 rounded-ds border border-ds-border"
               data-testid="lesson-worked-example"
             >
-              <MathText content={lesson.workedExample} />
+              <React.Suspense fallback={<MathText content={lesson.workedExample} />}>
+                <RichMarkdownText className="text-xs" content={lesson.workedExample} />
+              </React.Suspense>
             </div>
           </div>
 
@@ -527,7 +537,9 @@ export const ConceptLessonViewer: React.FC<ConceptLessonViewerProps> = ({
                 <span>5. Common Pitfalls & Traps</span>
               </h4>
               <div className="text-xs text-ds-secondary leading-relaxed" data-testid="lesson-traps">
-                <MathText content={lesson.traps} />
+                <React.Suspense fallback={<MathText content={lesson.traps} />}>
+                  <RichMarkdownText className="text-xs" content={lesson.traps} />
+                </React.Suspense>
               </div>
             </div>
           )}
