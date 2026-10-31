@@ -7,13 +7,15 @@ import com.gatelms.dto.*
 import com.gatelms.entity.UserRole
 import com.gatelms.security.CurrentUserProvider
 import com.gatelms.service.JourneyService
+import com.gatelms.service.TopicWorkbookPdfService
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
-import org.springframework.http.ResponseEntity
+import org.springframework.http.*
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 
 @RestController
@@ -23,7 +25,8 @@ class JourneyController(
     private val topicPrimerService: TopicPrimerService,
     private val currentUserProvider: CurrentUserProvider,
     private val conceptCoverageService: ConceptCoverageService,
-    private val conceptLessonService: com.gatelms.anatomy.service.ConceptLessonService
+    private val conceptLessonService: com.gatelms.anatomy.service.ConceptLessonService,
+    private val topicWorkbookPdfService: TopicWorkbookPdfService? = null
 ) {
     @GetMapping("/journey/overview")
     fun getOverview(): ResponseEntity<List<JourneyOverviewSubjectDto>> {
@@ -70,6 +73,20 @@ class JourneyController(
     fun deletePrimer(@PathVariable topicId: String): ResponseEntity<Map<String, String>> {
         topicPrimerService.deletePrimer(topicId)
         return ResponseEntity.ok(mapOf("status" to "deleted", "topicId" to topicId))
+    }
+
+    @GetMapping("/journey/topics/{topicId}/workbook/pdf", produces = [MediaType.APPLICATION_PDF_VALUE])
+    fun downloadWorkbookPdf(@PathVariable topicId: String): ResponseEntity<ByteArray> {
+        val service = topicWorkbookPdfService ?: throw IllegalStateException("TopicWorkbookPdfService not available")
+        val (filename, pdfBytes) = service.generateWorkbookPdf(topicId)
+        val disposition = ContentDisposition.attachment()
+            .filename(filename, StandardCharsets.UTF_8)
+            .build()
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+            .cacheControl(CacheControl.noStore())
+            .body(pdfBytes)
     }
 
     @GetMapping("/journey/continue")
