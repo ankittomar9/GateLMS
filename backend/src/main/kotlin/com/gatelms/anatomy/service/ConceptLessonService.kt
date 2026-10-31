@@ -1,5 +1,6 @@
 package com.gatelms.anatomy.service
 
+import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -44,6 +45,10 @@ class ConceptLessonService(
     private val log = LoggerFactory.getLogger(ConceptLessonService::class.java)
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .configure(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true)
+        .configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true)
+        .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
+        .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true)
 
     private val populationStatRegex = Regex(
         "(?i)(\\d+\\s*(%|percent)\\s+(of\\s+)?(students|candidates|aspirants|test-takers|examinees|cohort|learners)|" +
@@ -358,19 +363,23 @@ Important Rules (Binding PC-2 and AF-1 Contract):
 
     private fun extractJson(raw: String): String {
         val trimmed = raw.trim()
-        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-            return trimmed
+        val candidate = if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            trimmed
+        } else {
+            val codeFenceMatch = Regex("```(?:json)?\\s*([\\s\\S]*?)\\s*```", RegexOption.IGNORE_CASE).find(trimmed)
+            if (codeFenceMatch != null) {
+                codeFenceMatch.groupValues[1].trim()
+            } else {
+                val firstBrace = trimmed.indexOf('{')
+                val lastBrace = trimmed.lastIndexOf('}')
+                if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
+                    trimmed.substring(firstBrace, lastBrace + 1)
+                } else {
+                    trimmed
+                }
+            }
         }
-        val codeFenceMatch = Regex("```(?:json)?\\s*([\\s\\S]*?)\\s*```").find(trimmed)
-        if (codeFenceMatch != null) {
-            return codeFenceMatch.groupValues[1].trim()
-        }
-        val firstBrace = trimmed.indexOf('{')
-        val lastBrace = trimmed.lastIndexOf('}')
-        if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
-            return trimmed.substring(firstBrace, lastBrace + 1)
-        }
-        return trimmed
+        return AnatomyValidationService.repairJsonEscapes(candidate)
     }
 
     private fun findConceptTag(slug: String): ConceptTag {

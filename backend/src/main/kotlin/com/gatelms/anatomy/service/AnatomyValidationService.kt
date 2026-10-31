@@ -1,5 +1,6 @@
 package com.gatelms.anatomy.service
 
+import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -11,6 +12,10 @@ import org.springframework.stereotype.Service
 class AnatomyValidationService(
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .configure(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true)
+        .configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true)
+        .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
+        .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true)
 ) {
     private val slugRegex = Regex("^[a-z0-9]+(-[a-z0-9]+)*$")
     private val populationStatRegex = Regex(
@@ -22,19 +27,23 @@ class AnatomyValidationService(
 
     fun extractJson(raw: String): String {
         val trimmed = raw.trim()
-        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-            return trimmed
+        val candidate = if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            trimmed
+        } else {
+            val codeFenceMatch = Regex("```(?:json)?\\s*([\\s\\S]*?)\\s*```", RegexOption.IGNORE_CASE).find(trimmed)
+            if (codeFenceMatch != null) {
+                codeFenceMatch.groupValues[1].trim()
+            } else {
+                val firstBrace = trimmed.indexOf('{')
+                val lastBrace = trimmed.lastIndexOf('}')
+                if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
+                    trimmed.substring(firstBrace, lastBrace + 1)
+                } else {
+                    trimmed
+                }
+            }
         }
-        val codeFenceMatch = Regex("```(?:json)?\\s*([\\s\\S]*?)\\s*```").find(trimmed)
-        if (codeFenceMatch != null) {
-            return codeFenceMatch.groupValues[1].trim()
-        }
-        val firstBrace = trimmed.indexOf('{')
-        val lastBrace = trimmed.lastIndexOf('}')
-        if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
-            return trimmed.substring(firstBrace, lastBrace + 1)
-        }
-        return trimmed
+        return repairJsonEscapes(candidate)
     }
 
     fun parseAndValidate(rawResponse: String): AnatomyJsonPayload {
@@ -234,6 +243,187 @@ class AnatomyValidationService(
 
     companion object {
         const val WORKED_EXAMPLE_MIN_WORDS = 150
+
+        /**
+         * Repairs unescaped LaTeX backslashes inside JSON string literals while preserving
+         * valid JSON escapes (\", \\, \/, \uXXXX, and standard control escapes \n, \r, \t, \b, \f).
+         *
+         * When LLMs emit LaTeX formulas (e.g. $n \in \mathbb{N}$, $n \to \infty$, $f(n) \le c \cdot g(n)$)
+         * inside JSON string fields, they frequently omit the second backslash.
+         * RFC 8259 forbids unescaped backslashes such as \i, \l, \g, \c, \O, \T, etc.
+         * Furthermore, standard JSON parsers turn \frac into <formfeed>rac and \to into <tab>o,
+         * destroying math expressions.
+         *
+         * This scanner detects string literal boundaries and converts single-escaped LaTeX commands
+         * into valid double-escaped JSON (\\in, \\to, \\frac, \\le, etc.), preserving exact LaTeX syntax
+         * for downstream KaTeX rendering.
+         */
+        fun repairJsonEscapes(json: String): String {
+            if (json.isEmpty()) return json
+            val sb = StringBuilder(json.length + 64)
+            var inString = false
+            var i = 0
+            val len = json.length
+
+            while (i < len) {
+                val c = json[i]
+                if (!inString) {
+                    if (c == '"') {
+                        inString = true
+                    }
+                    sb.append(c)
+                    i++
+                } else {
+                    if (c == '"') {
+                        inString = false
+                        sb.append(c)
+                        i++
+                    } else if (c == '\\') {
+                        if (i + 1 >= len) {
+                            // Trailing backslash
+                            sb.append("\\\\")
+                            i++
+                            continue
+                        }
+                        val next = json[i + 1]
+                        when {
+                            // Valid standard JSON escapes that must remain intact
+                            next == '"' || next == '\\' || next == '/' -> {
+                                sb.append('\\')
+                                sb.append(next)
+                                i += 2
+                            }
+                            // Unicode escape \uXXXX vs LaTeX commands starting with u (\underbrace, \uparrow, etc.)
+                            next == 'u' -> {
+                                val isHex4 = (i + 5 < len) &&
+                                    json[i + 2].isHexDigit() &&
+                                    json[i + 3].isHexDigit() &&
+                                    json[i + 4].isHexDigit() &&
+                                    json[i + 5].isHexDigit()
+                                if (isHex4) {
+                                    sb.append(json, i, i + 6)
+                                    i += 6
+                                } else {
+                                    sb.append("\\\\u")
+                                    i += 2
+                                }
+                            }
+                            // Form feed \f vs LaTeX \frac, \forall, \flat, \footnote, etc.
+                            next == 'f' -> {
+                                if (json.getOrNull(i + 2).isAsciiLetter()) {
+                                    sb.append("\\\\f")
+                                } else {
+                                    sb.append("\\f")
+                                }
+                                i += 2
+                            }
+                            // Backspace \b vs LaTeX \beta, \binom, \mathbf, \boldsymbol, \bar, \bmod, etc.
+                            next == 'b' -> {
+                                if (json.getOrNull(i + 2).isAsciiLetter()) {
+                                    sb.append("\\\\b")
+                                } else {
+                                    sb.append("\\b")
+                                }
+                                i += 2
+                            }
+                            // Tab \t vs LaTeX commands (\to, \text, \times, \theta, \tau, \tan, etc.)
+                            next == 't' -> {
+                                if (isLatexTCommand(json, i + 1)) {
+                                    sb.append("\\\\t")
+                                } else {
+                                    sb.append("\\t")
+                                }
+                                i += 2
+                            }
+                            // Newline \n vs LaTeX commands (\neq, \ne, \notin, \nabla, etc.)
+                            next == 'n' -> {
+                                if (isLatexNCommand(json, i + 1)) {
+                                    sb.append("\\\\n")
+                                } else {
+                                    sb.append("\\n")
+                                }
+                                i += 2
+                            }
+                            // Carriage return \r vs LaTeX commands (\rho, \right, \rangle, etc.)
+                            next == 'r' -> {
+                                if (isLatexRCommand(json, i + 1)) {
+                                    sb.append("\\\\r")
+                                } else {
+                                    sb.append("\\r")
+                                }
+                                i += 2
+                            }
+                            // Any other character after backslash is an invalid escape in JSON (e.g. \i, \l, \g, \c, \O, \T, \{, \}, etc.)
+                            else -> {
+                                sb.append("\\\\")
+                                sb.append(next)
+                                i += 2
+                            }
+                        }
+                    } else {
+                        sb.append(c)
+                        i++
+                    }
+                }
+            }
+            return sb.toString()
+        }
+
+        private fun Char.isHexDigit(): Boolean =
+            this in '0'..'9' || this in 'a'..'f' || this in 'A'..'F'
+
+        private fun Char?.isAsciiLetter(): Boolean =
+            this != null && ((this in 'a'..'z') || (this in 'A'..'Z'))
+
+        private fun isLatexTCommand(json: String, startIdx: Int): Boolean {
+            val sub = json.substring(startIdx)
+            return when {
+                sub.startsWith("text") -> true
+                sub.startsWith("times") && !sub.getOrNull(5).isAsciiLetter() -> true
+                sub.startsWith("theta") && !sub.getOrNull(5).isAsciiLetter() -> true
+                sub.startsWith("tau") && !sub.getOrNull(3).isAsciiLetter() -> true
+                sub.startsWith("tanh") && !sub.getOrNull(4).isAsciiLetter() -> true
+                sub.startsWith("tan") && !sub.getOrNull(3).isAsciiLetter() -> true
+                sub.startsWith("top") && !sub.getOrNull(3).isAsciiLetter() -> true
+                sub.startsWith("tilde") && !sub.getOrNull(5).isAsciiLetter() -> true
+                sub.startsWith("tfrac") -> true
+                sub.startsWith("triangle") && !sub.getOrNull(8).isAsciiLetter() -> true
+                sub.startsWith("therefore") && !sub.getOrNull(9).isAsciiLetter() -> true
+                sub.startsWith("tag") && !sub.getOrNull(3).isAsciiLetter() -> true
+                sub.startsWith("to") && !sub.getOrNull(2).isAsciiLetter() -> true
+                else -> false
+            }
+        }
+
+        private fun isLatexNCommand(json: String, startIdx: Int): Boolean {
+            val sub = json.substring(startIdx)
+            return when {
+                sub.startsWith("neq") && !sub.getOrNull(3).isAsciiLetter() -> true
+                sub.startsWith("notin") && !sub.getOrNull(5).isAsciiLetter() -> true
+                sub.startsWith("nabla") && !sub.getOrNull(5).isAsciiLetter() -> true
+                sub.startsWith("natural") && !sub.getOrNull(7).isAsciiLetter() -> true
+                sub.startsWith("neg") && !sub.getOrNull(3).isAsciiLetter() -> true
+                sub.startsWith("not") && !sub.getOrNull(3).isAsciiLetter() -> true
+                sub.startsWith("nu") && !sub.getOrNull(2).isAsciiLetter() -> true
+                sub.startsWith("ne") && !sub.getOrNull(2).isAsciiLetter() -> true
+                else -> false
+            }
+        }
+
+        private fun isLatexRCommand(json: String, startIdx: Int): Boolean {
+            val sub = json.substring(startIdx)
+            return when {
+                sub.startsWith("rightarrow") && !sub.getOrNull(10).isAsciiLetter() -> true
+                sub.startsWith("Rightarrow") && !sub.getOrNull(10).isAsciiLetter() -> true
+                sub.startsWith("right") && !sub.getOrNull(5).isAsciiLetter() -> true
+                sub.startsWith("rho") && !sub.getOrNull(3).isAsciiLetter() -> true
+                sub.startsWith("rangle") && !sub.getOrNull(6).isAsciiLetter() -> true
+                sub.startsWith("rceil") && !sub.getOrNull(5).isAsciiLetter() -> true
+                sub.startsWith("rfloor") && !sub.getOrNull(6).isAsciiLetter() -> true
+                sub.startsWith("real") && !sub.getOrNull(4).isAsciiLetter() -> true
+                else -> false
+            }
+        }
     }
 }
 

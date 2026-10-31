@@ -1,6 +1,7 @@
 package com.gatelms.anatomy.service
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -68,6 +69,10 @@ class ConceptService(
     private val log = LoggerFactory.getLogger(ConceptService::class.java)
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .configure(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true)
+        .configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true)
+        .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
+        .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true)
 
     fun getConcept(slug: String): ConceptUnitDto {
         val unit = conceptUnitRepository.findByConceptTagSlug(slug)
