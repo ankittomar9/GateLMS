@@ -105,15 +105,60 @@ Every critical calculation (especially the GATE scoring engine: MCQ negative mar
 - Secret hygiene (G5) applies strictly before pushing any collab artifact.
 - Raw session transcripts stay out of git; `collab/` files are the only durable records.
 
-### G9 — Branch-per-Work-Package & Integration Protocol
-1. Every code implementation for a Work Package (WP) must be executed on a dedicated branch cut fresh from `origin/master`:
-   `git checkout -b <phase>/wp<N>-<slug> origin/master`
-2. One branch carries strictly one work package's deliverables. Mixing packages on a single branch is prohibited.
-3. Code reaches `master` ONLY via a non-fast-forward merge (`--no-ff`):
-   `git merge --no-ff <phase>/wp<N>-<slug> -m "feat(<phase>): WP<N> <title>"`
-4. Feature branches must be pushed to GitHub and NEVER deleted after merge; all branches must be permanently preserved in GitHub for complete audit and branch history.
-5. `--force-with-lease` is permitted ONLY on the executor's own un-merged feature branch; force-pushing `master` is strictly prohibited.
+### G9 — Strict Branch Hygiene & Integration Protocol (Zero Code Changes on Master)
 
-6. Doc-only commits touching strictly `collab/**` may land directly on `master` with standard commit prefixes.
+> **MANDATORY HARD RULE: ZERO CODE CHANGES ON MASTER.**
+> Under NO circumstances may any code change, bug fix, refactor, or feature implementation be performed directly on `master`.
+> The working tree on `master` must remain pristine. Every single code modification MUST happen on an isolated, dedicated branch cut fresh from `master`.
+
+#### 1. Branch Naming Discipline
+All branches must use clear, descriptive names reflecting the domain, feature/bug, and explicit sequential fixup numbering:
+- **Features / Work Packages:** `<domain>/<feature-slug>`
+  *Examples:* `ai/studio-ux-1`, `phase8/wp2-concept-lessons`, `auth/jwt-rotation`
+- **Bug Fixes / Investigations:** `<domain>/<feature-or-bug-slug>-fix`
+  *Examples:* `ai/topic-primer-latex-escape-fix`, `db/connection-leak-fix`
+- **Sequential Fixups:** `<domain>/<feature-slug>-fixup-<N>` (where `<N>` is an incrementing integer `1, 2, 3... 10... 100`)
+  *Examples:* `ai/provider-adapter-fixup-1`, `ai/studio-ux-fixup-1`, `ai/studio-ux-fixup-2`
+  *Rule:* If an issue, audit finding, or regression occurs on an existing feature, cut `...-fixup-<N>` with the next sequential integer. Never overwrite or re-use an existing branch name.
+
+#### 2. Strict Workflow Execution Steps
+Every development/fix task must follow this exact sequence:
+1. **Sync Base:** Ensure `master` is clean and up to date with remote:
+   ```bash
+   git checkout master
+   git pull origin master
+   ```
+2. **Cut Dedicated Branch:**
+   ```bash
+   git checkout -b <domain>/<branch-name> origin/master
+   ```
+3. **Execute & Test:** Make changes ONLY while checked out on that branch. Run all required honest-judge tests, unit tests, and full test suites.
+4. **Author Report:** Write the execution report in `collab/gemini/<TASK>-REPORT.md`.
+5. **Commit on Branch:** Stage and commit changes atomically:
+   ```bash
+   git commit -m "<type>(<scope>): <clear description>"
+   ```
+6. **Push Branch to Remote:** Push the branch to GitHub so all changes and diffs are immediately visible and reviewable:
+   ```bash
+   git push -u origin <domain>/<branch-name>
+   ```
+7. **Merge to Master with Non-Fast-Forward (`--no-ff`):**
+   ```bash
+   git checkout master
+   git merge --no-ff <domain>/<branch-name> -m "merge(<scope>): <description>"
+   ```
+8. **Push Master to Remote:**
+   ```bash
+   git push origin master
+   ```
+9. **Permanent Branch Retention:**
+   NEVER delete the feature or fixup branch locally or remotely (`git branch -d` and `git push origin --delete` are strictly forbidden). All branches must be permanently retained in GitHub for full traceability, audit history, and visual commit tracking.
+
+#### 3. Strict Prohibitions
+- **NO Direct Edits on Master:** Never edit or stage code files while on `master`.
+- **NO Fast-Forward Merges to Master:** Always use `git merge --no-ff` so the merge commit clearly encapsulates the branch topology.
+- **NO Mixing of Tasks:** One branch carries strictly one feature or fixup.
+- **NO Force-Pushing Master:** `--force-with-lease` is allowed ONLY on the executor's own unmerged branch. Force-pushing `master` is completely prohibited.
+- **Doc-only commits:** Only documentation changes strictly inside `collab/**` or project governance docs may land directly on `master` when explicitly permitted; all code changes must follow the branch workflow above.
 
 
