@@ -122,7 +122,7 @@ public class ConceptSeedRunner implements ApplicationRunner {
                         continue;
                     }
 
-                    Topic topic = topicRepository.findBySlug(raw.topicSlug());
+                    Topic topic = topicRepository.findBySlug(raw.topicSlug()).orElse(null);
                     if (topic == null) {
                         topic = topicRepository.findById(raw.topicSlug()).orElse(null);
                     }
@@ -193,7 +193,7 @@ public class ConceptSeedRunner implements ApplicationRunner {
                         continue;
                     }
 
-                    Question question = questionRepository.findByExternalId(raw.externalId());
+                    Question question = questionRepository.findByExternalId(raw.externalId()).orElse(null);
                     if (question == null) {
                         rejected++;
                         rejectionReasons.add("Line " + lineNum + ": Question not found with externalId '" + raw.externalId() + "'");

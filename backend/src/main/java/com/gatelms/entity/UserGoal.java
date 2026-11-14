@@ -43,6 +43,7 @@ public class UserGoal {
     public void setDailyTargetQuestions(Integer dailyTargetQuestions) { this.dailyTargetQuestions = dailyTargetQuestions; }
 
     public Boolean getStreakProtection() { return streakProtection; }
+    public boolean isStreakProtection() { return Boolean.TRUE.equals(streakProtection); }
     public void setStreakProtection(Boolean streakProtection) { this.streakProtection = streakProtection; }
 
     public Instant getUpdatedAt() { return updatedAt; }

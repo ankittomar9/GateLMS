@@ -1,7 +1,7 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.StatsDtos.ReadinessResponse;
-import com.gatelms.dto.StatsDtos.SubjectReadinessDto;
+import com.gatelms.dto.ReadinessResponse;
+import com.gatelms.dto.SubjectReadinessDto;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -24,7 +24,7 @@ public class ReadinessCalculationEngine {
     ) {}
 
     public record QuestionVerdict(
-        UUID questionId,
+        String questionId,
         String subjectId,
         String topicId,
         boolean isCorrect

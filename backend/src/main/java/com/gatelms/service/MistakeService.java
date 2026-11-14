@@ -1,7 +1,7 @@
 package com.gatelms.service;
 
 import com.gatelms.anatomy.repository.QuestionConceptTagRepository;
-import com.gatelms.dto.MistakeDtos.*;
+import com.gatelms.dto.*;
 import com.gatelms.entity.*;
 import com.gatelms.error.Exceptions.EntityNotFoundException;
 import com.gatelms.error.Exceptions.ValidationException;
@@ -212,14 +212,9 @@ public class MistakeService {
 
         return new MistakeDto(
             log.getId(),
-            log.getUserId(),
             q != null ? q.getId() : null,
             q != null ? q.getExternalId() : null,
-            q != null ? q.getStatement() : null,
-            q != null ? q.getType() : null,
-            q != null && q.getTopic() != null ? q.getTopic().getId() : null,
-            q != null && q.getTopic() != null ? q.getTopic().getName() : null,
-            q != null && q.getSubject() != null ? q.getSubject().getId() : null,
+            q != null ? q.getStatement() : "",
             log.getAttemptAnswer() != null ? log.getAttemptAnswer().getId() : null,
             log.getErrorCategory(),
             log.getDescription(),
@@ -227,8 +222,9 @@ public class MistakeService {
             log.getLoggedAt(),
             log.getReviewCount(),
             log.getNextReviewAt(),
-            log.getResolved(),
-            tags
+            log.isResolved(),
+            tags,
+            q != null && q.getTopic() != null ? q.getTopic().getId() : null
         );
     }
 }

@@ -25,6 +25,14 @@ public class Achievement {
 
     public Achievement() {}
 
+    public Achievement(UUID userId, String code, Instant earnedAt) {
+        this(UUID.randomUUID(), userId, code, earnedAt);
+    }
+
+    public Achievement(UUID userId, String code) {
+        this(UUID.randomUUID(), userId, code, Instant.now());
+    }
+
     public Achievement(UUID id, UUID userId, String code, Instant earnedAt) {
         this.id = id != null ? id : UUID.randomUUID();
         this.userId = userId != null ? userId : UUID.fromString("00000000-0000-0000-0000-000000000001");

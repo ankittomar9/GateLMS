@@ -1,6 +1,6 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.NoteDtos.*;
+import com.gatelms.dto.*;
 import com.gatelms.entity.Note;
 import com.gatelms.entity.Subject;
 import com.gatelms.entity.Topic;
@@ -137,9 +137,8 @@ public class NoteService {
         note.setSubject(subject);
         note.setTopic(topic);
         note.setTitle(request.title().trim());
-        note.setKind("TEXT");
         note.setContentMd(request.contentMd());
-        note.setIsPinned(request.isPinned() != null ? request.isPinned() : false);
+        note.setIsPinned(false);
         note.setCreatedAt(Instant.now());
         note.setUpdatedAt(Instant.now());
 
@@ -187,10 +186,9 @@ public class NoteService {
         note.setSubject(subject);
         note.setTopic(topic);
         note.setTitle(title.trim());
-        note.setKind("FILE");
         note.setFilePath(info.relativePath());
         note.setOriginalFilename(info.originalFilename());
-        note.setMimeType(info.contentType());
+        note.setContentType(info.contentType());
         note.setFileSizeBytes(info.sizeBytes());
         note.setIsPinned(isPinned != null ? isPinned : false);
         note.setCreatedAt(Instant.now());
@@ -207,7 +205,7 @@ public class NoteService {
             new EntityNotFoundException("Note not found with id " + id)
         );
 
-        if (request.version() != null && !Objects.equals(note.getVersion(), request.version())) {
+        if (note.getVersion() != request.version()) {
             throw new ConflictException("Note version mismatch: expected " + note.getVersion() + ", got " + request.version());
         }
 
@@ -287,6 +285,27 @@ public class NoteService {
         noteRepository.delete(note);
     }
 
+    public record NoteFileResult(Note note, Resource resource) {}
+
+    @Transactional
+    public NoteDto createFileNote(MultipartFile file, String title, String subjectId, String topicId) {
+        return uploadFileNote(title, subjectId, topicId, false, file);
+    }
+
+    @Transactional(readOnly = true)
+    public NoteFileResult getNoteFile(UUID id) {
+        UUID currentUserId = currentUserProvider.getCurrentUserId();
+        Note note = noteRepository.findByIdAndUserId(id, currentUserId).orElseThrow(() ->
+            new EntityNotFoundException("Note not found with id " + id)
+        );
+        String filePath = note.getFilePath();
+        if (filePath == null) {
+            throw new EntityNotFoundException("Note does not have an attached file");
+        }
+        Resource resource = noteStorageService.loadFileAsResource(filePath);
+        return new NoteFileResult(note, resource);
+    }
+
     @Transactional(readOnly = true)
     public Resource getNoteFileResource(UUID id) {
         UUID currentUserId = currentUserProvider.getCurrentUserId();
@@ -304,19 +323,19 @@ public class NoteService {
     public NoteDto toDto(Note n) {
         return new NoteDto(
             n.getId(),
+            n.getTitle(),
+            n.getFilePath(),
+            n.getOriginalFilename(),
+            n.getContentType(),
+            n.getFileSizeBytes(),
+            n.getContentMd(),
             n.getSubject() != null ? n.getSubject().getId() : null,
             n.getSubject() != null ? n.getSubject().getName() : null,
             n.getTopic() != null ? n.getTopic().getId() : null,
             n.getTopic() != null ? n.getTopic().getName() : null,
-            n.getTitle(),
+            Boolean.TRUE.equals(n.getIsPinned()),
             n.getKind(),
-            n.getContentMd(),
-            n.getFilePath(),
-            n.getOriginalFilename(),
-            n.getMimeType(),
-            n.getFileSizeBytes(),
-            n.getIsPinned(),
-            n.getVersion(),
+            n.getVersion() != null ? n.getVersion() : 0,
             n.getCreatedAt(),
             n.getUpdatedAt()
         );

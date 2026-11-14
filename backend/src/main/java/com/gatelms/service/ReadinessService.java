@@ -1,13 +1,14 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.StatsDtos.HeatmapResponse;
-import com.gatelms.dto.StatsDtos.ReadinessResponse;
-import com.gatelms.dto.StatsDtos.SubjectHeatmapDto;
-import com.gatelms.dto.StatsDtos.TopicHeatmapDto;
+import com.gatelms.dto.HeatmapResponse;
+import com.gatelms.dto.ReadinessResponse;
+import com.gatelms.dto.SubjectHeatmapDto;
+import com.gatelms.dto.TopicHeatmapDto;
 import com.gatelms.entity.Subject;
 import com.gatelms.entity.Topic;
 import com.gatelms.entity.TopicMastery;
 import com.gatelms.repository.AttemptAnswerRepository;
+import com.gatelms.repository.LatestAnswerProjection;
 import com.gatelms.repository.SubjectRepository;
 import com.gatelms.repository.TopicMasteryRepository;
 import com.gatelms.repository.TopicRepository;
@@ -50,7 +51,7 @@ public class ReadinessService {
         Map<String, TopicMastery> masteries = topicMasteryRepository.findByUserId(currentUserId).stream()
             .collect(Collectors.toMap(tm -> tm.getId().getTopicId(), tm -> tm, (a, b) -> a));
 
-        List<AttemptAnswerRepository.QuestionVerdictProjection> projections = attemptAnswerRepository.findLatestDistinctVerdicts(currentUserId);
+        List<LatestAnswerProjection> projections = attemptAnswerRepository.findLatestDistinctVerdicts(currentUserId);
         Map<String, List<Topic>> topicsBySubject = topics.stream()
             .collect(Collectors.groupingBy(t -> t.getSubject() != null ? t.getSubject().getId() : ""));
 
@@ -69,7 +70,7 @@ public class ReadinessService {
         }).toList();
 
         List<ReadinessCalculationEngine.QuestionVerdict> verdictList = projections.stream().map(p ->
-            new ReadinessCalculationEngine.QuestionVerdict(p.getQuestionId(), p.getSubjectId(), p.getTopicId(), p.getIsCorrect())
+            new ReadinessCalculationEngine.QuestionVerdict(p.getQuestionId(), p.getSubjectId(), p.getTopicId(), Boolean.TRUE.equals(p.getIsCorrect()))
         ).toList();
 
         return ReadinessCalculationEngine.compute(subjectDataList, verdictList);
@@ -91,7 +92,7 @@ public class ReadinessService {
         List<Topic> topics = topicRepository.findAll();
         Map<String, TopicMastery> masteries = topicMasteryRepository.findByUserId(currentUserId).stream()
             .collect(Collectors.toMap(tm -> tm.getId().getTopicId(), tm -> tm, (a, b) -> a));
-        List<AttemptAnswerRepository.QuestionVerdictProjection> projections = attemptAnswerRepository.findLatestDistinctVerdicts(currentUserId);
+        List<LatestAnswerProjection> projections = attemptAnswerRepository.findLatestDistinctVerdicts(currentUserId);
 
         Map<String, List<Topic>> topicsBySubject = topics.stream()
             .collect(Collectors.groupingBy(t -> t.getSubject() != null ? t.getSubject().getId() : ""));
@@ -100,10 +101,10 @@ public class ReadinessService {
         List<SubjectHeatmapDto> subjectDtos = subjects.stream().map(s -> {
             List<Topic> sTopics = topicsBySubject.getOrDefault(s.getId(), Collections.emptyList());
             List<TopicHeatmapDto> topicHeatmapDtos = sTopics.stream().map(t -> {
-                List<AttemptAnswerRepository.QuestionVerdictProjection> tVerdicts = projections.stream()
+                List<LatestAnswerProjection> tVerdicts = projections.stream()
                     .filter(p -> Objects.equals(p.getTopicId(), t.getId())).toList();
                 int answered = tVerdicts.size();
-                int correct = (int) tVerdicts.stream().filter(AttemptAnswerRepository.QuestionVerdictProjection::getIsCorrect).count();
+                int correct = (int) tVerdicts.stream().filter(p -> Boolean.TRUE.equals(p.getIsCorrect())).count();
                 TopicMastery tm = masteries.get(t.getId());
 
                 boolean isDue;

@@ -85,6 +85,46 @@ public class Question {
 
     public Question() {}
 
+    public Question(
+        String externalId,
+        Subject subject,
+        Topic topic,
+        Integer year,
+        QuestionType type,
+        int marks,
+        String statement,
+        String optionsJson,
+        String correctOptions,
+        Double numericMin,
+        Double numericMax,
+        String explanation,
+        String gateOverflowUrl,
+        String source,
+        String curationStatus,
+        String curationNote,
+        String difficulty
+    ) {
+        this.externalId = externalId;
+        this.subject = subject;
+        this.topic = topic;
+        this.year = year;
+        this.type = type != null ? type : QuestionType.MCQ;
+        this.marks = marks;
+        this.statement = statement != null ? statement : "";
+        this.optionsJson = optionsJson;
+        this.correctOptions = correctOptions;
+        this.numericMin = numericMin;
+        this.numericMax = numericMax;
+        this.explanation = explanation;
+        this.gateOverflowUrl = gateOverflowUrl;
+        this.source = source != null ? source : "SAMPLE";
+        this.curationStatus = curationStatus != null ? curationStatus : "UNREVIEWED";
+        this.curationNote = curationNote;
+        this.difficulty = difficulty;
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+    }
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 

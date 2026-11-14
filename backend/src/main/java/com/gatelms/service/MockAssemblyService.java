@@ -1,9 +1,9 @@
 package com.gatelms.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gatelms.dto.MockDtos.BlueprintSection;
-import com.gatelms.dto.MockDtos.MockAttemptSectionDto;
-import com.gatelms.dto.MockDtos.MockBlueprint;
+import com.gatelms.dto.BlueprintSection;
+import com.gatelms.dto.MockAttemptSectionDto;
+import com.gatelms.dto.MockBlueprint;
 import com.gatelms.entity.Question;
 import com.gatelms.entity.Subject;
 import com.gatelms.repository.QuestionRepository;

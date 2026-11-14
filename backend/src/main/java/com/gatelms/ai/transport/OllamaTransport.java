@@ -3,7 +3,7 @@ package com.gatelms.ai.transport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gatelms.ai.config.AiProperties;
-import com.gatelms.ai.dto.AiDtos.ChatMessageDto;
+import com.gatelms.ai.dto.ChatMessageDto;
 import com.gatelms.ai.exception.AiExceptions.AiServiceUnavailableException;
 import com.gatelms.ai.registry.ProviderKind;
 import com.gatelms.ai.registry.ProviderSpec;

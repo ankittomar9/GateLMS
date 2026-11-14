@@ -1,6 +1,6 @@
 package com.gatelms.anatomy.service;
 
-import com.gatelms.anatomy.dto.ConceptCoverageDtos.*;
+import com.gatelms.anatomy.dto.*;
 import com.gatelms.anatomy.entity.ConceptTag;
 import com.gatelms.anatomy.entity.ConceptTagSource;
 import com.gatelms.anatomy.entity.ConceptUnit;
@@ -10,7 +10,7 @@ import com.gatelms.anatomy.entity.QuestionConceptTagId;
 import com.gatelms.anatomy.repository.ConceptTagRepository;
 import com.gatelms.anatomy.repository.ConceptUnitRepository;
 import com.gatelms.anatomy.repository.QuestionConceptTagRepository;
-import com.gatelms.dto.QuestionDtos.QuestionDto;
+import com.gatelms.dto.QuestionDto;
 import com.gatelms.entity.Question;
 import com.gatelms.entity.Topic;
 import com.gatelms.repository.QuestionRepository;
@@ -58,7 +58,7 @@ public class ConceptCoverageService {
     public TopicConceptCoverageResponseDto getTopicConceptCoverage(String topicId) {
         Topic topic = topicRepository.findById(topicId)
             .orElseGet(() -> {
-                Topic bySlug = topicRepository.findBySlug(topicId);
+                Topic bySlug = topicRepository.findBySlug(topicId).orElse(null);
                 if (bySlug == null) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Topic not found: " + topicId);
                 }
@@ -131,7 +131,7 @@ public class ConceptCoverageService {
             resolvedTopicId = topicRepository.findById(topicId)
                 .map(Topic::getId)
                 .orElseGet(() -> {
-                    Topic bySlug = topicRepository.findBySlug(topicId);
+                    Topic bySlug = topicRepository.findBySlug(topicId).orElse(null);
                     return bySlug != null ? bySlug.getId() : topicId;
                 });
         }

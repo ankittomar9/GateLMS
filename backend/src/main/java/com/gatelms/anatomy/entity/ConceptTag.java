@@ -23,6 +23,10 @@ public class ConceptTag {
 
     public ConceptTag() {}
 
+    public ConceptTag(String slug, String label, Topic topic) {
+        this(slug, label, topic, Instant.now());
+    }
+
     public ConceptTag(String slug, String label, Topic topic, Instant createdAt) {
         this.slug = slug != null ? slug : "";
         this.label = label != null ? label : "";

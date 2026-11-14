@@ -3,7 +3,7 @@ package com.gatelms.ai.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gatelms.ai.config.AiProperties;
-import com.gatelms.ai.dto.AiDtos.TranscriptionResponse;
+import com.gatelms.ai.dto.TranscriptionResponse;
 import com.gatelms.ai.exception.AiExceptions.*;
 import com.gatelms.ai.registry.ProviderRegistry;
 import com.gatelms.ai.registry.ProviderSpec;

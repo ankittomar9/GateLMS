@@ -3,8 +3,8 @@ package com.gatelms.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gatelms.anatomy.repository.QuestionConceptTagRepository;
 import com.gatelms.anatomy.service.CardSchedulingService;
-import com.gatelms.dto.PracticeDtos.*;
-import com.gatelms.dto.QuestionDtos.QuestionSummaryDto;
+import com.gatelms.dto.*;
+import com.gatelms.dto.QuestionSummaryDto;
 import com.gatelms.entity.*;
 import com.gatelms.error.Exceptions.EntityNotFoundException;
 import com.gatelms.error.Exceptions.ValidationException;
@@ -290,7 +290,7 @@ public class PracticeService {
         ans.setSelectedOptions(submission.selectedOptions() != null ? submission.selectedOptions().trim() : null);
         ans.setNumericAnswer(submission.numericAnswer());
         ans.setState(AttemptAnswerState.ANSWERED);
-        ans.setTimeSpentSeconds(submission.timeSpentSeconds() != null ? submission.timeSpentSeconds() : 0);
+        ans.setTimeSpentSeconds(submission.timeSpentSeconds());
         ans.setMarksAwarded(grading.marksAwarded());
         ans.setIsCorrect(grading.isCorrect());
         attemptAnswerRepository.save(ans);
@@ -299,14 +299,14 @@ public class PracticeService {
             rollupService.recordAnswer(
                 LocalDate.now(),
                 grading.isCorrect(),
-                submission.timeSpentSeconds() != null ? submission.timeSpentSeconds() : 0,
+                submission.timeSpentSeconds(),
                 "practice",
                 currentUserId
             );
         }
 
         if (question.getTopic() != null && question.getTopic().getId() != null && planProgressService != null) {
-            int secondsSpent = submission.timeSpentSeconds() != null ? submission.timeSpentSeconds() : 0;
+            int secondsSpent = submission.timeSpentSeconds();
             int minutesSpent = Math.max(1, (secondsSpent + 59) / 60);
             try {
                 planProgressService.onQuestionsAnswered(

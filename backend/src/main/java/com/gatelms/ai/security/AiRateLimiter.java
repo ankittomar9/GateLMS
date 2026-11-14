@@ -42,6 +42,14 @@ public class AiRateLimiter {
         checkQuota("primer_gen:" + userId, aiProperties.getQuota().getPrimerGeneratePerHour(), Duration.ofHours(1), "Hourly topic primer generation quota exceeded.");
     }
 
+    public void checkChatLimit(UUID userId) { checkChatQuota(userId); }
+    public void checkTranscribeLimit(UUID userId) { checkTranscribeQuota(userId); }
+    public void checkStatusLimit(UUID userId) { checkStatusQuota(userId); }
+    public void checkAnatomyGenerateLimit(UUID userId) { checkAnatomyGenerateQuota(userId); }
+    public void checkConceptGenerateLimit(UUID userId) { checkConceptGenerateQuota(userId); }
+    public void checkPrimerGenerateLimit(UUID userId) { checkPrimerGenerateQuota(userId); }
+    public void checkLessonGenerateLimit(UUID userId) { checkPrimerGenerateQuota(userId); }
+
     private void checkQuota(String key, int maxAllowed, Duration window, String errorMessage) {
         Instant now = Instant.now();
         Instant cutoff = now.minus(window);

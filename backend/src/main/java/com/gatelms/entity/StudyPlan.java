@@ -1,6 +1,8 @@
 package com.gatelms.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -15,35 +17,48 @@ public class StudyPlan {
     @Column(name = "user_id", nullable = false)
     private UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-    @Column(name = "name", length = 150, nullable = false)
-    private String name = "";
+    @Column(name = "title", length = 200, nullable = false)
+    private String title = "";
 
-    @Column(name = "target_exam_date", nullable = false)
-    private LocalDate targetExamDate = LocalDate.now();
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate = LocalDate.now();
 
-    @Column(name = "daily_hours", nullable = false)
-    private Double dailyHours = 2.0;
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate = LocalDate.now();
+
+    @Column(name = "weekly_target_questions", nullable = false)
+    private Integer weeklyTargetQuestions = 150;
+
+    @Column(name = "weekly_target_minutes", nullable = false)
+    private Integer weeklyTargetMinutes = 600;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "strategy", length = 30, nullable = false)
     private PlanStrategy strategy = PlanStrategy.WEIGHTED;
 
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive = true;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "generated_reasoning", columnDefinition = "jsonb")
+    private String generatedReasoning;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
     public StudyPlan() {}
 
-    public StudyPlan(UUID id, UUID userId, String name, LocalDate targetExamDate, Double dailyHours, PlanStrategy strategy, Boolean isActive, Instant createdAt) {
+    public StudyPlan(UUID userId, String title, LocalDate startDate, LocalDate endDate, Integer weeklyTargetQuestions, Integer weeklyTargetMinutes, PlanStrategy strategy, String generatedReasoning) {
+        this(UUID.randomUUID(), userId, title, startDate, endDate, weeklyTargetQuestions, weeklyTargetMinutes, strategy, generatedReasoning, Instant.now());
+    }
+
+    public StudyPlan(UUID id, UUID userId, String title, LocalDate startDate, LocalDate endDate, Integer weeklyTargetQuestions, Integer weeklyTargetMinutes, PlanStrategy strategy, String generatedReasoning, Instant createdAt) {
         this.id = id != null ? id : UUID.randomUUID();
         this.userId = userId != null ? userId : UUID.fromString("00000000-0000-0000-0000-000000000001");
-        this.name = name != null ? name : "";
-        this.targetExamDate = targetExamDate != null ? targetExamDate : LocalDate.now();
-        this.dailyHours = dailyHours != null ? dailyHours : 2.0;
+        this.title = title != null ? title : "";
+        this.startDate = startDate != null ? startDate : LocalDate.now();
+        this.endDate = endDate != null ? endDate : LocalDate.now();
+        this.weeklyTargetQuestions = weeklyTargetQuestions != null ? weeklyTargetQuestions : 150;
+        this.weeklyTargetMinutes = weeklyTargetMinutes != null ? weeklyTargetMinutes : 600;
         this.strategy = strategy != null ? strategy : PlanStrategy.WEIGHTED;
-        this.isActive = isActive != null ? isActive : true;
+        this.generatedReasoning = generatedReasoning;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
@@ -53,20 +68,26 @@ public class StudyPlan {
     public UUID getUserId() { return userId; }
     public void setUserId(UUID userId) { this.userId = userId; }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
 
-    public LocalDate getTargetExamDate() { return targetExamDate; }
-    public void setTargetExamDate(LocalDate targetExamDate) { this.targetExamDate = targetExamDate; }
+    public LocalDate getStartDate() { return startDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
 
-    public Double getDailyHours() { return dailyHours; }
-    public void setDailyHours(Double dailyHours) { this.dailyHours = dailyHours; }
+    public LocalDate getEndDate() { return endDate; }
+    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+
+    public Integer getWeeklyTargetQuestions() { return weeklyTargetQuestions; }
+    public void setWeeklyTargetQuestions(Integer weeklyTargetQuestions) { this.weeklyTargetQuestions = weeklyTargetQuestions; }
+
+    public Integer getWeeklyTargetMinutes() { return weeklyTargetMinutes; }
+    public void setWeeklyTargetMinutes(Integer weeklyTargetMinutes) { this.weeklyTargetMinutes = weeklyTargetMinutes; }
 
     public PlanStrategy getStrategy() { return strategy; }
     public void setStrategy(PlanStrategy strategy) { this.strategy = strategy; }
 
-    public Boolean getIsActive() { return isActive; }
-    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+    public String getGeneratedReasoning() { return generatedReasoning; }
+    public void setGeneratedReasoning(String generatedReasoning) { this.generatedReasoning = generatedReasoning; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }

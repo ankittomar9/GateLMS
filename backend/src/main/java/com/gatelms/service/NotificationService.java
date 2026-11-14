@@ -1,20 +1,15 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.EngagementDtos.NotificationDto;
+import com.gatelms.dto.NotificationDto;
 import com.gatelms.entity.Notification;
 import com.gatelms.entity.NotificationType;
 import com.gatelms.entity.PlanItem;
-import com.gatelms.entity.UserGoal;
-import com.gatelms.repository.DailyRollupRepository;
-import com.gatelms.repository.NotificationRepository;
-import com.gatelms.repository.PlanItemRepository;
-import com.gatelms.repository.UserGoalRepository;
+import com.gatelms.repository.*;
 import com.gatelms.security.CurrentUserProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,69 +19,78 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class NotificationService {
+
     private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
 
     private final NotificationRepository notificationRepository;
     private final UserGoalRepository userGoalRepository;
     private final DailyRollupRepository dailyRollupRepository;
-    private final PlanItemRepository planItemRepository;
     private final CurrentUserProvider currentUserProvider;
-    private final RevisionService revisionService;
+    private final MistakeLogRepository mistakeLogRepository;
+    private final TopicMasteryRepository topicMasteryRepository;
+    private final PlanItemRepository planItemRepository;
+    private final UserRepository userRepository;
 
     public NotificationService(
-        NotificationRepository notificationRepository,
-        UserGoalRepository userGoalRepository,
-        DailyRollupRepository dailyRollupRepository,
-        PlanItemRepository planItemRepository,
-        CurrentUserProvider currentUserProvider,
-        @Autowired(required = false) RevisionService revisionService
+            NotificationRepository notificationRepository,
+            UserGoalRepository userGoalRepository,
+            DailyRollupRepository dailyRollupRepository,
+            CurrentUserProvider currentUserProvider,
+            @Autowired(required = false) MistakeLogRepository mistakeLogRepository,
+            @Autowired(required = false) TopicMasteryRepository topicMasteryRepository,
+            @Autowired(required = false) PlanItemRepository planItemRepository,
+            @Autowired(required = false) UserRepository userRepository
     ) {
         this.notificationRepository = notificationRepository;
         this.userGoalRepository = userGoalRepository;
         this.dailyRollupRepository = dailyRollupRepository;
-        this.planItemRepository = planItemRepository;
         this.currentUserProvider = currentUserProvider;
-        this.revisionService = revisionService;
+        this.mistakeLogRepository = mistakeLogRepository;
+        this.topicMasteryRepository = topicMasteryRepository;
+        this.planItemRepository = planItemRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
     public Page<NotificationDto> getNotifications(boolean unreadOnly, Pageable pageable) {
         UUID currentUserId = currentUserProvider.getCurrentUserId();
-        Page<Notification> page = notificationRepository.findNotifications(currentUserId, unreadOnly, pageable);
+        Page<Notification> page = unreadOnly
+                ? notificationRepository.findByUserIdAndReadAtIsNullOrderByCreatedAtDesc(currentUserId, pageable)
+                : notificationRepository.findAllByUserIdOrderByCreatedAtDesc(currentUserId, pageable);
         return page.map(this::toDto);
     }
 
     @Transactional(readOnly = true)
     public long getUnreadCount() {
         UUID currentUserId = currentUserProvider.getCurrentUserId();
-        return notificationRepository.countUnread(currentUserId);
+        return notificationRepository.countByUserIdAndReadAtIsNull(currentUserId);
     }
 
     @Transactional(readOnly = true)
     public List<NotificationDto> getTop10() {
         UUID currentUserId = currentUserProvider.getCurrentUserId();
-        Page<Notification> page = notificationRepository.findTop10ByUserIdOrderByCreatedAtDesc(currentUserId, PageRequest.of(0, 10));
-        return page.getContent().stream().map(this::toDto).toList();
+        return notificationRepository.findTop10ByUserIdOrderByCreatedAtDesc(currentUserId).stream()
+                .map(this::toDto)
+                .toList();
     }
 
     @Transactional
     public NotificationDto markAsRead(UUID id) {
         UUID currentUserId = currentUserProvider.getCurrentUserId();
-        Notification notif = notificationRepository.findByIdAndUserId(id, currentUserId).orElseThrow(() ->
-            new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification not found: " + id)
-        );
-
-        if (!Boolean.TRUE.equals(notif.getIsRead())) {
-            notif.setIsRead(true);
-            notif.setReadAt(Instant.now());
-            notif = notificationRepository.save(notif);
+        Notification notification = notificationRepository.findByIdAndUserId(id, currentUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification not found"));
+        if (notification.getReadAt() == null) {
+            notification.setReadAt(Instant.now());
+            notificationRepository.save(notification);
         }
-        return toDto(notif);
+        return toDto(notification);
     }
 
     @Transactional
@@ -96,90 +100,138 @@ public class NotificationService {
     }
 
     @Transactional
-    public NotificationDto createNotification(
-        UUID userId,
-        NotificationType type,
-        String title,
-        String message,
-        String actionUrl
+    public Notification createNotification(
+            NotificationType type,
+            String title,
+            String body,
+            String link,
+            boolean forceDuplicate,
+            UUID userId
     ) {
-        Notification notif = new Notification();
-        notif.setUserId(userId);
-        notif.setType(type);
-        notif.setTitle(title);
-        notif.setMessage(message);
-        notif.setActionUrl(actionUrl);
-        notif.setIsRead(false);
-        notif.setCreatedAt(Instant.now());
+        UUID targetUserId = userId != null ? userId : currentUserProvider.getCurrentUserId();
+        Instant now = Instant.now();
+        Instant startOfDay = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant();
+        Instant endOfDay = startOfDay.plus(1, ChronoUnit.DAYS);
 
-        Notification saved = notificationRepository.save(notif);
-        return toDto(saved);
+        if (!forceDuplicate && type != NotificationType.ACHIEVEMENT_EARNED) {
+            boolean exists = notificationRepository.existsByUserIdAndTypeAndCreatedAtBetween(targetUserId, type, startOfDay, endOfDay);
+            if (exists) {
+                logger.info("Notification of type {} already produced today for user {}. Skipping de-dup.", type, targetUserId);
+                return null;
+            }
+        }
+
+        Notification notification = new Notification(
+                targetUserId,
+                type,
+                title,
+                body,
+                link,
+                now
+        );
+        Notification saved = notificationRepository.save(notification);
+        logger.info("Produced notification [{}] id={} for user {}", type, saved.getId(), targetUserId);
+        return saved;
     }
 
-    @Scheduled(cron = "0 0 8 * * *")
+    public Notification createNotification(NotificationType type, String title, String body, String link) {
+        return createNotification(type, title, body, link, false, null);
+    }
+
+    @Scheduled(cron = "${app.notifications.morning-cron:0 0 8 * * *}")
     @Transactional
     public void runMorningNotificationJob() {
-        logger.info("Executing morning scheduled notification dispatch");
+        logger.info("Executing morning notification job...");
+        List<com.gatelms.entity.User> users = userRepository != null ? userRepository.findAll() : List.of();
+        Instant now = Instant.now();
         LocalDate today = LocalDate.now();
 
-        List<UserGoal> goals = userGoalRepository.findAll();
-        for (UserGoal goal : goals) {
-            UUID userId = goal.getUserId();
-            if (userId == null) continue;
+        for (var u : users) {
+            try {
+                long dueMistakes = mistakeLogRepository != null ? mistakeLogRepository.countDueReviews(u.getId(), now) : 0L;
+                long dueTopics = topicMasteryRepository != null ? topicMasteryRepository.countDueForRevision(u.getId(), now) : 0L;
+                if (dueMistakes + dueTopics > 0) {
+                    createNotification(
+                            NotificationType.REVISION_DUE,
+                            "Revisions Due Today",
+                            dueMistakes + " mistake reviews and " + dueTopics + " topics due for revision.",
+                            "/revision",
+                            false,
+                            u.getId()
+                    );
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to check revision due in morning job for user {}: {}", u.getId(), e.getMessage());
+            }
 
-            List<PlanItem> todayItems = planItemRepository.findDailyItems(userId, today);
-            int plannedQuestions = todayItems.stream().mapToInt(PlanItem::getTargetQuestions).sum();
-            int plannedMinutes = todayItems.stream().mapToInt(PlanItem::getTargetMinutes).sum();
-
-            if (plannedQuestions > 0 || plannedMinutes > 0) {
-                createNotification(
-                    userId,
-                    NotificationType.SYSTEM,
-                    "Today's Study Plan Ready",
-                    "You have " + plannedQuestions + " questions (" + plannedMinutes + " mins) scheduled for today.",
-                    "/plan"
-                );
+            try {
+                List<PlanItem> openItems = planItemRepository != null ? planItemRepository.findOpenItemsForDate(today).stream()
+                        .filter(it -> it.getPlan().getUserId().equals(u.getId()))
+                        .toList() : List.of();
+                if (!openItems.isEmpty()) {
+                    createNotification(
+                            NotificationType.PLAN_DUE,
+                            "Daily Study Plan Due",
+                            openItems.size() + " study plan items scheduled for today.",
+                            "/planner",
+                            false,
+                            u.getId()
+                    );
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to check plan due in morning job for user {}: {}", u.getId(), e.getMessage());
             }
         }
     }
 
-    @Scheduled(cron = "0 0 20 * * *")
+    @Scheduled(cron = "${app.notifications.evening-cron:0 0 20 * * *}")
     @Transactional
     public void runEveningNotificationJob() {
-        logger.info("Executing evening scheduled notification dispatch");
+        logger.info("Executing evening notification job...");
+        List<com.gatelms.entity.User> users = userRepository != null ? userRepository.findAll() : List.of();
         LocalDate today = LocalDate.now();
 
-        List<UserGoal> goals = userGoalRepository.findAll();
-        for (UserGoal goal : goals) {
-            UUID userId = goal.getUserId();
-            if (userId == null) continue;
+        for (var u : users) {
+            try {
+                var rollups = dailyRollupRepository.findAllByUserIdOrderByActivityDateDesc(u.getId());
+                Map<LocalDate, Integer> activityMap = rollups.stream()
+                        .collect(Collectors.toMap(r -> r.getId().getActivityDate(), com.gatelms.entity.DailyRollup::getQuestionsAnswered, (a, b) -> a));
+                int todayAnswered = activityMap.getOrDefault(today, 0);
 
-            dailyRollupRepository.findByUserIdAndActivityDate(userId, today).ifPresent(rollup -> {
-                int target = goal.getDailyTargetQuestions();
-                int done = rollup.getQuestionsAnswered();
-                if (done < target) {
-                    int remaining = target - done;
+                var goal = userGoalRepository.findFirstByUserIdOrderByUpdatedAtDesc(u.getId()).orElse(null);
+                boolean streakProtection = goal != null && goal.isStreakProtection();
+
+                StreakCalculator.StreakResult streakRes = StreakCalculator.computeStreak(
+                        activityMap,
+                        today,
+                        streakProtection
+                );
+
+                if (streakRes.streak() > 0 && todayAnswered == 0) {
                     createNotification(
-                        userId,
-                        NotificationType.STREAK,
-                        "Streak At Risk!",
-                        "You need " + remaining + " more questions today to keep your daily goal.",
-                        "/practice"
+                            NotificationType.STREAK_AT_RISK,
+                            "Streak At Risk!",
+                            "You have an active streak of " + streakRes.streak() + " days. Complete a study session today to keep it alive!",
+                            "/practice",
+                            false,
+                            u.getId()
                     );
                 }
-            });
+            } catch (Exception e) {
+                logger.warn("Failed to check streak at risk in evening job for user {}: {}", u.getId(), e.getMessage());
+            }
         }
     }
 
-    public NotificationDto toDto(Notification n) {
+    private NotificationDto toDto(Notification n) {
         return new NotificationDto(
-            n.getId(),
-            n.getType() != null ? n.getType().name() : "SYSTEM",
-            n.getTitle(),
-            n.getMessage(),
-            n.getActionUrl(),
-            n.getIsRead(),
-            n.getCreatedAt()
+                n.getId(),
+                n.getType(),
+                n.getTitle(),
+                n.getBody(),
+                n.getLink(),
+                n.getCreatedAt(),
+                n.getReadAt()
         );
     }
 }

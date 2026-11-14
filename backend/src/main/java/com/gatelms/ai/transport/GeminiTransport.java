@@ -3,7 +3,7 @@ package com.gatelms.ai.transport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gatelms.ai.config.AiProperties;
-import com.gatelms.ai.dto.AiDtos.ChatMessageDto;
+import com.gatelms.ai.dto.ChatMessageDto;
 import com.gatelms.ai.exception.AiExceptions.AiProviderException;
 import com.gatelms.ai.registry.ProviderKind;
 import com.gatelms.ai.registry.ProviderSpec;
@@ -18,7 +18,7 @@ import java.util.*;
 
 @Component
 public class GeminiTransport implements ChatTransport {
-    private static final Logger log = LoggerFactory.getLogger(GeminiTransport::class.java.getName().replace("$", ""));
+    private static final Logger log = LoggerFactory.getLogger(GeminiTransport.class);
     private final AiProperties aiProperties;
     private final ObjectMapper objectMapper;
     private final RestClient restClient;

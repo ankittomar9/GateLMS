@@ -1,7 +1,7 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.TopicDtos.TopicDto;
-import com.gatelms.dto.TopicDtos.TopicMasteryUpdateDto;
+import com.gatelms.dto.TopicDto;
+import com.gatelms.dto.TopicMasteryUpdateDto;
 import com.gatelms.entity.Topic;
 import com.gatelms.entity.TopicMastery;
 import com.gatelms.error.Exceptions.ConflictException;

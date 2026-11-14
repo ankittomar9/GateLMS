@@ -2,13 +2,13 @@ package com.gatelms.anatomy.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gatelms.ai.dto.AiDtos.AiChatRequest;
-import com.gatelms.ai.dto.AiDtos.ChatMessageDto;
-import com.gatelms.ai.dto.AiDtos.AiChatResponse;
+import com.gatelms.ai.dto.AiChatRequest;
+import com.gatelms.ai.dto.ChatMessageDto;
+import com.gatelms.ai.dto.AiChatResponse;
 import com.gatelms.ai.registry.ProviderRegistry;
 import com.gatelms.ai.security.AiRateLimiter;
 import com.gatelms.ai.service.AiChatService;
-import com.gatelms.anatomy.dto.AnatomyDtos.*;
+import com.gatelms.anatomy.dto.*;
 import com.gatelms.anatomy.entity.*;
 import com.gatelms.anatomy.exception.AnatomyExceptions.AnatomyLockedException;
 import com.gatelms.anatomy.exception.AnatomyExceptions.AnatomyNotFoundException;

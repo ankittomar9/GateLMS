@@ -1,8 +1,8 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.SubjectDtos.SubjectDetailDto;
-import com.gatelms.dto.SubjectDtos.SubjectSummaryDto;
-import com.gatelms.dto.TopicDtos.TopicDto;
+import com.gatelms.dto.SubjectDetailDto;
+import com.gatelms.dto.SubjectSummaryDto;
+import com.gatelms.dto.TopicDto;
 import com.gatelms.entity.Subject;
 import com.gatelms.entity.Topic;
 import com.gatelms.entity.TopicMastery;
@@ -39,7 +39,7 @@ public class SubjectService {
     }
 
     public SubjectDetailDto getSubjectByIdOrSlug(String idOrSlug) {
-        Subject subject = subjectRepository.findByIdOrSlug(idOrSlug);
+        Subject subject = subjectRepository.findByIdOrSlug(idOrSlug).orElse(null);
         if (subject == null) {
             throw new EntityNotFoundException("Subject not found with id or slug: " + idOrSlug);
         }

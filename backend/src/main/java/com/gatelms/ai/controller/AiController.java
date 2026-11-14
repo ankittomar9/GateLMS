@@ -1,6 +1,6 @@
 package com.gatelms.ai.controller;
 
-import com.gatelms.ai.dto.AiDtos.*;
+import com.gatelms.ai.dto.*;
 import com.gatelms.ai.security.AiRateLimiter;
 import com.gatelms.ai.service.AiChatService;
 import com.gatelms.ai.service.AiStatusService;

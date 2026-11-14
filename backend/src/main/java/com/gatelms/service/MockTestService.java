@@ -4,8 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gatelms.anatomy.repository.QuestionConceptTagRepository;
 import com.gatelms.anatomy.service.CardSchedulingService;
-import com.gatelms.dto.MockDtos.*;
-import com.gatelms.dto.PracticeDtos.PracticeQuestionDto;
+import com.gatelms.dto.*;
+import com.gatelms.dto.PracticeQuestionDto;
 import com.gatelms.entity.*;
 import com.gatelms.metrics.GateLmsMetrics;
 import com.gatelms.repository.*;
@@ -151,7 +151,7 @@ public class MockTestService {
         }
 
         List<String> shortfallWarnings = new ArrayList<>();
-        Subject gaSubject = subjectRepository.findBySlug("general-aptitude");
+        Subject gaSubject = subjectRepository.findBySlug("general-aptitude").orElse(null);
         String gaSubjectId = gaSubject != null ? gaSubject.getId() : "subj_aptitude";
 
         List<Question> gaQuestions = pypQuestions.stream()

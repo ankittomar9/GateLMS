@@ -1,7 +1,7 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.EngagementDtos.*;
-import com.gatelms.dto.RevisionDtos.RevisionOverviewDto;
+import com.gatelms.dto.*;
+import com.gatelms.dto.RevisionOverviewDto;
 import com.gatelms.entity.DailyRollup;
 import com.gatelms.entity.UserGoal;
 import com.gatelms.error.Exceptions.ValidationException;
@@ -108,7 +108,7 @@ public class EngagementService {
 
     private UserGoal getOrCreateGoal() {
         UUID currentUserId = currentUserProvider.getCurrentUserId();
-        UserGoal existing = userGoalRepository.findFirstByUserIdOrderByUpdatedAtDesc(currentUserId);
+        UserGoal existing = userGoalRepository.findFirstByUserIdOrderByUpdatedAtDesc(currentUserId).orElse(null);
         if (existing != null) {
             return existing;
         }

@@ -1,8 +1,8 @@
 package com.gatelms.service;
 
 import com.gatelms.anatomy.repository.QuestionConceptTagRepository;
-import com.gatelms.dto.PracticeDtos.SimilarQuestionsResponseDto;
-import com.gatelms.dto.QuestionDtos.QuestionSummaryDto;
+import com.gatelms.dto.SimilarQuestionsResponseDto;
+import com.gatelms.dto.QuestionSummaryDto;
 import com.gatelms.entity.Question;
 import com.gatelms.entity.QuestionProgress;
 import com.gatelms.repository.QuestionProgressRepository;
