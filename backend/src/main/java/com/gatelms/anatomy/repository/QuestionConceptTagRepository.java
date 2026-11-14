@@ -33,7 +33,7 @@ public interface QuestionConceptTagRepository extends JpaRepository<QuestionConc
         GROUP BY qct.id.questionId, q.year, q.createdAt, q.statement
     """)
     List<Object[]> findConceptCandidatesWithSharedSlugCount(
-        @Param("slugs") Collection<String>,
+        @Param("slugs") Collection<String> slugs,
         @Param("sourceQuestionId") UUID sourceQuestionId
     );
 

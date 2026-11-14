@@ -18,37 +18,46 @@ public class MistakeLog {
     @JoinColumn(name = "question_id", nullable = false)
     private Question question;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "attempt_answer_id")
+    private AttemptAnswer attemptAnswer;
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "error_category", length = 30)
-    private MistakeErrorCategory errorCategory;
+    @Column(name = "error_category", length = 50, nullable = false)
+    private MistakeErrorCategory errorCategory = MistakeErrorCategory.CONCEPTUAL;
 
-    @Column(name = "notes", columnDefinition = "TEXT")
-    private String notes;
+    @Column(name = "description", columnDefinition = "text")
+    private String description;
 
-    @Column(name = "attempt_count", nullable = false)
-    private Integer attemptCount = 1;
+    @Column(name = "corrective_takeaway", columnDefinition = "text", nullable = false)
+    private String correctiveTakeaway = "";
 
-    @Column(name = "first_failed_at", nullable = false, updatable = false)
-    private Instant firstFailedAt = Instant.now();
+    @Column(name = "logged_at", nullable = false, updatable = false)
+    private Instant loggedAt = Instant.now();
 
-    @Column(name = "last_failed_at", nullable = false)
-    private Instant lastFailedAt = Instant.now();
+    @Column(name = "review_count", nullable = false)
+    private int reviewCount = 0;
 
-    @Column(name = "next_review_due")
-    private Instant nextReviewDue;
+    @Column(name = "next_review_at")
+    private Instant nextReviewAt;
+
+    @Column(name = "resolved", nullable = false)
+    private boolean resolved = false;
 
     public MistakeLog() {}
 
-    public MistakeLog(UUID id, UUID userId, Question question, MistakeErrorCategory errorCategory, String notes, Integer attemptCount, Instant firstFailedAt, Instant lastFailedAt, Instant nextReviewDue) {
+    public MistakeLog(UUID id, UUID userId, Question question, AttemptAnswer attemptAnswer, MistakeErrorCategory errorCategory, String description, String correctiveTakeaway, Instant loggedAt, int reviewCount, Instant nextReviewAt, boolean resolved) {
         this.id = id != null ? id : UUID.randomUUID();
         this.userId = userId != null ? userId : UUID.fromString("00000000-0000-0000-0000-000000000001");
         this.question = question;
-        this.errorCategory = errorCategory;
-        this.notes = notes;
-        this.attemptCount = attemptCount != null ? attemptCount : 1;
-        this.firstFailedAt = firstFailedAt != null ? firstFailedAt : Instant.now();
-        this.lastFailedAt = lastFailedAt != null ? lastFailedAt : Instant.now();
-        this.nextReviewDue = nextReviewDue;
+        this.attemptAnswer = attemptAnswer;
+        this.errorCategory = errorCategory != null ? errorCategory : MistakeErrorCategory.CONCEPTUAL;
+        this.description = description;
+        this.correctiveTakeaway = correctiveTakeaway != null ? correctiveTakeaway : "";
+        this.loggedAt = loggedAt != null ? loggedAt : Instant.now();
+        this.reviewCount = reviewCount;
+        this.nextReviewAt = nextReviewAt;
+        this.resolved = resolved;
     }
 
     public UUID getId() { return id; }
@@ -60,21 +69,28 @@ public class MistakeLog {
     public Question getQuestion() { return question; }
     public void setQuestion(Question question) { this.question = question; }
 
+    public AttemptAnswer getAttemptAnswer() { return attemptAnswer; }
+    public void setAttemptAnswer(AttemptAnswer attemptAnswer) { this.attemptAnswer = attemptAnswer; }
+
     public MistakeErrorCategory getErrorCategory() { return errorCategory; }
     public void setErrorCategory(MistakeErrorCategory errorCategory) { this.errorCategory = errorCategory; }
 
-    public String getNotes() { return notes; }
-    public void setNotes(String notes) { this.notes = notes; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public Integer getAttemptCount() { return attemptCount; }
-    public void setAttemptCount(Integer attemptCount) { this.attemptCount = attemptCount; }
+    public String getCorrectiveTakeaway() { return correctiveTakeaway; }
+    public void setCorrectiveTakeaway(String correctiveTakeaway) { this.correctiveTakeaway = correctiveTakeaway; }
 
-    public Instant getFirstFailedAt() { return firstFailedAt; }
-    public void setFirstFailedAt(Instant firstFailedAt) { this.firstFailedAt = firstFailedAt; }
+    public Instant getLoggedAt() { return loggedAt; }
+    public void setLoggedAt(Instant loggedAt) { this.loggedAt = loggedAt; }
 
-    public Instant getLastFailedAt() { return lastFailedAt; }
-    public void setLastFailedAt(Instant lastFailedAt) { this.lastFailedAt = lastFailedAt; }
+    public int getReviewCount() { return reviewCount; }
+    public void setReviewCount(int reviewCount) { this.reviewCount = reviewCount; }
 
-    public Instant getNextReviewDue() { return nextReviewDue; }
-    public void setNextReviewDue(Instant nextReviewDue) { this.nextReviewDue = nextReviewDue; }
+    public Instant getNextReviewAt() { return nextReviewAt; }
+    public void setNextReviewAt(Instant nextReviewAt) { this.nextReviewAt = nextReviewAt; }
+
+    public boolean isResolved() { return resolved; }
+    public boolean getResolved() { return resolved; }
+    public void setResolved(boolean resolved) { this.resolved = resolved; }
 }

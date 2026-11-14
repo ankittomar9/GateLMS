@@ -204,7 +204,7 @@ public class QuestionSeedRunner implements ApplicationRunner {
                 try {
                     RemovalRow row = objectMapper.readValue(trimmed, RemovalRow.class);
                     if (row.externalId() != null && !row.externalId().isBlank()) {
-                        Question existing = questionRepository.findByExternalId(row.externalId());
+                        Question existing = questionRepository.findByExternalId(row.externalId()).orElse(null);
                         if (existing != null) {
                             questionRepository.delete(existing);
                             deleted++;
@@ -286,17 +286,17 @@ public class QuestionSeedRunner implements ApplicationRunner {
                         topicPatterns.computeIfAbsent(topicSlug, k -> new HashSet<>()).add(pat);
                     }
 
-                    Subject subject = subjectRepository.findBySlug(raw.subjectSlug());
-                    Topic topic = topicRepository.findBySubjectAndTopicSlug(subject.getId(), raw.topicSlug());
+                    Subject subject = subjectRepository.findBySlug(raw.subjectSlug()).orElse(null);
+                    Topic topic = (subject != null) ? topicRepository.findBySubjectAndTopicSlug(subject.getId(), raw.topicSlug()).orElse(null) : null;
                     if (topic == null) {
-                        topic = topicRepository.findBySlug(raw.topicSlug());
+                        topic = topicRepository.findBySlug(raw.topicSlug()).orElse(null);
                     }
 
                     QuestionType qType = QuestionType.valueOf(raw.type().toUpperCase());
                     String optionsJsonStr = serializeOptions(raw.options());
                     String correctOptionsStr = serializeCorrectOptions(raw.correctOptions());
 
-                    Question existing = questionRepository.findByExternalId(raw.externalId());
+                    Question existing = questionRepository.findByExternalId(raw.externalId()).orElse(null);
                     if (existing != null) {
                         existing.setSubject(subject);
                         existing.setTopic(topic);
@@ -423,14 +423,14 @@ public class QuestionSeedRunner implements ApplicationRunner {
             seenNormalizedStatements.put(normalized, lineNum);
         }
 
-        Subject subject = subjectRepository.findBySlug(raw.subjectSlug());
+        Subject subject = subjectRepository.findBySlug(raw.subjectSlug()).orElse(null);
         if (subject == null) {
             return "subjectSlug '" + raw.subjectSlug() + "' does not exist in database";
         }
 
-        Topic topic = topicRepository.findBySubjectAndTopicSlug(subject.getId(), raw.topicSlug());
+        Topic topic = topicRepository.findBySubjectAndTopicSlug(subject.getId(), raw.topicSlug()).orElse(null);
         if (topic == null) {
-            topic = topicRepository.findBySlug(raw.topicSlug());
+            topic = topicRepository.findBySlug(raw.topicSlug()).orElse(null);
         }
         if (topic == null) {
             return "topicSlug '" + raw.topicSlug() + "' does not exist for subject '" + raw.subjectSlug() + "'";

@@ -95,4 +95,18 @@ public class ProviderSpec {
 
     public Integer getMaxRetriesOverride() { return maxRetriesOverride; }
     public void setMaxRetriesOverride(Integer maxRetriesOverride) { this.maxRetriesOverride = maxRetriesOverride; }
+
+    public boolean isModelAllowed(String model) {
+        if (model == null) return false;
+        String trimmed = model.trim();
+        if (trimmed.isEmpty()) return false;
+        if (allowAnyModel) return true;
+        if (modelAllowlist != null && !modelAllowlist.isEmpty()) {
+            if (modelAllowlist.stream().anyMatch(m -> m.equalsIgnoreCase(trimmed))) return true;
+        }
+        if (modelPrefixes != null && !modelPrefixes.isEmpty()) {
+            if (modelPrefixes.stream().anyMatch(p -> trimmed.toLowerCase().startsWith(p.toLowerCase()))) return true;
+        }
+        return (modelAllowlist == null || modelAllowlist.isEmpty()) && (modelPrefixes == null || modelPrefixes.isEmpty());
+    }
 }

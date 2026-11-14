@@ -1,7 +1,7 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.AuthDtos.AuthLoginRequest;
-import com.gatelms.dto.AuthDtos.AuthMeResponse;
+import com.gatelms.dto.AuthLoginRequest;
+import com.gatelms.dto.AuthMeResponse;
 import com.gatelms.entity.User;
 import com.gatelms.error.Exceptions.EntityNotFoundException;
 import com.gatelms.error.Exceptions.InvalidCredentialsException;
@@ -42,7 +42,7 @@ public class AuthService {
     public User login(AuthLoginRequest request) {
         String username = request.username().trim();
         if (loginRateLimiter.isBlocked(username)) {
-            int retryAfter = loginRateLimiter.getRetryAfterSeconds(username);
+            long retryAfter = loginRateLimiter.getRetryAfterSeconds(username);
             logger.warn("Login blocked by rate limiter for username: {}", username);
             throw new RateLimitException("Too many failed login attempts. Please try again later.", retryAfter);
         }

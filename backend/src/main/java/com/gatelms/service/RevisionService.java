@@ -2,10 +2,10 @@ package com.gatelms.service;
 
 import com.gatelms.anatomy.repository.QuestionConceptTagRepository;
 import com.gatelms.anatomy.repository.RetrievalCardStateRepository;
-import com.gatelms.dto.PracticeDtos.PracticeSessionResponse;
-import com.gatelms.dto.RevisionDtos.RevisionDrillRequest;
-import com.gatelms.dto.RevisionDtos.RevisionDrillSource;
-import com.gatelms.dto.RevisionDtos.RevisionOverviewDto;
+import com.gatelms.dto.PracticeSessionResponse;
+import com.gatelms.dto.RevisionDrillRequest;
+import com.gatelms.dto.RevisionDrillSource;
+import com.gatelms.dto.RevisionOverviewDto;
 import com.gatelms.entity.MistakeLog;
 import com.gatelms.entity.Question;
 import com.gatelms.repository.MistakeLogRepository;
@@ -23,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class RevisionService {

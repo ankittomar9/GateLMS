@@ -109,11 +109,11 @@ public class GradingService {
     }
 
     private String normalizeLetter(String raw) {
-        return raw.replace("[", "").replace("]", "").replace(""", "").trim().toUpperCase();
+        return raw.replace("[", "").replace("]", "").replace("\"", "").trim().toUpperCase();
     }
 
     private Set<String> parseOptionSet(String raw) {
-        String cleaned = raw.replace("[", "").replace("]", "").replace(""", "");
+        String cleaned = raw.replace("[", "").replace("]", "").replace("\"", "");
         return Arrays.stream(cleaned.split(","))
             .map(s -> s.trim().toUpperCase())
             .filter(s -> !s.isEmpty())

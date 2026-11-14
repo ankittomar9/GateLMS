@@ -1,6 +1,6 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.ExamDtos.ExamCountdownDto;
+import com.gatelms.dto.ExamCountdownDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 

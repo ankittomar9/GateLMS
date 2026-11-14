@@ -1,9 +1,9 @@
 package com.gatelms.anatomy.controller;
 
-import com.gatelms.anatomy.dto.AnatomyDtos.*;
+import com.gatelms.anatomy.dto.*;
 import com.gatelms.anatomy.service.AnatomyGenerationService;
 import com.gatelms.anatomy.service.ConceptService;
-import com.gatelms.dto.QuestionDtos.QuestionSummaryDto;
+import com.gatelms.dto.QuestionSummaryDto;
 import com.gatelms.entity.User;
 import com.gatelms.entity.UserRole;
 import com.gatelms.security.CurrentUserProvider;

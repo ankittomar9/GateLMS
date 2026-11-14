@@ -35,6 +35,14 @@ public class Notification {
 
     public Notification() {}
 
+    public Notification(UUID userId, NotificationType type, String title, String body, String link, Instant createdAt) {
+        this(UUID.randomUUID(), userId, type, title, body, link, null, createdAt != null ? createdAt : Instant.now());
+    }
+
+    public Notification(UUID userId, NotificationType type, String title, String body, String link) {
+        this(UUID.randomUUID(), userId, type, title, body, link, null, Instant.now());
+    }
+
     public Notification(UUID id, UUID userId, NotificationType type, String title, String body, String link, Instant readAt, Instant createdAt) {
         this.id = id != null ? id : UUID.randomUUID();
         this.userId = userId != null ? userId : UUID.fromString("00000000-0000-0000-0000-000000000001");

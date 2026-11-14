@@ -1,6 +1,6 @@
 package com.gatelms.ai.transport;
 
-import com.gatelms.ai.dto.AiDtos.ChatMessageDto;
+import com.gatelms.ai.dto.ChatMessageDto;
 import com.gatelms.ai.registry.ProviderKind;
 import com.gatelms.ai.registry.ProviderSpec;
 import java.util.List;

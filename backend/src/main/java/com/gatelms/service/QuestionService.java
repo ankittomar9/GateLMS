@@ -3,7 +3,7 @@ package com.gatelms.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gatelms.anatomy.repository.QuestionConceptTagRepository;
-import com.gatelms.dto.QuestionDtos.*;
+import com.gatelms.dto.*;
 import com.gatelms.entity.*;
 import com.gatelms.error.Exceptions.ConflictException;
 import com.gatelms.error.Exceptions.EntityNotFoundException;
@@ -380,7 +380,7 @@ public class QuestionService {
 
         if (dto.externalId() != null && !dto.externalId().isBlank()) {
             try {
-                Question existing = questionRepository.findByExternalId(dto.externalId().trim());
+                Question existing = questionRepository.findByExternalId(dto.externalId().trim()).orElse(null);
                 if (existing != null) {
                     warnings.add("External ID '" + dto.externalId() + "' already exists in question bank");
                 }

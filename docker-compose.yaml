@@ -27,7 +27,7 @@ services:
       retries: 5
       start_period: 10s
 
-  # 2. GateLMS Core Backend Service (Kotlin + Spring Boot 3.4.2)
+  # 2. GateLMS Core Backend Service (Java 21 + Spring Boot 3.4.2)
   backend:
     build:
       context: ./backend

@@ -21,4 +21,16 @@ public interface QuestionAnatomyRepository extends JpaRepository<QuestionAnatomy
     List<QuestionAnatomy> findByQuestionIdIn(@Param("questionIds") Collection<UUID> questionIds);
 
     Page<QuestionAnatomy> findByStatus(AnatomyStatus status, Pageable pageable);
+
+    long countByStatus(AnatomyStatus status);
+
+    @Query("""
+        SELECT qa.question.id
+        FROM QuestionAnatomy qa
+        WHERE qa.question.id IN :questionIds
+          AND qa.status <> com.gatelms.anatomy.entity.AnatomyStatus.REJECTED
+          AND qa.parseError IS NULL
+          AND qa.testedConcept <> 'Generation parsing incomplete'
+    """)
+    java.util.Set<UUID> findQuestionIdsWithValidAnatomy(@Param("questionIds") Collection<UUID> questionIds);
 }

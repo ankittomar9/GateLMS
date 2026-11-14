@@ -1,21 +1,21 @@
 package com.gatelms.anatomy.service;
 
 import com.gatelms.ai.config.AiProperties;
-import com.gatelms.ai.dto.AiDtos.AiChatRequest;
-import com.gatelms.ai.dto.AiDtos.ChatMessageDto;
-import com.gatelms.ai.dto.AiDtos.AiChatResponse;
+import com.gatelms.ai.dto.AiChatRequest;
+import com.gatelms.ai.dto.ChatMessageDto;
+import com.gatelms.ai.dto.AiChatResponse;
 import com.gatelms.ai.registry.ProviderRegistry;
 import com.gatelms.ai.security.AiRateLimiter;
 import com.gatelms.ai.service.AiChatService;
-import com.gatelms.anatomy.dto.AnatomyDtos.TopicPrimerPayload;
+import com.gatelms.anatomy.dto.TopicPrimerPayload;
 import com.gatelms.anatomy.entity.ConceptTag;
 import com.gatelms.anatomy.entity.TopicPrimer;
 import com.gatelms.anatomy.entity.TopicPrimerStatus;
 import com.gatelms.anatomy.repository.ConceptTagRepository;
 import com.gatelms.anatomy.repository.TopicPrimerRepository;
-import com.gatelms.dto.JourneyDtos.CurationPrimerUpdateRequest;
-import com.gatelms.dto.JourneyDtos.TopicPrimerDto;
-import com.gatelms.dto.JourneyDtos.TopicPrimerResponseDto;
+import com.gatelms.dto.CurationPrimerUpdateRequest;
+import com.gatelms.dto.TopicPrimerDto;
+import com.gatelms.dto.TopicPrimerResponseDto;
 import com.gatelms.entity.Question;
 import com.gatelms.entity.Topic;
 import com.gatelms.repository.QuestionRepository;
@@ -193,7 +193,7 @@ public class TopicPrimerService {
         TopicPrimer primer = topicPrimerRepository.findByTopicId(topic.getId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Topic primer not found for topic: " + topicId));
 
-        if (req.status() != null) primer.setStatus(TopicPrimerStatus.valueOf(req.status()));
+        if (req.status() != null) primer.setStatus(req.status());
         if (req.motivation() != null) primer.setMotivation(req.motivation());
         if (req.coreIdea() != null) primer.setCoreIdea(req.coreIdea());
         if (req.invariant() != null) primer.setInvariant(req.invariant());
@@ -220,7 +220,7 @@ public class TopicPrimerService {
         TopicPrimer primer = topicPrimerRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Topic primer not found: " + id));
 
-        if (req.status() != null) primer.setStatus(TopicPrimerStatus.valueOf(req.status()));
+        if (req.status() != null) primer.setStatus(req.status());
         if (req.motivation() != null) primer.setMotivation(req.motivation());
         if (req.coreIdea() != null) primer.setCoreIdea(req.coreIdea());
         if (req.invariant() != null) primer.setInvariant(req.invariant());
@@ -234,7 +234,7 @@ public class TopicPrimerService {
     private Topic findTopic(String topicId) {
         return topicRepository.findById(topicId)
             .orElseGet(() -> {
-                Topic bySlug = topicRepository.findBySlug(topicId);
+                Topic bySlug = topicRepository.findBySlug(topicId).orElse(null);
                 if (bySlug == null) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Topic not found: " + topicId);
                 }

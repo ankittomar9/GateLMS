@@ -57,7 +57,15 @@ public class LoginRateLimiter {
         });
     }
 
+    public void recordFailure(String key) {
+        recordFailedAttempt(key);
+    }
+
     public void resetAttempts(String key) {
         attempts.remove(key);
+    }
+
+    public void reset(String key) {
+        resetAttempts(key);
     }
 }

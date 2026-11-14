@@ -3,7 +3,7 @@ package com.gatelms.anatomy.service;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gatelms.anatomy.dto.AnatomyDtos.*;
+import com.gatelms.anatomy.dto.*;
 import com.gatelms.anatomy.exception.AnatomyExceptions.AnatomyValidationException;
 import org.springframework.stereotype.Service;
 import java.util.*;

@@ -28,6 +28,10 @@ public class AnatomyExceptions {
             this.code = code;
         }
 
+        public NoSourceQuestionsException(String message) {
+            this("NO_SOURCE_QUESTIONS", message);
+        }
+
         public NoSourceQuestionsException() {
             this("NO_SOURCE_QUESTIONS", "At least one tagged question is required to generate a concept unit.");
         }

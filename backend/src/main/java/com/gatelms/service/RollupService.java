@@ -1,10 +1,10 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.AnalyticsDtos.DayRollupDto;
-import com.gatelms.dto.AnalyticsDtos.Rolling7Stats;
-import com.gatelms.dto.AnalyticsDtos.TrendsResponse;
+import com.gatelms.dto.DayRollupDto;
+import com.gatelms.dto.Rolling7Stats;
+import com.gatelms.dto.TrendsResponse;
 import com.gatelms.entity.DailyRollup;
-import com.gatelms.error.Exceptions.ValidationException;
+import com.gatelms.error.ValidationException;
 import com.gatelms.repository.DailyRollupRepository;
 import com.gatelms.security.CurrentUserProvider;
 import org.springframework.stereotype.Service;
@@ -45,6 +45,11 @@ public class RollupService {
     }
 
     @Transactional
+    public void recordAnswer(LocalDate activityDate, boolean correct, int seconds, String mode) {
+        recordAnswer(activityDate, correct, seconds, mode, null);
+    }
+
+    @Transactional
     public void recordMockSubmit(
         LocalDate activityDate,
         int questionsAnswered,
@@ -64,68 +69,62 @@ public class RollupService {
         );
     }
 
+    @Transactional
+    public void recordMockSubmit(
+        LocalDate activityDate,
+        int questionsAnswered,
+        int correctAnswers,
+        int minutesMocked
+    ) {
+        recordMockSubmit(activityDate, questionsAnswered, correctAnswers, minutesMocked, null);
+    }
+
     @Transactional(readOnly = true)
     public TrendsResponse getTrends(int days) {
-        if (days != 7 && days != 30 && days != 90) {
-            throw new ValidationException("Invalid days parameter", Map.of("days", "Must be one of 7, 30, or 90"));
+        if (days < 7 || days > 365) {
+            throw new ValidationException(
+                "Invalid days parameter",
+                Map.of("days", "Days must be between 7 and 365")
+            );
         }
 
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(days - 1);
         UUID currentUserId = currentUserProvider.getCurrentUserId();
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(days - 1);
 
-        List<DailyRollup> rows = dailyRollupRepository.findByDateRange(currentUserId, startDate, endDate);
-        Map<LocalDate, DailyRollup> rowMap = new HashMap<>();
-        for (DailyRollup r : rows) {
-            rowMap.put(r.getActivityDate(), r);
+        List<DailyRollup> recordsList = dailyRollupRepository.findByActivityDateBetween(currentUserId, startDate, today);
+        Map<LocalDate, DailyRollup> records = new HashMap<>();
+        for (DailyRollup r : recordsList) {
+            records.put(r.getActivityDate(), r);
         }
 
-        List<DayRollupDto> dayDtos = new ArrayList<>();
+        List<DayRollupDto> filledDays = new ArrayList<>();
         LocalDate curr = startDate;
-        while (!curr.isAfter(endDate)) {
-            DailyRollup r = rowMap.get(curr);
-            int answered = r != null ? r.getQuestionsAnswered() : 0;
-            int correct = r != null ? r.getCorrectAnswers() : 0;
-            double accuracy = answered > 0
-                ? BigDecimal.valueOf((double) correct / (double) answered * 100.0).setScale(2, RoundingMode.HALF_UP).doubleValue()
-                : 0.0;
-            int totalMins = r != null ? (r.getMinutesPracticed() + r.getMinutesMocked()) : 0;
-
-            dayDtos.add(new DayRollupDto(
-                curr.toString(),
-                answered,
-                correct,
-                accuracy,
-                totalMins,
-                r != null ? r.getMockAttempts() : 0
+        while (!curr.isAfter(today)) {
+            DailyRollup record = records.get(curr);
+            filledDays.add(new DayRollupDto(
+                curr,
+                record != null ? record.getQuestionsAnswered() : 0,
+                record != null ? record.getCorrectAnswers() : 0,
+                record != null ? record.getMinutesPracticed() : 0,
+                record != null ? record.getMinutesMocked() : 0
             ));
             curr = curr.plusDays(1);
         }
 
-        // Rolling 7 days stats
-        LocalDate last7Start = endDate.minusDays(6);
-        List<DayRollupDto> last7Days = dayDtos.stream()
-            .filter(d -> !LocalDate.parse(d.date()).isBefore(last7Start))
-            .toList();
-
-        double avgQuestions = last7Days.stream().mapToInt(DayRollupDto::questionsAnswered).average().orElse(0.0);
-        double avgMinutes = last7Days.stream().mapToInt(DayRollupDto::studyTimeMinutes).average().orElse(0.0);
-        int totalAnswered7 = last7Days.stream().mapToInt(DayRollupDto::questionsAnswered).sum();
-        int totalCorrect7 = last7Days.stream().mapToInt(DayRollupDto::correctAnswers).sum();
-        double overallAccuracy7 = totalAnswered7 > 0
-            ? BigDecimal.valueOf((double) totalCorrect7 / (double) totalAnswered7 * 100.0).setScale(2, RoundingMode.HALF_UP).doubleValue()
+        List<DayRollupDto> last7Days = filledDays.subList(Math.max(0, filledDays.size() - 7), filledDays.size());
+        int rollingVolume = last7Days.stream().mapToInt(DayRollupDto::questionsAnswered).sum();
+        int rollingCorrect = last7Days.stream().mapToInt(DayRollupDto::correct).sum();
+        double rollingAccuracy = rollingVolume > 0
+            ? BigDecimal.valueOf(100.0 * rollingCorrect / rollingVolume).setScale(1, RoundingMode.HALF_UP).doubleValue()
             : 0.0;
 
-        Rolling7Stats rolling7 = new Rolling7Stats(
-            BigDecimal.valueOf(avgQuestions).setScale(1, RoundingMode.HALF_UP).doubleValue(),
-            BigDecimal.valueOf(avgMinutes).setScale(1, RoundingMode.HALF_UP).doubleValue(),
-            overallAccuracy7
-        );
-
         return new TrendsResponse(
-            days,
-            dayDtos,
-            rolling7
+            filledDays,
+            new Rolling7Stats(
+                rollingAccuracy,
+                rollingVolume
+            )
         );
     }
 }

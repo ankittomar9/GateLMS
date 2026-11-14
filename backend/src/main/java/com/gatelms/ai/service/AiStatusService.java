@@ -1,7 +1,7 @@
 package com.gatelms.ai.service;
 
 import com.gatelms.ai.config.AiProperties;
-import com.gatelms.ai.dto.AiDtos.ProviderStatusDto;
+import com.gatelms.ai.dto.ProviderStatusDto;
 import com.gatelms.ai.registry.ProviderRegistry;
 import com.gatelms.ai.registry.ProviderSpec;
 import org.slf4j.Logger;

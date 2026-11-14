@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,29 +15,54 @@ import java.util.UUID;
 @Repository
 public interface NoteRepository extends JpaRepository<Note, UUID> {
 
-    @Query("""
-        SELECT n FROM Note n
-        WHERE n.userId = :userId
-          AND (:subjectId IS NULL OR n.subject.id = :subjectId)
-          AND (:topicId IS NULL OR n.topic.id = :topicId)
-          AND (:questionId IS NULL OR n.question.id = :questionId)
-        ORDER BY n.isPinned DESC, n.updatedAt DESC
-    """)
-    Page<Note> findFiltered(
+    @Query(
+        value = """
+            SELECT n.* FROM notes n
+            WHERE n.user_id = :userId
+              AND (:subjectId IS NULL OR n.subject_id = :subjectId)
+              AND (:topicId IS NULL OR n.topic_id = :topicId)
+              AND (
+                :kind IS NULL 
+                OR (:kind = 'FILE' AND n.file_path IS NOT NULL) 
+                OR (:kind = 'TEXT' AND n.file_path IS NULL)
+              )
+              AND (
+                :searchPattern IS NULL 
+                OR n.title ILIKE :searchPattern ESCAPE '\\'
+                OR n.content_md ILIKE :searchPattern ESCAPE '\\'
+              )
+            ORDER BY
+              CASE WHEN :pinnedFirst = true THEN n.is_pinned END DESC NULLS LAST,
+              n.updated_at DESC,
+              n.created_at DESC
+        """,
+        countQuery = """
+            SELECT count(*) FROM notes n
+            WHERE n.user_id = :userId
+              AND (:subjectId IS NULL OR n.subject_id = :subjectId)
+              AND (:topicId IS NULL OR n.topic_id = :topicId)
+              AND (
+                :kind IS NULL 
+                OR (:kind = 'FILE' AND n.file_path IS NOT NULL) 
+                OR (:kind = 'TEXT' AND n.file_path IS NULL)
+              )
+              AND (
+                :searchPattern IS NULL 
+                OR n.title ILIKE :searchPattern ESCAPE '\\'
+                OR n.content_md ILIKE :searchPattern ESCAPE '\\'
+              )
+        """,
+        nativeQuery = true
+    )
+    Page<Note> findNotes(
         @Param("userId") UUID userId,
         @Param("subjectId") String subjectId,
         @Param("topicId") String topicId,
-        @Param("questionId") UUID questionId,
+        @Param("kind") String kind,
+        @Param("searchPattern") String searchPattern,
+        @Param("pinnedFirst") boolean pinnedFirst,
         Pageable pageable
     );
-
-    @Query("""
-        SELECT n FROM Note n
-        WHERE n.userId = :userId
-          AND (LOWER(n.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(n.tags) LIKE LOWER(CONCAT('%', :query, '%')))
-        ORDER BY n.isPinned DESC, n.updatedAt DESC
-    """)
-    Page<Note> searchNotes(@Param("userId") UUID userId, @Param("query") String query, Pageable pageable);
 
     Optional<Note> findByIdAndUserId(UUID id, UUID userId);
 

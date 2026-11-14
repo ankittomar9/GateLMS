@@ -1,6 +1,6 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.TopicDtos.TopicMasteryUpdateDto;
+import com.gatelms.dto.TopicMasteryUpdateDto;
 import com.gatelms.entity.TopicMastery;
 import com.gatelms.entity.TopicMasteryId;
 import com.gatelms.error.Exceptions.ValidationException;
@@ -35,7 +35,7 @@ public class TopicMasteryService {
     @Transactional(readOnly = true)
     public TopicMastery getMastery(String topicId, UUID userId) {
         return topicMasteryRepository.findByIdUserIdAndIdTopicId(userId, topicId).orElseGet(() ->
-            new TopicMastery(new TopicMasteryId(userId, topicId), 0, null, null, null)
+            new TopicMastery(new TopicMasteryId(userId, topicId))
         );
     }
 
@@ -55,7 +55,7 @@ public class TopicMasteryService {
         }
 
         TopicMastery mastery = topicMasteryRepository.findByIdUserIdAndIdTopicId(userId, topicId).orElseGet(() ->
-            new TopicMastery(new TopicMasteryId(userId, topicId), 0, null, null, null)
+            new TopicMastery(new TopicMasteryId(userId, topicId))
         );
 
         if (update.masteryLevel() != null) mastery.setMasteryLevel(update.masteryLevel());

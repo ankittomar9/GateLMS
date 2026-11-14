@@ -16,7 +16,15 @@ import com.gatelms.repository.QuestionProgressRepository;
 import com.gatelms.repository.QuestionRepository;
 import com.gatelms.repository.TopicRepository;
 import com.gatelms.security.CurrentUserProvider;
-import com.lowagie.text.*;
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.Element;
+import com.lowagie.text.Font;
+import com.lowagie.text.HeaderFooter;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
+import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.BaseFont;
 import com.lowagie.text.pdf.PdfWriter;
 import org.slf4j.Logger;
@@ -34,6 +42,7 @@ import java.text.Normalizer;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -396,7 +405,7 @@ public class TopicWorkbookPdfService {
             }
 
             document.close();
-        } catch (DocumentException e) {
+        } catch (DocumentException | java.io.IOException e) {
             log.error("Failed to compile PDF document: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to generate PDF", e);
         }

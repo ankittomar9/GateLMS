@@ -1,6 +1,6 @@
 package com.gatelms.ai.service;
 
-import com.gatelms.ai.dto.AiDtos.*;
+import com.gatelms.ai.dto.*;
 import com.gatelms.ai.exception.AiExceptions.*;
 import com.gatelms.ai.registry.ProviderRegistry;
 import com.gatelms.ai.registry.ProviderSpec;
@@ -23,6 +23,14 @@ public class AiChatService {
         }
     }
 
+    public AiChatResponse chat(AiChatRequest request) {
+        return chat(request, null, null);
+    }
+
+    public AiChatResponse chat(AiChatRequest request, String customApiKey) {
+        return chat(request, customApiKey, null);
+    }
+
     public AiChatResponse chat(AiChatRequest request, String customApiKey, String customProvider) {
         String providerId = (customProvider != null && !customProvider.trim().isEmpty())
             ? customProvider.trim().toLowerCase()
@@ -38,17 +46,19 @@ public class AiChatService {
             throw new AiValidationException("Missing API key for provider '" + spec.getLabel() + "'. Please configure in Settings or set environment variable.");
         }
 
-        String model = (request.model() != null && !request.model().trim().isEmpty())
+        String candidateModel = (request.model() != null && !request.model().trim().isEmpty())
             ? request.model().trim()
             : providerRegistry.resolveDefaultModel(providerId);
 
         if (!spec.isAllowAnyModel()) {
-            boolean matchesPrefix = spec.getModelPrefixes().stream().anyMatch(p -> model.toLowerCase().startsWith(p.toLowerCase()));
-            boolean inAllowlist = spec.getModelAllowlist().stream().anyMatch(m -> m.equalsIgnoreCase(model));
+            final String checkModel = candidateModel;
+            boolean matchesPrefix = spec.getModelPrefixes().stream().anyMatch(p -> checkModel.toLowerCase().startsWith(p.toLowerCase()));
+            boolean inAllowlist = spec.getModelAllowlist().stream().anyMatch(m -> m.equalsIgnoreCase(checkModel));
             if (!matchesPrefix && !inAllowlist) {
-                model = spec.getDefaultModel();
+                candidateModel = spec.getDefaultModel();
             }
         }
+        String model = candidateModel;
 
         ChatTransport transport = transportMap.get(spec.getKind().name());
         if (transport == null) {
@@ -88,42 +98,29 @@ public class AiChatService {
 
     private String buildGateSystemPrompt(String mode, QuestionContextDto ctx) {
         StringBuilder sb = new StringBuilder();
-        sb.append("You are the GateLMS AI Studio Assistant, an elite Computer Science pedagogical mentor specializing in the Graduate Aptitude Test in Engineering (GATE CSE).
-");
-        sb.append("Your mission is to guide students with mathematical rigor, conceptual clarity, and Socratic questioning.
+        sb.append("""
+                You are the GateLMS AI Studio Assistant, an elite Computer Science pedagogical mentor specializing in the Graduate Aptitude Test in Engineering (GATE CSE).
+                Your mission is to guide students with mathematical rigor, conceptual clarity, and Socratic questioning.
 
-");
-        sb.append("Guidelines:
-");
-        sb.append("1. Always use standard LaTeX notation for mathematical equations, formulas, set theory, complexity notations ($O(n \log n)$), and boolean algebra ($$...$$ for display math, $...$ for inline).
-");
-        sb.append("2. When analyzing code or algorithms, provide formal loop invariants, time/space complexity derivations, and edge cases.
-");
+                Guidelines:
+                1. Always use standard LaTeX notation for mathematical equations, formulas, set theory, complexity notations ($O(n \\log n)$), and boolean algebra ($$...$$ for display math, $...$ for inline).
+                2. When analyzing code or algorithms, provide formal loop invariants, time/space complexity derivations, and edge cases.
+                """);
 
         if ("HINT".equalsIgnoreCase(mode)) {
-            sb.append("3. SOCRATIC HINT MODE: NEVER give the final direct answer, numerical value, or correct option letter. Guide the student step by step by identifying the relevant theoretical invariant or asking a probing question.
-");
+            sb.append("3. SOCRATIC HINT MODE: NEVER give the final direct answer, numerical value, or correct option letter. Guide the student step by step by identifying the relevant theoretical invariant or asking a probing question.\n");
         } else if ("EXPLANATION".equalsIgnoreCase(mode)) {
-            sb.append("3. FULL EXPLANATION MODE: Provide a step-by-step rigorous derivation, analyze why each incorrect option is false, and state the exact correct answer with proof.
-");
+            sb.append("3. FULL EXPLANATION MODE: Provide a step-by-step rigorous derivation, analyze why each incorrect option is false, and state the exact correct answer with proof.\n");
         }
 
         if (ctx != null) {
-            sb.append("
---- ACTIVE QUESTION CONTEXT ---
-");
-            if (ctx.statement() != null) sb.append("Question: ").append(ctx.statement()).append("
-");
-            if (ctx.type() != null) sb.append("Type: ").append(ctx.type()).append("
-");
-            if (ctx.subjectName() != null) sb.append("Subject: ").append(ctx.subjectName()).append("
-");
-            if (ctx.topicName() != null) sb.append("Topic: ").append(ctx.topicName()).append("
-");
-            if (ctx.optionsJson() != null && !ctx.optionsJson().isEmpty()) sb.append("Options: ").append(ctx.optionsJson()).append("
-");
-            sb.append("------------------------------
-");
+            sb.append("\n--- ACTIVE QUESTION CONTEXT ---\n");
+            if (ctx.statement() != null) sb.append("Question: ").append(ctx.statement()).append("\n");
+            if (ctx.type() != null) sb.append("Type: ").append(ctx.type()).append("\n");
+            if (ctx.subjectName() != null) sb.append("Subject: ").append(ctx.subjectName()).append("\n");
+            if (ctx.topicName() != null) sb.append("Topic: ").append(ctx.topicName()).append("\n");
+            if (ctx.optionsJson() != null && !ctx.optionsJson().isEmpty()) sb.append("Options: ").append(ctx.optionsJson()).append("\n");
+            sb.append("------------------------------\n");
         }
 
         return sb.toString();

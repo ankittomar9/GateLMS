@@ -1,6 +1,6 @@
 package com.gatelms.service;
 
-import com.gatelms.dto.SeedInventoryDto.*;
+import com.gatelms.dto.*;
 import com.gatelms.entity.Subject;
 import com.gatelms.entity.Topic;
 import com.gatelms.repository.QuestionRepository;
